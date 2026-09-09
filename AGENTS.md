@@ -6,6 +6,19 @@ Agent and developer guide for **IPSS: Integrated POS and Stock Monitoring System
 
 ---
 
+## Agent Workflow (required)
+
+1. Read `CONTEXT.md` and inspect neighboring implementation and tests.
+2. If the user supplies or substantially changes a spec or plan, follow the Plan Reconciliation guidance (`RULES.md` → `plan-reconciliation`).
+3. Find the task concern in `RULES.md`; open only its linked playbook section — never load all playbooks eagerly.
+4. State assumptions when product behavior is ambiguous.
+5. Make the smallest coherent change (one commit = one layer, per Commit Rules below) and add risk-appropriate tests.
+6. Run the quality gates plus `npm run build` before completion; record phases, tasks, and blockers in `PROGRESS.md`.
+
+`CONTEXT.md` reports `Product status: complete` — do not repeat product onboarding.
+
+---
+
 ## Tech Stack
 
 | Concern          | Choice                                                                                                             |
@@ -430,7 +443,20 @@ receives `EXPO_PUBLIC_*` values, which are non-secret by design.
 
 ---
 
+## Authority Boundaries
+
+- Do not deploy, publish, merge, push, send messages, or modify production data unless explicitly asked.
+- Do not delete user work or weaken tests/security controls to make a check pass.
+
+## Deviation Policy
+
+Agents may recommend alternatives, but must propose the change and receive explicit approval before changing the selected architecture, provider, authentication model, data boundary, production baseline, or major dependency. Record approved deviations and their rationale in `CONTEXT.md`.
+
+---
+
 ## Do / Don't
+
+- **Do** route task concerns through `RULES.md` → `playbooks/` (open only the linked section).
 
 - **Do** read the Expo SDK 57 docs before using an Expo API.
 - **Do** run `npx tsc --noEmit` before every commit.
