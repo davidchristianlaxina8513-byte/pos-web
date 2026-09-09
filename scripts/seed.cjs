@@ -36,7 +36,12 @@ const { createClient } = require('@supabase/supabase-js');
 
 const ROOT = path.resolve(__dirname, '..');
 
-const DEV_SUPABASE_HOST = 'mhlmskbuifatnlehvodf'; // DEV project ref (must never appear for PROD)
+// Default DEV project ref (legacy). Additional refs can be allowed via env:
+//   DEV_SUPABASE_REF_EXTRA="ccqoegnvzancptqhmyoc"
+//   (comma- or space-separated; also read from .env.development / .env.local).
+//   DEV_SUPABASE_REF, when set to a non-default value, is also treated as an
+//   extra allowed ref (additive — the default is never dropped).
+const DEFAULT_DEV_SUPABASE_HOST = 'mhlmskbuifatnlehvodf'; // DEV project ref (must never appear for PROD)
 
 function loadEnvFile(file) {
   const target = path.join(ROOT, file);
@@ -51,7 +56,12 @@ function loadEnvFile(file) {
       .slice(eq + 1)
       .trim()
       .replace(/^["']|["']$/g, '');
-    if (!Object.prototype.hasOwnProperty.call(process.env, key)) {
+    // First file wins; an empty passthrough (e.g. `VAR="" make seed`)
+    // must not block a real value from a later file.
+    if (
+      !Object.prototype.hasOwnProperty.call(process.env, key) ||
+      process.env[key] === ''
+    ) {
       process.env[key] = value;
     }
   }
@@ -66,7 +76,21 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 // --- Safety guard: DEV-only ------------------------------------------------
+// Allowed DEV refs = default + optional override(s) via env. Computed AFTER
+// loadEnvFile so the override can live in .env.development / .env.local.
+function allowedDevRefs() {
+  const extras = [
+    ...(process.env.DEV_SUPABASE_REF_EXTRA ?? '').split(/[,\s]+/),
+    ...(process.env.DEV_SUPABASE_REF ?? '').split(/[,\s]+/),
+  ]
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return [...new Set([DEFAULT_DEV_SUPABASE_HOST, ...extras])];
+}
+
 function assertDevOnly() {
+  const allowed = allowedDevRefs();
+  const matchesAllowed = (value) => allowed.some((ref) => value.includes(ref));
   if (!DATABASE_URL) {
     throw new Error(
       'DATABASE_URL is required (set in .env.development / .env.local) and must point to the DEV project.',
@@ -74,24 +98,24 @@ function assertDevOnly() {
   }
   // Refuse anything that doesn't resolve to the DEV project. Newer pooler
   // URLs carry the project ref in the user segment (postgres.<ref>@...) rather
-  // than the hostname, so match either — the literal DEV ref must still appear.
+  // than the hostname, so match either — one of the allowed DEV refs must appear.
   try {
     const parsed = new URL(DATABASE_URL);
     const host = parsed.hostname;
     const username = parsed.username;
-    if (
-      !host.includes(DEV_SUPABASE_HOST) &&
-      !username.includes(DEV_SUPABASE_HOST)
-    ) {
+    if (!matchesAllowed(host) && !matchesAllowed(username)) {
       throw new Error(
-        `seed.js is DEV-only. Refusing to seed a non-DEV database (host="${host}").`,
+        `seed.js is DEV-only. Refusing to seed a non-DEV database (host="${host}"). Allowed refs: ${allowed.join(', ')}. Hint: set DEV_SUPABASE_REF_EXTRA to allow a new DEV project ref.`,
       );
     }
   } catch (e) {
+    if (e.message.includes('DEV-only')) throw e;
     throw new Error(`Invalid DATABASE_URL: ${e.message}`);
   }
-  if (!SUPABASE_URL || !SUPABASE_URL.includes(DEV_SUPABASE_HOST)) {
-    throw new Error('SUPABASE_URL must point to the DEV project.');
+  if (!SUPABASE_URL || !matchesAllowed(SUPABASE_URL)) {
+    throw new Error(
+      `SUPABASE_URL must point to a DEV project (allowed refs: ${allowed.join(', ')}). Hint: set DEV_SUPABASE_REF_EXTRA to allow a new DEV project ref.`,
+    );
   }
 }
 

@@ -25,8 +25,15 @@ EAS := npx eas-cli
 NODE := node
 SUPABASE := supabase
 
-# DEV project reference (fixed; used to guard destructive reset-dev).
-DEV_SUPABASE_REF := mhlmskbuifatnlehvodf
+# DEV project reference (default; used to guard destructive reset-dev).
+# Override / extend via env: `DEV_SUPABASE_REF_EXTRA` (space-separated) adds
+# extra allowed DEV refs without dropping the default.
+# Example: DEV_SUPABASE_REF_EXTRA=ccqoegnvzancptqhmyoc make seed
+comma := ,
+DEFAULT_DEV_SUPABASE_REF := mhlmskbuifatnlehvodf
+DEV_SUPABASE_REF ?= $(DEFAULT_DEV_SUPABASE_REF)
+DEV_SUPABASE_REF_EXTRA ?=
+ALLOWED_DEV_REFS := $(DEFAULT_DEV_SUPABASE_REF) $(subst $(comma), ,$(DEV_SUPABASE_REF_EXTRA)) $(if $(filter-out $(DEFAULT_DEV_SUPABASE_REF),$(DEV_SUPABASE_REF)),$(DEV_SUPABASE_REF))
 # The CLI writes the linked project ref here after `supabase link`.
 LINKED_REF_FILE := supabase/.temp/project-ref
 
@@ -77,7 +84,7 @@ preview: ## Build a test APK via EAS (preview profile; QR/URL to install on your
 	@echo "and install it. The build inlines EXPO_PUBLIC_* from .env.production."
 
 seed: ## Seed DEV database with demo data ONLY (refuses PROD; assumes schema migrated)
-	$(NODE) scripts/seed.cjs
+	DEV_SUPABASE_REF_EXTRA="$(DEV_SUPABASE_REF_EXTRA)" DEV_SUPABASE_REF="$(DEV_SUPABASE_REF)" $(NODE) scripts/seed.cjs
 
 # --- Destructive DEV reset (rebuild DEV schema from local migrations) ---------
 # Resets the LINKED project, re-running ALL local migrations (0001-0004+).
@@ -86,16 +93,19 @@ seed: ## Seed DEV database with demo data ONLY (refuses PROD; assumes schema mig
 reset-dev: ## Rebuild the linked DEV database from local migrations (destructive; DEV-only, no seed)
 	@if [ ! -f "$(LINKED_REF_FILE)" ]; then \
 	  echo "error: not linked to any Supabase project."; \
-	  echo "       Run: supabase login && supabase link --project-ref $(DEV_SUPABASE_REF)"; \
+	  echo "       Run: supabase login && supabase link --project-ref $(DEFAULT_DEV_SUPABASE_REF)"; \
 	  exit 1; \
 	fi; \
 	LINKED_REF=$$(cat "$(LINKED_REF_FILE)"); \
-	if [ "$$LINKED_REF" != "$(DEV_SUPABASE_REF)" ]; then \
-	  echo "REFUSED: linked project is $$LINKED_REF, expected DEV $(DEV_SUPABASE_REF)."; \
-	  echo "reset-dev only runs against the DEV project."; \
-	  exit 1; \
-	fi; \
-	echo "WARNING: this REBUILDS the DEV database $(DEV_SUPABASE_REF) from local migrations (destructive)."; \
+	case " $(ALLOWED_DEV_REFS) " in \
+	  *" $$LINKED_REF "*) ;; \
+	  *) \
+	    echo "REFUSED: linked project is $$LINKED_REF, expected one of: $(ALLOWED_DEV_REFS)."; \
+	    echo "reset-dev only runs against the DEV project. Hint: set DEV_SUPABASE_REF_EXTRA to allow a new DEV ref."; \
+	    exit 1; \
+	    ;; \
+	esac; \
+	echo "WARNING: this REBUILDS the DEV database $$LINKED_REF from local migrations (destructive)."; \
 	read -r -p "Type DEV to confirm: " CONFIRM; \
 	if [ "$$CONFIRM" != "DEV" ]; then \
 	  echo "Aborted."; \
