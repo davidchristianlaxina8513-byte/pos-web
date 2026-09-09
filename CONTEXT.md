@@ -59,6 +59,7 @@
 ## Product Decisions
 
 - **Web migration (planned):** pos-app will gain a web build so the Next.js + Tailwind playbooks under `playbooks/` apply. Until migration lands, Expo React Native remains the baseline; `stack/nextjs`, `styling/tailwind`, `platform/web`, and `capabilities/supabase/nextjs` playbooks are marked web-track and are advisory only. (Approved by project owner, 2026-09-09.)
+- **Web migration Phase 0 (complete 2026-09-09):** Next.js + Tailwind + Supabase scaffold lives in `web/` (landing page only, no product UI). Expo root untouched and still the baseline. `web/` has its own toolchain (`web/package.json`, strict `tsconfig`, `eslint-config-next`, Tailwind v4 tokens mapped 1:1 from `src/theme/colors.ts`); root ESLint ignores `web/**`; generated `web/next-env.d.ts` is committed, `web/.next/` is gitignored. CI runs a separate `web` job (Node 22, typecheck + lint + test + build with dummy `NEXT_PUBLIC_*` env).
 
 ## Approved Deviations
 

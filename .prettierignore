@@ -26,3 +26,7 @@ app.json
 
 # planning scratch docs
 .opencode/plans/
+
+# Next.js web sub-app: generated build output + generated env types
+web/.next/
+web/next-env.d.ts

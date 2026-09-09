@@ -1,0 +1,20 @@
+/* web/src/app/globals.css — tokens mapped from root src/theme/colors.ts */
+@import 'tailwindcss';
+
+@theme {
+  --color-primary: #364c35;
+  --color-secondary: #4d644b;
+  --color-nav-active: #adc5ab;
+  --color-background: #f5f5f5;
+  --color-surface: #ffffff;
+  --color-success: #4caf72;
+  --color-warning: #f5a623;
+  --color-danger: #e8614a;
+  --color-danger-surface: #fef0f0;
+  --color-danger-border: #fecaca;
+  --color-disabled: #c2c5c5;
+  --color-foreground: #1a1a1a;
+  --color-muted: #6b6b6b;
+  --color-border: #e0e0e0;
+  --color-icon-circle: #e8f0e3;
+}

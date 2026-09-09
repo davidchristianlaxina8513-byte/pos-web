@@ -31,7 +31,7 @@ DEV_SUPABASE_REF := mhlmskbuifatnlehvodf
 LINKED_REF_FILE := supabase/.temp/project-ref
 
 .PHONY: help setup dev devbuild prod preview seed reset-dev typecheck lint format format-check \
-        build migrate-dev migrate-prod
+        build migrate-dev migrate-prod web-dev web-build
 
 help: ## Show available commands
 	@echo "===== DEVELOPMENT ====="
@@ -127,3 +127,10 @@ migrate-dev: ## Apply pending migrations to the linked DEV project
 
 migrate-prod: ## Apply pending migrations to the linked PROD project (controlled deployment)
 	$(SUPABASE) db push
+
+# --- Next.js web sub-app (Phase 0 scaffold; Expo remains the baseline) -----
+web-dev: ## Start Next.js web app (http://localhost:3000)
+	npm --prefix web run dev
+
+web-build: ## Production build of the Next.js web app
+	npm --prefix web run build
