@@ -17,17 +17,18 @@
 - User management via `create-user` edge function
 - Agent system: `AGENTS.md` + `CONTEXT.md` + `RULES.md` + `playbooks/` (copied from pos-template, adapted)
 - Web migration Phase 0: Next.js 16 + Tailwind v4 scaffold in `web/` (landing page only) + CI `web` job + `make web-dev` / `web-build` (2026-09-09)
+- Web migration Phase 1: SSR Supabase clients + session proxy, `/login` with role routing (`/pos` cashier, `/admin` admin), server-side role gates; live-verified as both demo users (2026-09-11)
 
 ## In Progress
 
 - Agent-system rollout (this change): verify playbook links, confirm workflow on next feature branch
-- **Web migration (approved 2026-09-09, phased rewrite):** Expo stays the live baseline until cutover. Phase 0 done; next is Phase 1 (auth + role routing + Supabase clients/proxy — detailed plan at execution time).
+- **Web migration (approved 2026-09-09, phased rewrite):** Expo stays the live baseline until cutover. Phases 0–1 done; next is Phase 2 (POS core — detailed plan at execution time).
   - Completed Phase 0: scaffold alongside Expo; CI extended with `web` job
+  - Completed Phase 1: auth + role routing + Supabase clients/proxy; RLS role reads verified live (`user_read_own`)
   - Remaining phases:
-  1. **Phase 1 — Foundation:** auth + role routing, Supabase clients/proxy, design-token → Tailwind theme mapping
-  2. **Phase 2 — POS core:** menu → cart → checkout → payment → receipt (web)
-  3. **Phase 3 — Back office:** inventory, menu management, reports/dashboard, user management
-  4. **Phase 4 — Cutover:** parity check vs Expo, flip baseline to web, archive Expo track
+  1. **Phase 2 — POS core:** menu → cart → checkout → payment → receipt (web)
+  2. **Phase 3 — Back office:** inventory, menu management, reports/dashboard, user management
+  3. **Phase 4 — Cutover:** parity check vs Expo, flip baseline to web, archive Expo track
   - Web-track playbooks (`stack/nextjs`, `styling/tailwind`, `platform/web`, `capabilities/supabase/nextjs`) activate phase by phase; Expo stays untouched until Phase 4.
 
 ## Up Next
@@ -48,3 +49,4 @@ Per `docs/future-plans.md` sequencing:
 - 2026-09-09: Adopt pos-template agent system (AGENTS/CONTEXT/RULES/playbooks), merged with existing pos-app AGENTS.md; skip `create-win-project.profile.json` (pos-app wasn't generator-created)
 - 2026-09-09: Web migration planned — `stack/nextjs`, `styling/tailwind`, `platform/web`, `capabilities/supabase/nextjs` playbooks marked web-track/advisory until migration lands
 - 2026-09-09: Web Phase 0 scaffold decisions — full 16-color token map (`textPrimary→foreground`, `textSecondary→muted`); `turbopack.root` set to silence dual-lockfile warning; `skipLibCheck` on + `jsx: react-jsx` (Next-mandated, matches pos-template); web `test` uses `--passWithNoTests`; root ESLint ignores `web/**`; generated `web/next-env.d.ts` committed (CI typechecks before build), `web/.next/` gitignored + prettier-ignored
+- 2026-09-11: Web Phase 1 auth decisions — `NEXT_PUBLIC_SUPABASE_ANON_KEY` kept (plan/`.env.example` naming; template `PUBLISHABLE_KEY` is the same value); unknown roles fail closed (sign-out + error, no Expo-style cashier fallback); `web/vitest.config.ts` (node env, `@` alias) so web tests don't inherit root jsdom config; no new deps (`zod`, testing-library deferred); `web/.env.local` holds real values, gitignored, never staged
