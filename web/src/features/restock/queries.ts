@@ -1,20 +1,12 @@
 import { requireRole } from '@/features/auth/queries';
 import { createClient } from '@/lib/supabase/server';
-
-export type RestockStatus = 'pending' | 'ordered' | 'received' | 'cancelled';
-
-export interface RestockRow {
-  request_id: number;
-  product_id: number;
-  product_name: string;
-  current_stock_snapshot: number;
-  reorder_point_snapshot: number;
-  par_level_snapshot: number;
-  suggested_quantity: number;
-  status: RestockStatus;
-  supplier: string | null;
-  created_at: string;
-}
+import {
+  byUrgency,
+  parseRestockStatus,
+  statusesForFilter,
+  type RestockFilter,
+  type RestockRow,
+} from './restock';
 
 interface RestockDbRow {
   request_id: number;
@@ -25,71 +17,70 @@ interface RestockDbRow {
   suggested_quantity: number;
   status: unknown;
   supplier: string | null;
+  cancel_reason: unknown;
   created_at: string;
+  resolved_at: unknown;
   product: { name: string } | { name: string }[] | null;
 }
 
-function parseStatus(value: unknown): RestockStatus | null {
-  return value === 'pending' ||
-    value === 'ordered' ||
-    value === 'received' ||
-    value === 'cancelled'
-    ? value
-    : null;
-}
-
-/** Open requests (pending + ordered), product name joined, oldest first. RLS `reorder_admin_all` enforces admin-only. */
-export async function getOpenRequests(): Promise<RestockRow[]> {
+/**
+ * Restock requests with the product name joined. Admin-only via
+ * `requireRole` + RLS `reorder_admin_all`. Sorted most urgent/oldest first.
+ */
+export async function getRestockRequests(
+  filter: RestockFilter = 'open',
+): Promise<RestockRow[]> {
   await requireRole('admin');
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('reorder_requests')
     .select(
-      'request_id, product_id, current_stock_snapshot, reorder_point_snapshot, par_level_snapshot, suggested_quantity, status, supplier, created_at, product(name)',
+      'request_id, product_id, current_stock_snapshot, reorder_point_snapshot, par_level_snapshot, suggested_quantity, status, supplier, cancel_reason, created_at, resolved_at, product(name)',
     )
-    .in('status', ['pending', 'ordered'])
+    .in('status', statusesForFilter(filter))
     .order('created_at', { ascending: true });
   if (error) throw error;
   const rows = (data ?? []) as RestockDbRow[];
-  return rows.flatMap((row) => {
-    const status = parseStatus(row.status);
-    const product = Array.isArray(row.product) ? row.product[0] : row.product;
-    if (!status || !product) return [];
-    return [
-      {
-        request_id: row.request_id,
-        product_id: row.product_id,
-        product_name: product.name,
-        current_stock_snapshot: row.current_stock_snapshot,
-        reorder_point_snapshot: row.reorder_point_snapshot,
-        par_level_snapshot: row.par_level_snapshot,
-        suggested_quantity: row.suggested_quantity,
-        status,
-        supplier: row.supplier,
-        created_at: row.created_at,
-      },
-    ];
-  });
+  return rows
+    .flatMap((row) => {
+      const status = parseRestockStatus(row.status);
+      const product = Array.isArray(row.product) ? row.product[0] : row.product;
+      if (!status || !product) return [];
+      return [
+        {
+          request_id: row.request_id,
+          product_id: row.product_id,
+          product_name: product.name,
+          current_stock_snapshot: row.current_stock_snapshot,
+          reorder_point_snapshot: row.reorder_point_snapshot,
+          par_level_snapshot: row.par_level_snapshot,
+          suggested_quantity: row.suggested_quantity,
+          status,
+          supplier: row.supplier,
+          cancel_reason:
+            typeof row.cancel_reason === 'string' ? row.cancel_reason : null,
+          created_at: row.created_at,
+          resolved_at:
+            typeof row.resolved_at === 'string' ? row.resolved_at : null,
+        },
+      ];
+    })
+    .sort(byUrgency);
 }
 
-/** Groups rows by supplier for the printable list; null/blank → 'Unassigned'. */
-export function groupBySupplier(
-  rows: RestockRow[],
-): { supplier: string; rows: RestockRow[] }[] {
-  const groups = new Map<string, RestockRow[]>();
-  for (const row of rows) {
-    const key = row.supplier?.trim() ? row.supplier.trim() : 'Unassigned';
-    const existing = groups.get(key);
-    if (existing) existing.push(row);
-    else groups.set(key, [row]);
-  }
-  return [...groups.entries()].map(([supplier, groupRows]) => ({
-    supplier,
-    rows: groupRows,
-  }));
+/** Open requests (pending + ordered), oldest first. */
+export async function getOpenRequests(): Promise<RestockRow[]> {
+  return getRestockRequests('open');
 }
 
-/** Allow-listed status transitions for the admin actions. */
-export function parseRestockStatus(value: unknown): RestockStatus | null {
-  return parseStatus(value);
+/** Count of actionable (pending + ordered) requests for nav badges. */
+export async function getOpenRestockCount(): Promise<number> {
+  await requireRole('admin');
+  const supabase = await createClient();
+  const { count, error } = await supabase
+    .from('reorder_requests')
+    .select('request_id', { count: 'exact', head: true })
+    .in('status', ['pending', 'ordered']);
+  if (error) throw error;
+  return count ?? 0;
 }

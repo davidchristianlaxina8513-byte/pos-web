@@ -2,13 +2,17 @@ import Link from 'next/link';
 import { requireRole } from '@/features/auth/queries';
 import { signOut } from '@/features/auth/actions';
 import { getInventoryItems } from '@/features/inventory/queries';
+import { getOpenRestockCount } from '@/features/restock/queries';
 import { InventoryList } from '@/features/inventory/components/InventoryList';
 import { Button } from '@/components/common/Button';
 
 /** Admin inventory: counts, restock shortcut, filterable stock list. */
 export default async function InventoryPage() {
   const profile = await requireRole('admin');
-  const items = await getInventoryItems();
+  const [items, openRestockCount] = await Promise.all([
+    getInventoryItems(),
+    getOpenRestockCount(),
+  ]);
   const lowCount = items.filter((item) => item.status === 'low').length;
   const criticalCount = items.filter(
     (item) => item.status === 'critical',
@@ -35,6 +39,7 @@ export default async function InventoryPage() {
           className="rounded border border-border bg-surface px-3 py-1 font-medium text-foreground"
         >
           Restock requests
+          {openRestockCount > 0 ? ` (${openRestockCount} open)` : null}
         </Link>{' '}
         <Link
           href="/admin"
