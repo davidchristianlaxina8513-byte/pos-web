@@ -246,22 +246,24 @@ const products = MENU.map(([category, _productId, name, price], index) => ({
 
 // Stock for each product (stock_id mirrors product_id). A few items are
 // intentionally low/out-of-stock so the StockBadge states are visible.
+// par_level seeds the reorder-tracking feature (null = inactive).
 const stockOverrides = {
-  4: [8, 10], // Bacon w/ Egg — low
-  6: [0, 10], // Chicken Tonkatsu - critical
-  19: [45, 8], // Latte - healthy
-  30: [40, 10], // Dark Chocolate - healthy
+  4: [8, 10, 24], // Bacon w/ Egg — low
+  6: [0, 10, 20], // Chicken Tonkatsu - critical
+  19: [45, 8, 60], // Latte - healthy
+  30: [40, 10, 50], // Dark Chocolate - healthy
 };
 
 const inventory = products.map((product) => {
-  const [quantity, reorder_level] = stockOverrides[product.product_id] ?? [
-    30, 10,
-  ];
+  const [quantity, reorder_level, par_level] = stockOverrides[
+    product.product_id
+  ] ?? [30, 10, null];
   return {
     stock_id: product.product_id,
     product_id: product.product_id,
     quantity,
     reorder_level,
+    par_level,
   };
 });
 
@@ -406,12 +408,13 @@ on conflict (product_id) do update
       is_available = excluded.is_available;`;
 
 const UPSERT_INVENTORY = `
-insert into inventory (stock_id, product_id, quantity, reorder_level)
+insert into inventory (stock_id, product_id, quantity, reorder_level, par_level)
 values $1
 on conflict (stock_id) do update
   set product_id = excluded.product_id,
       quantity = excluded.quantity,
-      reorder_level = excluded.reorder_level;`;
+      reorder_level = excluded.reorder_level,
+      par_level = excluded.par_level;`;
 
 const UPSERT_USER = `
 insert into "user" (user_id, username, password, role, is_active)
@@ -607,6 +610,7 @@ async function runSeed() {
       'product_id',
       'quantity',
       'reorder_level',
+      'par_level',
     ]);
     await upsertRows(client, UPSERT_MOVEMENTS, stockMovements, [
       'movement_id',
