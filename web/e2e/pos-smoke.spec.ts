@@ -41,13 +41,15 @@ async function productIdByName(name: string): Promise<number> {
     password: CASHIER_PASSWORD,
   });
   expect(signInError).toBeNull();
+  // Names are not unique in the demo catalog: take the lowest id.
   const { data, error } = await supabase
     .from('product')
     .select('product_id')
     .eq('name', name)
-    .maybeSingle();
+    .order('product_id')
+    .limit(1);
   expect(error).toBeNull();
-  const id = (data as { product_id: number } | null)?.product_id;
+  const id = (data as { product_id: number }[] | null)?.[0]?.product_id;
   expect(typeof id).toBe('number');
   return id as number;
 }

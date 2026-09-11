@@ -20,6 +20,7 @@
 - Web migration Phase 1: SSR Supabase clients + session proxy, `/login` with role routing (`/pos` cashier, `/admin` admin), server-side role gates; live-verified as both demo users (2026-09-11)
 - Automatic restock tracking (2026-09-11): `0008_reorder_tracking.sql` (`par_level`, `reorder_requests`, low-stock trigger, admin-only RLS — 14/14 probes green); web `/admin/restock` + print; mobile `Restock` screen + PDF share; `par_level` editing (mobile product form, web inline); demo seed pars
 - Web migration Phase 2: POS core on web (2026-09-11) — menu → session cart → `process_sale` checkout (cash/GCash/Maya) → receipt + browser print; `/pos` open to cashier+admin via `requireStaff`; Playwright smoke (cashier cash sale, stock deducts, receipt renders) green against dev Supabase; 30/30 vitest green
+- Web migration Phase 3 (2026-09-11, on `feature/web-back-office` stacked on Phase 2 branch): 3a inventory list + `adjust_stock` stock-in; 3b menu/category CRUD + photo upload to `product-images` + auto inventory row on create (fixes Expo gap); 3c admin dashboard (SVG chart, low-stock, top-5) + filtered reports (Manila-day bucketing, voided excluded); 3d user list + `set_user_active` toggle + web enforces `is_active=false` at sign-in/session (Expo leaves it unenforced); 48/48 vitest green
 
 ## In Progress
 
@@ -28,8 +29,9 @@
   - Completed Phase 0: scaffold alongside Expo; CI extended with `web` job
   - Completed Phase 1: auth + role routing + Supabase clients/proxy; RLS role reads verified live (`user_read_own`)
   - Completed Phase 2: POS core (menu/cart/checkout/receipt + Playwright smoke green)
+  - Phase 3 in progress on `feature/web-back-office`: 3a inventory, 3b menu, 3c reports, 3d users done; admin e2e 5/6 green (staff-create blocked, see Blocked)
   - Remaining phases:
-  1. **Phase 3 — Back office:** inventory, menu management, reports/dashboard, user management
+  1. **Phase 3 — Back office:** unblock staff-create e2e (deploy `create-user`), merge
   2. **Phase 4 — Cutover:** parity check vs Expo, flip baseline to web, archive Expo track
   - Web-track playbooks (`stack/nextjs`, `styling/tailwind`, `platform/web`, `capabilities/supabase/nextjs`) activate phase by phase; Expo stays untouched until Phase 4.
 
@@ -44,7 +46,7 @@ Per `docs/future-plans.md` sequencing:
 
 ## Blocked
 
-- (none)
+- `create-user` edge function not deployed on dev project `ccqoegnvzancptqhmyoc` (direct invoke returns 404 `NOT_FOUND`; mobile user creation is equally affected). Web 3d code is complete and surfaces the failure cleanly; e2e staff-create test stays red until deploy. Remediation: `supabase functions deploy create-user` (needs explicit approval + CLI auth), then re-run `test:e2e`.
 
 ## Decisions Made
 
