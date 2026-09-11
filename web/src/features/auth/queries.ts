@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { landingForRole, parseRole, type UserRole } from './roles';
+import { isStaffRole, landingForRole, parseRole, type UserRole } from './roles';
 
 export interface SessionProfile {
   userId: string;
@@ -44,5 +44,16 @@ export async function requireRole(role: UserRole): Promise<SessionProfile> {
   const profile = await getSessionProfile();
   if (!profile) redirect('/login');
   if (profile.role !== role) redirect(landingForRole(profile.role));
+  return profile;
+}
+
+/**
+ * POS gate: any staff role (cashier or admin) may sell. Unknown roles cannot
+ * occur here — getSessionProfile already fails closed on them.
+ */
+export async function requireStaff(): Promise<SessionProfile> {
+  const profile = await getSessionProfile();
+  if (!profile) redirect('/login');
+  if (!isStaffRole(profile.role)) redirect(landingForRole(profile.role));
   return profile;
 }

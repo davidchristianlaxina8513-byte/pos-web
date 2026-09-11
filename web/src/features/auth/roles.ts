@@ -13,6 +13,14 @@ export function parseRole(value: unknown): UserRole | null {
   return value === 'admin' || value === 'cashier' ? value : null;
 }
 
+/**
+ * POS sellers: both staff roles can sell (capability matrix — admin sees the
+ * same Menu(POS) entry as cashier in the Expo app).
+ */
+export function isStaffRole(role: UserRole): boolean {
+  return role === 'admin' || role === 'cashier';
+}
+
 const ALLOWED_DESTINATIONS = ['/', '/pos', '/admin'] as const;
 
 type AppDestination = (typeof ALLOWED_DESTINATIONS)[number];

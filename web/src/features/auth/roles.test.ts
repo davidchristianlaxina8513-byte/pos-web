@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest';
 import {
   isAppRelativeDestination,
+  isStaffRole,
   landingForRole,
   parseRole,
   resolveCallbackDestination,
@@ -34,6 +35,11 @@ test('resolveCallbackDestination rejects open redirects', () => {
   );
   expect(resolveCallbackDestination('/secret')).toBe('/');
   expect(resolveCallbackDestination(null)).toBe('/');
+});
+
+test('isStaffRole admits both selling roles', () => {
+  expect(isStaffRole('admin')).toBe(true);
+  expect(isStaffRole('cashier')).toBe(true);
 });
 
 test('isAppRelativeDestination narrows correctly', () => {
