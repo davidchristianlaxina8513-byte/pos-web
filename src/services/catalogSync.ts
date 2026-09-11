@@ -53,6 +53,7 @@ export async function refreshLocalCache(): Promise<void> {
         product_id: record.product_id,
         quantity: record.quantity,
         reorder_level: record.reorder_level,
+        par_level: record.par_level,
       })),
     );
     await upsertLocalUsers(

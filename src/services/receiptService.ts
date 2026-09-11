@@ -189,3 +189,77 @@ export async function shareReceipt(uri: string): Promise<void> {
   if (!(await Sharing.isAvailableAsync())) return;
   await Sharing.shareAsync(uri);
 }
+
+export interface RestockListRow {
+  product_name: string;
+  current_stock_snapshot: number;
+  suggested_quantity: number;
+  status: string;
+}
+
+export interface RestockListGroup {
+  supplier: string;
+  rows: RestockListRow[];
+}
+
+/**
+ * Supplier purchase list (A4-ish full-width document — deliberately not the
+ * 80mm receipt template; thermal printers don't print supplier lists).
+ * Shared as PDF through the same print/share mechanism as receipts.
+ */
+export function buildRestockListHtml(
+  groups: RestockListGroup[],
+  generatedAt: string,
+): string {
+  const sections = groups
+    .map((group) => {
+      const items = group.rows
+        .map(
+          (row) => `
+        <tr>
+          <td>${escapeHtml(row.product_name)}</td>
+          <td>${row.current_stock_snapshot}</td>
+          <td>${row.suggested_quantity}</td>
+          <td>${escapeHtml(row.status)}</td>
+        </tr>`,
+        )
+        .join('');
+      return `
+      <h2>${escapeHtml(group.supplier)}</h2>
+      <table>
+        <thead>
+          <tr><th>Product</th><th>On hand</th><th>To order</th><th>Status</th></tr>
+        </thead>
+        <tbody>${items}</tbody>
+      </table>`;
+    })
+    .join('');
+  return `
+    <html>
+      <head>
+        <style>
+          body { font-family: sans-serif; padding: 24px; color: #1A1A1A; }
+          h1 { font-size: 20px; }
+          h2 { font-size: 16px; margin-top: 24px; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { border: 1px solid #E0E0E0; padding: 8px; text-align: left; }
+          .meta { color: #6B6B6B; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <h1>${escapeHtml(BUSINESS.name)} — Restock List</h1>
+        <p class="meta">Generated ${escapeHtml(generatedAt)}</p>
+        ${sections}
+      </body>
+    </html>
+  `;
+}
+
+export async function generateRestockList(
+  groups: RestockListGroup[],
+): Promise<string> {
+  const { uri } = await Print.printToFileAsync({
+    html: buildRestockListHtml(groups, new Date().toLocaleString()),
+  });
+  return uri;
+}

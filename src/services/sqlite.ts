@@ -73,7 +73,8 @@ export async function initDb(): Promise<void> {
       stock_id INTEGER PRIMARY KEY AUTOINCREMENT,
       product_id INTEGER NOT NULL,
       quantity INTEGER NOT NULL,
-      reorder_level INTEGER NOT NULL
+      reorder_level INTEGER NOT NULL,
+      par_level INTEGER
     );
     CREATE TABLE IF NOT EXISTS stock_movements (
       movement_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -155,6 +156,11 @@ export async function initDb(): Promise<void> {
     } catch {
       // Column already exists on newer local DBs.
     }
+  }
+  try {
+    await db.execAsync('ALTER TABLE inventory ADD COLUMN par_level INTEGER;');
+  } catch {
+    // Column already exists on newer local DBs.
   }
 }
 
@@ -301,6 +307,7 @@ export async function getLocalInventory(): Promise<
     product_id: number;
     quantity: number;
     reorder_level: number;
+    par_level: number | null;
   }[]
 > {
   const db = await getDb();
@@ -309,6 +316,7 @@ export async function getLocalInventory(): Promise<
     product_id: number;
     quantity: number;
     reorder_level: number;
+    par_level: number | null;
   }>(`SELECT * FROM inventory`);
 }
 
@@ -318,6 +326,7 @@ export async function replaceLocalInventory(
     product_id: number;
     quantity: number;
     reorder_level: number;
+    par_level: number | null;
   }[],
 ): Promise<void> {
   const db = await getDb();
@@ -325,12 +334,13 @@ export async function replaceLocalInventory(
     await db.runAsync('DELETE FROM inventory;');
     for (const record of inventory) {
       await db.runAsync(
-        `INSERT INTO inventory (stock_id, product_id, quantity, reorder_level)
-         VALUES (?, ?, ?, ?)`,
+        `INSERT INTO inventory (stock_id, product_id, quantity, reorder_level, par_level)
+         VALUES (?, ?, ?, ?, ?)`,
         record.stock_id,
         record.product_id,
         record.quantity,
         record.reorder_level,
+        record.par_level,
       );
     }
   });
@@ -340,14 +350,16 @@ export async function upsertLocalInventory(record: {
   product_id: number;
   quantity: number;
   reorder_level: number;
+  par_level: number | null;
 }): Promise<void> {
   const db = await getDb();
   await db.runAsync(
-    `INSERT INTO inventory (product_id, quantity, reorder_level) VALUES (?, ?, ?)
-     ON CONFLICT(product_id) DO UPDATE SET quantity = excluded.quantity, reorder_level = excluded.reorder_level`,
+    `INSERT INTO inventory (product_id, quantity, reorder_level, par_level) VALUES (?, ?, ?, ?)
+     ON CONFLICT(product_id) DO UPDATE SET quantity = excluded.quantity, reorder_level = excluded.reorder_level, par_level = excluded.par_level`,
     record.product_id,
     record.quantity,
     record.reorder_level,
+    record.par_level,
   );
 }
 

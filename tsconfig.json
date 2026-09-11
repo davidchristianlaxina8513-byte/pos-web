@@ -6,5 +6,5 @@
       "@/*": ["./src/*"]
     }
   },
-  "exclude": ["supabase/functions", "dist"]
+  "exclude": ["supabase/functions", "dist", "web"]
 }

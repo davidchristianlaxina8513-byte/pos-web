@@ -45,6 +45,7 @@ export interface Inventory {
   product_id: number;
   quantity: number;
   reorder_level: number;
+  par_level: number | null;
 }
 
 export interface StockMovement {
@@ -54,4 +55,21 @@ export interface StockMovement {
   quantity: number;
   date: string;
   supplier?: string;
+}
+
+export type ReorderStatus = 'pending' | 'ordered' | 'received' | 'cancelled';
+
+export interface ReorderRequest {
+  request_id: number;
+  product_id: number;
+  current_stock_snapshot: number;
+  reorder_point_snapshot: number;
+  par_level_snapshot: number;
+  suggested_quantity: number;
+  status: ReorderStatus;
+  supplier: string | null;
+  created_at: string;
+  updated_at: string;
+  resolved_at: string | null;
+  resolved_by: string | null;
 }
