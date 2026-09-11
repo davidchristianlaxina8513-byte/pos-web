@@ -2,6 +2,7 @@ import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import { colors, typography } from '@/theme';
 import { InventoryManagement } from '@/features/admin/inventory-management/pages/InventoryManagement';
+import { RestockRequests } from '@/features/admin/inventory-management/pages/RestockRequests';
 import { StockIn } from '@/features/admin/inventory-management/pages/StockIn';
 import { Dashboard } from './pages/Dashboard';
 import { Reports } from './pages/Reports';
@@ -12,6 +13,7 @@ export type ReportsStackParamList = {
   Reports: undefined;
   TopSelling: undefined;
   Inventory: undefined;
+  Restock: undefined;
   StockIn: {
     stockId: number;
     productName: string;
@@ -50,6 +52,11 @@ export function ReportsNavigator(): React.JSX.Element {
         name="Inventory"
         component={InventoryManagement}
         options={{ title: 'Inventory' }}
+      />
+      <Stack.Screen
+        name="Restock"
+        component={RestockRequests}
+        options={{ title: 'Restock Requests' }}
       />
       <Stack.Screen
         name="StockIn"

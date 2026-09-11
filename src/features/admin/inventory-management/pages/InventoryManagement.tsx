@@ -15,6 +15,7 @@ import { StockBadge } from '@/components/common/StockBadge/StockBadge';
 import { colors } from '@/theme';
 import { ReportsStackParamList } from '@/features/admin/reports/ReportsNavigator';
 import { useInventory, InventoryItem, StockStatus } from '@/hooks/useInventory';
+import { useReorderRequests } from '@/features/admin/inventory-management/hooks/useReorderRequests';
 import { inventoryManagementStyles } from './InventoryManagement.styles';
 
 type InventoryManagementProps = StackScreenProps<
@@ -51,13 +52,15 @@ export function InventoryManagement({
     lowCount,
     criticalCount,
   } = useInventory();
+  const { openCount, loadRequests } = useReorderRequests();
   const [filter, setFilter] = useState<FilterKey>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   useFocusEffect(
     useCallback(() => {
       void loadInventory();
-    }, [loadInventory]),
+      void loadRequests();
+    }, [loadInventory, loadRequests]),
   );
 
   const filteredItems = useMemo(() => {
@@ -165,6 +168,18 @@ export function InventoryManagement({
           </Text>
         </View>
       </View>
+
+      <Pressable
+        style={({ pressed }) => [
+          inventoryManagementStyles.stockInButton,
+          pressed ? inventoryManagementStyles.stockInButtonPressed : null,
+        ]}
+        onPress={() => navigation.navigate('Restock')}
+      >
+        <Text style={inventoryManagementStyles.stockInButtonText}>
+          Restock requests{openCount > 0 ? ` (${openCount})` : ''}
+        </Text>
+      </Pressable>
 
       {alertCount > 0 ? (
         <View style={inventoryManagementStyles.alertBanner}>
