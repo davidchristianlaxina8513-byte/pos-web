@@ -48,10 +48,7 @@ export function UsersManager({ users, currentUserId }: UsersManagerProps) {
     }
     setBusy(true);
     setError(null);
-    const result = await setStaffActive(
-      user.user_id,
-      user.is_active === false,
-    );
+    const result = await setStaffActive(user.user_id, user.is_active === false);
     setBusy(false);
     setConfirmId(null);
     if (!result.ok) {
@@ -85,9 +82,7 @@ export function UsersManager({ users, currentUserId }: UsersManagerProps) {
             <span className="text-foreground">Role</span>
             <select
               value={role}
-              onChange={(event) =>
-                setRole(event.target.value as UserRole)
-              }
+              onChange={(event) => setRole(event.target.value as UserRole)}
               className="mt-1 block w-full rounded border border-border bg-surface px-3 py-2 text-foreground"
             >
               <option value="cashier">Cashier</option>

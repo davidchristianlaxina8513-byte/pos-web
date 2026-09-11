@@ -18,12 +18,14 @@ export async function getUsers(): Promise<StaffUser[]> {
     .select('user_id, username, role, is_active')
     .order('username');
   if (error) throw error;
-  return ((data ?? []) as {
-    user_id: unknown;
-    username: unknown;
-    role: unknown;
-    is_active: unknown;
-  }[]).flatMap((row) => {
+  return (
+    (data ?? []) as {
+      user_id: unknown;
+      username: unknown;
+      role: unknown;
+      is_active: unknown;
+    }[]
+  ).flatMap((row) => {
     const role = parseRole(row.role);
     if (
       typeof row.user_id !== 'string' ||

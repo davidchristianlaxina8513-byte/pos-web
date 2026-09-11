@@ -79,9 +79,7 @@ export function InventoryList({ items }: InventoryListProps) {
                 <p className="text-foreground">On hand: {item.quantity}</p>
                 <p className="text-muted">
                   Reorder at: {item.reorder_level}
-                  {item.par_level !== null
-                    ? ` · Par: ${item.par_level}`
-                    : null}
+                  {item.par_level !== null ? ` · Par: ${item.par_level}` : null}
                 </p>
                 <span
                   className={cn(

@@ -18,9 +18,7 @@ const PRESETS: { value: ReportPreset; label: string }[] = [
 ];
 
 function parsePreset(value: string | undefined): ReportPreset {
-  return value === '7d' || value === '30d' || value === 'all'
-    ? value
-    : 'today';
+  return value === '7d' || value === '30d' || value === 'all' ? value : 'today';
 }
 
 /** Filtered sales + top products + inventory summary. */
@@ -97,9 +95,7 @@ export default async function ReportsPage({
         <Card title="Sales summary">
           <p>Revenue: ₱{report.summary.revenue.toFixed(2)}</p>
           <p>Orders: {report.summary.orders}</p>
-          <p>
-            Average order: ₱{report.summary.averageOrderValue.toFixed(2)}
-          </p>
+          <p>Average order: ₱{report.summary.averageOrderValue.toFixed(2)}</p>
           <ul className="mt-2">
             {report.summary.breakdown.map((row) => (
               <li key={row.mode}>

@@ -3,8 +3,6 @@ import { requireRole } from '@/features/auth/queries';
 import { getMenu } from '@/features/pos/queries';
 import type { MenuCategory, MenuItem } from '@/features/pos/types';
 
-export const UNCATEGORIZED = 'Uncategorized';
-
 export interface EditableProduct extends MenuItem {
   par_level: number | null;
 }

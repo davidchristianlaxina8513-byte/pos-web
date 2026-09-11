@@ -12,7 +12,6 @@ import {
   buildDaySales,
   summarizeSales,
   type DaySales,
-  type ReportPreset,
   type ReportRange,
   type SaleRow,
   type SalesSummary,
@@ -79,7 +78,9 @@ export interface DashboardData {
 }
 
 /** Dashboard metrics: all-time revenue/orders, 7-day chart, low stock, top 5. */
-export async function getDashboard(now: Date = new Date()): Promise<DashboardData> {
+export async function getDashboard(
+  now: Date = new Date(),
+): Promise<DashboardData> {
   await requireRole('admin');
   const supabase = await createClient();
   const [{ rows }, inventoryItems] = await Promise.all([
@@ -103,11 +104,13 @@ export async function getDashboard(now: Date = new Date()): Promise<DashboardDat
       names.set(row.product_id, row.name);
     }
   }
-  const soldItems = ((itemsData ?? []) as {
-    product_id: unknown;
-    quantity: unknown;
-    subtotal: unknown;
-  }[]).flatMap((row) =>
+  const soldItems = (
+    (itemsData ?? []) as {
+      product_id: unknown;
+      quantity: unknown;
+      subtotal: unknown;
+    }[]
+  ).flatMap((row) =>
     typeof row.product_id === 'number' &&
     Number.isFinite(Number(row.quantity)) &&
     Number.isFinite(Number(row.subtotal))
@@ -125,10 +128,15 @@ export async function getDashboard(now: Date = new Date()): Promise<DashboardDat
     orders: summary.orders,
     weekly: buildDaySales(active, 7, now),
     lowStock: inventoryItems
-      .filter((item) => getStockStatus(item.quantity, item.reorder_level) !== 'ok')
+      .filter(
+        (item) => getStockStatus(item.quantity, item.reorder_level) !== 'ok',
+      )
       .sort((a, b) => a.quantity - b.quantity)
       .slice(0, 5)
-      .map((item) => ({ product_name: item.product_name, quantity: item.quantity })),
+      .map((item) => ({
+        product_name: item.product_name,
+        quantity: item.quantity,
+      })),
     topProducts: aggregateTopProducts(soldItems, names, 5),
   };
 }
@@ -146,9 +154,7 @@ export async function getSalesReport(range: ReportRange): Promise<SalesReport> {
     range.from && range.to
       ? Math.max(
           1,
-          Math.round(
-            (range.to.getTime() - range.from.getTime()) / 86_400_000,
-          ),
+          Math.round((range.to.getTime() - range.from.getTime()) / 86_400_000),
         )
       : 31;
   const end = range.to ?? new Date();
@@ -192,11 +198,13 @@ export async function getTopProducts(
       names.set(row.product_id, row.name);
     }
   }
-  const soldItems = ((itemsData ?? []) as {
-    product_id: unknown;
-    quantity: unknown;
-    subtotal: unknown;
-  }[]).flatMap((row) =>
+  const soldItems = (
+    (itemsData ?? []) as {
+      product_id: unknown;
+      quantity: unknown;
+      subtotal: unknown;
+    }[]
+  ).flatMap((row) =>
     typeof row.product_id === 'number' &&
     Number.isFinite(Number(row.quantity)) &&
     Number.isFinite(Number(row.subtotal))

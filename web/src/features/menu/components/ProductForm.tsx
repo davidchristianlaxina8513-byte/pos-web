@@ -32,9 +32,7 @@ export function ProductForm({ categories, initial }: ProductFormProps) {
       ? String(initial.par_level)
       : '',
   );
-  const [isAvailable, setIsAvailable] = useState(
-    initial?.is_available ?? true,
-  );
+  const [isAvailable, setIsAvailable] = useState(initial?.is_available ?? true);
   const [imageUrl, setImageUrl] = useState<string | null>(
     initial?.image_url ?? null,
   );
@@ -94,9 +92,7 @@ export function ProductForm({ categories, initial }: ProductFormProps) {
       return;
     }
     setIsSaving(true);
-    const result = await deleteProduct(
-      (initial as EditableProduct).product_id,
-    );
+    const result = await deleteProduct((initial as EditableProduct).product_id);
     if (!result.ok) {
       setError(result.error);
       setIsSaving(false);
@@ -153,10 +149,7 @@ export function ProductForm({ categories, initial }: ProductFormProps) {
         >
           <option value="">Select a category</option>
           {categories.map((category) => (
-            <option
-              key={category.category_id}
-              value={category.category_id}
-            >
+            <option key={category.category_id} value={category.category_id}>
               {category.name}
             </option>
           ))}
@@ -203,11 +196,7 @@ export function ProductForm({ categories, initial }: ProductFormProps) {
           {isSaving ? 'Saving…' : isEditing ? 'Save changes' : 'Add product'}
         </Button>
         {isEditing ? (
-          <Button
-            variant="danger"
-            onClick={handleDelete}
-            disabled={isSaving}
-          >
+          <Button variant="danger" onClick={handleDelete} disabled={isSaving}>
             {confirmDelete ? 'Confirm delete' : 'Delete'}
           </Button>
         ) : null}

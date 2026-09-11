@@ -110,7 +110,12 @@ export function buildDaySales(
   }
   return keys.map((key) => {
     const bucket = buckets.get(key) as { revenue: number; orders: number };
-    return { date: key, label: dayLabel(key), revenue: bucket.revenue, orders: bucket.orders };
+    return {
+      date: key,
+      label: dayLabel(key),
+      revenue: bucket.revenue,
+      orders: bucket.orders,
+    };
   });
 }
 

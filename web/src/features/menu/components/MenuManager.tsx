@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/common/Button';
 import { Field } from '@/components/common/Field';
 import { createCategory, deleteCategory } from '../actions';
-import { UNCATEGORIZED } from '../queries';
+import { UNCATEGORIZED } from '../validate';
 import type { MenuCategory, MenuItem } from '@/features/pos/types';
 
 export interface MenuManagerProps {
@@ -176,10 +176,7 @@ export function MenuManager({ categories, items }: MenuManagerProps) {
             {categories
               .filter((category) => category.name !== UNCATEGORIZED)
               .map((category) => (
-                <option
-                  key={category.category_id}
-                  value={category.category_id}
-                >
+                <option key={category.category_id} value={category.category_id}>
                   {category.name}
                 </option>
               ))}

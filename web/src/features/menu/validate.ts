@@ -1,3 +1,5 @@
+export const UNCATEGORIZED = 'Uncategorized';
+
 export interface ProductFormValues {
   name: string;
   category_id: string;
@@ -34,7 +36,10 @@ export function validateProduct(
   }
   const parText = values.parText.trim();
   if (parText === '') {
-    return { ok: true, value: { name, category_id: values.category_id, price, parLevel: null } };
+    return {
+      ok: true,
+      value: { name, category_id: values.category_id, price, parLevel: null },
+    };
   }
   const par = Number(parText);
   if (!Number.isInteger(par) || par < 0) {

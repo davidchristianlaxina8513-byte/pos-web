@@ -3,8 +3,11 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { requireRole } from '@/features/auth/queries';
-import { validateCategoryName, validateProduct } from './validate';
-import { UNCATEGORIZED } from './queries';
+import {
+  validateCategoryName,
+  validateProduct,
+  UNCATEGORIZED,
+} from './validate';
 
 const IMAGE_BUCKET = 'product-images';
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;

@@ -4,9 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { requireRole } from '@/features/auth/queries';
 
-export type StockInResult =
-  | { ok: true }
-  | { ok: false; error: string };
+export type StockInResult = { ok: true } | { ok: false; error: string };
 
 /**
  * Admin stock-in. Validates like Expo (`useInventory.addStock`), then calls

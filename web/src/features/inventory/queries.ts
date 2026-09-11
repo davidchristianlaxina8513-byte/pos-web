@@ -31,7 +31,9 @@ interface ProductDbRow {
   category: { name: unknown } | unknown[] | null;
 }
 
-export function itemStatus(item: Pick<InventoryItem, 'quantity' | 'reorder_level'>): StockStatus {
+export function itemStatus(
+  item: Pick<InventoryItem, 'quantity' | 'reorder_level'>,
+): StockStatus {
   return getStockStatus(item.quantity, item.reorder_level);
 }
 

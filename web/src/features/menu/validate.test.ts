@@ -48,13 +48,11 @@ test('name, category, and price are required and sane', () => {
 test('par must be a whole number when present', () => {
   expect(validateProduct({ ...BASE, parText: '1.5' })).toEqual({
     ok: false,
-    error:
-      'Par level must be a whole number greater than or equal to zero.',
+    error: 'Par level must be a whole number greater than or equal to zero.',
   });
   expect(validateProduct({ ...BASE, parText: '-1' })).toEqual({
     ok: false,
-    error:
-      'Par level must be a whole number greater than or equal to zero.',
+    error: 'Par level must be a whole number greater than or equal to zero.',
   });
 });
 
