@@ -37,6 +37,13 @@
 
 ## Up Next
 
+- **Restock mobile parity (follow-up, web Phase B is web-only):** mobile
+  `RestockRequests` screen still marks received without an `adjust_stock`
+  bump and cancels without a reason — both now rejected/gated server-side
+  (`chk_reorder_cancel_reason`, ordered-only receive). Bring the mobile
+  screen to parity: received-qty input + `adjust_stock` via transport,
+  cancel-reason prompt mirroring the void-reason pattern.
+
 Per `docs/future-plans.md` sequencing:
 
 1. **Phase 1 (P1):** Excel export → Personal Info editing (name/phone)

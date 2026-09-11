@@ -1,9 +1,11 @@
 import { expect, test } from 'vitest';
 import {
+  canTransitionRestock,
   groupBySupplier,
+  parseRestockFilter,
   parseRestockStatus,
   type RestockRow,
-} from './queries';
+} from './restock';
 
 function row(
   overrides: Partial<RestockRow> & { request_id: number },
@@ -17,7 +19,9 @@ function row(
     suggested_quantity: 55,
     status: 'pending',
     supplier: null,
+    cancel_reason: null,
     created_at: '2026-09-11T00:00:00Z',
+    resolved_at: null,
     ...overrides,
   };
 }
@@ -53,4 +57,28 @@ test('parseRestockStatus accepts the four statuses only', () => {
   expect(parseRestockStatus('shipped')).toBeNull();
   expect(parseRestockStatus('')).toBeNull();
   expect(parseRestockStatus(null)).toBeNull();
+});
+
+test('parseRestockFilter accepts open, all, and the four statuses', () => {
+  expect(parseRestockFilter('open')).toBe('open');
+  expect(parseRestockFilter('all')).toBe('all');
+  expect(parseRestockFilter('pending')).toBe('pending');
+  expect(parseRestockFilter('ordered')).toBe('ordered');
+  expect(parseRestockFilter('received')).toBe('received');
+  expect(parseRestockFilter('cancelled')).toBe('cancelled');
+  expect(parseRestockFilter('shipped')).toBeNull();
+  expect(parseRestockFilter('')).toBeNull();
+  expect(parseRestockFilter(null)).toBeNull();
+});
+
+test('canTransitionRestock allow-lists pending->ordered, ordered->received, open->cancelled', () => {
+  expect(canTransitionRestock('pending', 'ordered')).toBe(true);
+  expect(canTransitionRestock('ordered', 'received')).toBe(true);
+  expect(canTransitionRestock('pending', 'cancelled')).toBe(true);
+  expect(canTransitionRestock('ordered', 'cancelled')).toBe(true);
+  expect(canTransitionRestock('pending', 'received')).toBe(false);
+  expect(canTransitionRestock('ordered', 'ordered')).toBe(false);
+  expect(canTransitionRestock('received', 'cancelled')).toBe(false);
+  expect(canTransitionRestock('cancelled', 'pending')).toBe(false);
+  expect(canTransitionRestock('received', 'ordered')).toBe(false);
 });

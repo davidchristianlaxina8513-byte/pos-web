@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { requireRole } from '@/features/auth/queries';
 import { signOut } from '@/features/auth/actions';
 import { getDashboard } from '@/features/reports/queries';
+import { getOpenRestockCount } from '@/features/restock/queries';
 import { SalesChart } from '@/features/reports/components/SalesChart';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
@@ -18,7 +19,10 @@ const NAV = [
 /** Admin hub: metrics, weekly chart, low stock, top products. */
 export default async function AdminPage() {
   const profile = await requireRole('admin');
-  const dashboard = await getDashboard();
+  const [dashboard, openRestockCount] = await Promise.all([
+    getDashboard(),
+    getOpenRestockCount(),
+  ]);
   return (
     <main className="bg-background text-foreground">
       <header className="flex items-center justify-between">
@@ -40,6 +44,11 @@ export default async function AdminPage() {
             className="rounded border border-border bg-surface px-3 py-1 font-medium text-foreground"
           >
             {entry.label}
+            {entry.href === '/admin/restock' && openRestockCount > 0 ? (
+              <span className="ml-1 rounded bg-warning px-2 py-0.5 text-sm text-surface">
+                {openRestockCount} open
+              </span>
+            ) : null}
           </Link>
         ))}
       </nav>
@@ -63,6 +72,13 @@ export default async function AdminPage() {
               ))}
             </ul>
           )}
+          {openRestockCount > 0 ? (
+            <p className="mt-2">
+              <Link href="/admin/restock" className="font-medium">
+                Open restock requests: {openRestockCount}
+              </Link>
+            </p>
+          ) : null}
         </Card>
         <Card title="Top selling">
           {dashboard.topProducts.length === 0 ? (

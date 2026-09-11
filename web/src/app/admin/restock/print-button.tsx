@@ -1,13 +1,17 @@
 'use client';
 
+import { Button } from '@/components/common/Button';
+
+/** Browser-print handoff for the supplier list (same pattern as receipts). */
 export function PrintButton() {
   return (
-    <button
+    <Button
+      variant="secondary"
+      size="sm"
       type="button"
       onClick={() => window.print()}
-      className="print:hidden"
     >
       Print supplier list
-    </button>
+    </Button>
   );
 }
