@@ -18,6 +18,7 @@
 - Agent system: `AGENTS.md` + `CONTEXT.md` + `RULES.md` + `playbooks/` (copied from pos-template, adapted)
 - Web migration Phase 0: Next.js 16 + Tailwind v4 scaffold in `web/` (landing page only) + CI `web` job + `make web-dev` / `web-build` (2026-09-09)
 - Web migration Phase 1: SSR Supabase clients + session proxy, `/login` with role routing (`/pos` cashier, `/admin` admin), server-side role gates; live-verified as both demo users (2026-09-11)
+- Automatic restock tracking (2026-09-11): `0008_reorder_tracking.sql` (`par_level`, `reorder_requests`, low-stock trigger, admin-only RLS — 14/14 probes green); web `/admin/restock` + print; mobile `Restock` screen + PDF share; `par_level` editing (mobile product form, web inline); demo seed pars
 
 ## In Progress
 
@@ -50,3 +51,4 @@ Per `docs/future-plans.md` sequencing:
 - 2026-09-09: Web migration planned — `stack/nextjs`, `styling/tailwind`, `platform/web`, `capabilities/supabase/nextjs` playbooks marked web-track/advisory until migration lands
 - 2026-09-09: Web Phase 0 scaffold decisions — full 16-color token map (`textPrimary→foreground`, `textSecondary→muted`); `turbopack.root` set to silence dual-lockfile warning; `skipLibCheck` on + `jsx: react-jsx` (Next-mandated, matches pos-template); web `test` uses `--passWithNoTests`; root ESLint ignores `web/**`; generated `web/next-env.d.ts` committed (CI typechecks before build), `web/.next/` gitignored + prettier-ignored
 - 2026-09-11: Web Phase 1 auth decisions — `NEXT_PUBLIC_SUPABASE_ANON_KEY` kept (plan/`.env.example` naming; template `PUBLISHABLE_KEY` is the same value); unknown roles fail closed (sign-out + error, no Expo-style cashier fallback); `web/vitest.config.ts` (node env, `@` alias) so web tests don't inherit root jsdom config; no new deps (`zod`, testing-library deferred); `web/.env.local` holds real values, gitignored, never staged
+- 2026-09-11: Restock tracking decisions — trigger-on-`inventory` (not per-RPC hooks) covers all 5 write paths incl. offline replays; manual suggested-qty edits overwritten on next stock change (no override flag); recovery refreshes snapshots, never auto-closes; supplier pre-fills from latest movement; Expo list online-only (no SQLite mirror); web par editing inline on restock page (no web menu management until web Phase 3); seed upserts fire the trigger (2 legitimate demo requests for low-stock products 4 + 6); root `tsconfig.json` now excludes `web/` (separate toolchain, mirrors `eslint.config.js` `web/**` ignore)
