@@ -21,13 +21,20 @@ export async function signIn(formData: FormData) {
   if (error || !data.user) redirect('/login?error=invalid_credentials');
   const { data: row } = await supabase
     .from('user')
-    .select('user_id, role')
+    .select('user_id, role, is_active')
     .eq('user_id', data.user.id)
     .maybeSingle();
-  const role = parseRole((row as { role: unknown } | null)?.role);
+  const typed = row as { role: unknown; is_active: unknown } | null;
+  const role = parseRole(typed?.role);
   if (!role) {
     await supabase.auth.signOut();
     redirect('/login?error=unknown_role');
+  }
+  // Expo leaves `is_active` unenforced at login; the web fails closed so a
+  // disabled account cannot start a session.
+  if (typed?.is_active === false) {
+    await supabase.auth.signOut();
+    redirect('/login?error=account_disabled');
   }
   redirect(landingForRole(role));
 }
