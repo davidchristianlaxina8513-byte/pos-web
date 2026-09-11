@@ -29,7 +29,7 @@
   - Completed Phase 0: scaffold alongside Expo; CI extended with `web` job
   - Completed Phase 1: auth + role routing + Supabase clients/proxy; RLS role reads verified live (`user_read_own`)
   - Completed Phase 2: POS core (menu/cart/checkout/receipt + Playwright smoke green)
-  - Phase 3 in progress on `feature/web-back-office`: 3a inventory, 3b menu, 3c reports, 3d users done; admin e2e 5/6 green (staff-create blocked, see Blocked)
+  - Phase 3 done on `feature/web-back-office`: 3a inventory, 3b menu, 3c reports, 3d users; admin e2e 6/6 + pos smoke green (7/7 total) against dev Supabase
   - Remaining phases:
   1. **Phase 3 — Back office:** unblock staff-create e2e (deploy `create-user`), merge
   2. **Phase 4 — Cutover:** parity check vs Expo, flip baseline to web, archive Expo track
@@ -46,7 +46,7 @@ Per `docs/future-plans.md` sequencing:
 
 ## Blocked
 
-- `create-user` edge function not deployed on dev project `ccqoegnvzancptqhmyoc` (direct invoke returns 404 `NOT_FOUND`; mobile user creation is equally affected). Web 3d code is complete and surfaces the failure cleanly; e2e staff-create test stays red until deploy. Remediation: `supabase functions deploy create-user` (needs explicit approval + CLI auth), then re-run `test:e2e`.
+- (none — `create-user` deployed 2026-09-11; staff-create e2e green after deploy)
 
 ## Decisions Made
 

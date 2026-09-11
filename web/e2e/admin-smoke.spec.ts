@@ -143,6 +143,10 @@ test('staff create, disable, and disabled login', async ({ page }) => {
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Create account' }).click();
+  // The action confirms via notice; a full reload re-reads the staff list
+  // deterministically (avoids router-cache timing on the dev server).
+  await expect(page.getByText('Account created.')).toBeVisible();
+  await page.reload();
   await expect(page.getByText(email)).toBeVisible();
 
   await page
@@ -164,5 +168,7 @@ test('staff create, disable, and disabled login', async ({ page }) => {
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/error=account_disabled/);
-  await expect(page.getByRole('alert')).toContainText('disabled');
+  await expect(
+    page.getByText('This account is disabled. Ask an admin to check it.'),
+  ).toBeVisible();
 });
