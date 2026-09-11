@@ -22,6 +22,10 @@ import { useCategories } from '@/hooks/useCategories';
 import { useAuth } from '@/context/AuthContext';
 import { toErrorMessage } from '@/services/errors';
 import { uploadProductImage } from '@/api/storageApi';
+import {
+  getInventoryByProduct,
+  updateParLevelByProduct,
+} from '@/api/reorderApi';
 import { colors } from '@/theme';
 import { MenuManagementStackParamList } from '@/features/admin/menu-management/MenuManagementNavigator';
 import { useMenuManagement } from '@/features/admin/menu-management/hooks/useMenuManagement';
@@ -56,6 +60,7 @@ export function AddEditMenuItem({
     product ? String(product.price) : '',
   );
   const [isAvailable, setIsAvailable] = useState(product?.is_available ?? true);
+  const [parText, setParText] = useState('');
   const imageUrl = product?.image_url ?? null;
   const [pickedImage, setPickedImage] = useState<PickedImage | null>(null);
   const [imageRemoved, setImageRemoved] = useState(false);
@@ -70,14 +75,34 @@ export function AddEditMenuItem({
     }, [loadCategories]),
   );
 
+  // Par level lives on the inventory row (not the product row). New products
+  // have no inventory row yet, so the field only appears when editing.
+  useFocusEffect(
+    useCallback(() => {
+      if (!product) return;
+      getInventoryByProduct(product.product_id)
+        .then((row) => {
+          if (row?.par_level !== null && row?.par_level !== undefined) {
+            setParText(String(row.par_level));
+          }
+        })
+        .catch(() => {
+          // Par prefill is best-effort; the field stays editable.
+        });
+    }, [product]),
+  );
+
   const price = parseFloat(priceText);
+  const par = parText.trim() === '' ? null : Number(parText);
+  const parIsValid = par === null || (Number.isInteger(par) && par >= 0);
   const formIsValid = useMemo(
     () =>
       name.trim().length > 0 &&
       categoryId.trim().length > 0 &&
       Number.isFinite(price) &&
-      price >= 0,
-    [name, categoryId, price],
+      price >= 0 &&
+      parIsValid,
+    [name, categoryId, price, parIsValid],
   );
 
   if (role !== 'admin') {
@@ -118,6 +143,7 @@ export function AddEditMenuItem({
       };
       if (isEditing && product) {
         await updateProduct(product.product_id, payload);
+        await updateParLevelByProduct(product.product_id, par);
       } else {
         await createProduct(payload);
       }
@@ -203,6 +229,16 @@ export function AddEditMenuItem({
               keyboardType="decimal-pad"
               style={addEditMenuItemStyles.fieldSpacing}
             />
+            {isEditing ? (
+              <InputField
+                label="Par level (optional)"
+                value={parText}
+                onChangeText={setParText}
+                keyboardType="number-pad"
+                placeholder="Unset"
+                style={addEditMenuItemStyles.fieldSpacing}
+              />
+            ) : null}
 
             <Text style={addEditMenuItemStyles.sectionLabel}>Availability</Text>
             <View style={addEditMenuItemStyles.availabilityRow}>
