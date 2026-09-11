@@ -21,6 +21,7 @@
 - Automatic restock tracking (2026-09-11): `0008_reorder_tracking.sql` (`par_level`, `reorder_requests`, low-stock trigger, admin-only RLS — 14/14 probes green); web `/admin/restock` + print; mobile `Restock` screen + PDF share; `par_level` editing (mobile product form, web inline); demo seed pars
 - Web migration Phase 2: POS core on web (2026-09-11) — menu → session cart → `process_sale` checkout (cash/GCash/Maya) → receipt + browser print; `/pos` open to cashier+admin via `requireStaff`; Playwright smoke (cashier cash sale, stock deducts, receipt renders) green against dev Supabase; 30/30 vitest green
 - Web migration Phase 3 (2026-09-11, on `feature/web-back-office` stacked on Phase 2 branch): 3a inventory list + `adjust_stock` stock-in; 3b menu/category CRUD + photo upload to `product-images` + auto inventory row on create (fixes Expo gap); 3c admin dashboard (SVG chart, low-stock, top-5) + filtered reports (Manila-day bucketing, voided excluded); 3d user list + `set_user_active` toggle + web enforces `is_active=false` at sign-in/session (Expo leaves it unenforced); 48/48 vitest green
+- Line-ending normalization (2026-09-11): committed root `.gitattributes` (`* text=auto eol=lf`, `*.{cmd,bat}` kept CRLF, image/archive binaries excluded) — no pos-template predecessor existed; repo has no tracked files needing CRLF. Verified on a Windows checkout: working tree renormalized LF-only with zero content change, `typecheck`/`lint`/`build` green (`lint` went from 13573 `Delete ␍` errors to 0)
 
 ## In Progress
 
@@ -43,6 +44,8 @@
   (`chk_reorder_cancel_reason`, ordered-only receive). Bring the mobile
   screen to parity: received-qty input + `adjust_stock` via transport,
   cancel-reason prompt mirroring the void-reason pattern.
+
+- **Prettier drift (pre-existing on dev, found 2026-09-11):** `web/src/features/pos/actions.ts` + `web/src/features/pos/checkout.ts` fail root `prettier --check` (3.9.6; committed under web Phase 2 with 3.6.2-era formatting — HEAD blobs fail identically, so unrelated to line endings). Fix via `npx prettier --write` on those 2 files in a `style(web)` commit.
 
 Per `docs/future-plans.md` sequencing:
 
