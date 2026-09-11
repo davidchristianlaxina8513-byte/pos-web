@@ -12,6 +12,7 @@ interface UserRow {
   user_id: string;
   username: string;
   role: unknown;
+  is_active: unknown;
 }
 
 /**
@@ -27,12 +28,12 @@ export async function getSessionProfile(): Promise<SessionProfile | null> {
   const { data: authData } = await supabase.auth.getUser();
   const { data } = await supabase
     .from('user')
-    .select('user_id, username, role')
+    .select('user_id, username, role, is_active')
     .eq('user_id', userId)
     .maybeSingle();
   const row = data as UserRow | null;
   const role = parseRole(row?.role);
-  if (!row || !role) return null;
+  if (!row || !role || row.is_active === false) return null;
   return { userId: row.user_id, email: authData.user?.email ?? '', role };
 }
 

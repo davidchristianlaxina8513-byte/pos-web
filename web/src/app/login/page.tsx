@@ -7,6 +7,7 @@ const ERRORS: Record<string, string> = {
   missing_credentials: 'Enter your email and password.',
   invalid_credentials: 'Sign-in failed. Check your details and try again.',
   unknown_role: 'This account has no staff role. Ask an admin to check it.',
+  account_disabled: 'This account is disabled. Ask an admin to check it.',
 };
 
 export default async function LoginPage({
