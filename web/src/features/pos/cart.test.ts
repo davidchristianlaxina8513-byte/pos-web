@@ -18,7 +18,14 @@ function menuItem(overrides: Partial<MenuItem> = {}): MenuItem {
 }
 
 function line(overrides: Partial<CartLine> = {}): CartLine {
-  return { product_id: 1, name: 'Latte', price: 120, qty: 1, ...overrides };
+  return {
+    product_id: 1,
+    name: 'Latte',
+    price: 120,
+    qty: 1,
+    image_url: null,
+    ...overrides,
+  };
 }
 
 test('add pushes a new line, then bumps qty', () => {

@@ -94,8 +94,14 @@ test('isSellable requires availability and on-hand stock', () => {
 test('cartTotal sums price times qty', () => {
   expect(
     cartTotal([
-      { product_id: 1, name: 'Latte', price: 120, qty: 2 },
-      { product_id: 2, name: 'Muffin', price: 65.5, qty: 1 },
+      { product_id: 1, name: 'Latte', price: 120, qty: 2, image_url: null },
+      {
+        product_id: 2,
+        name: 'Muffin',
+        price: 65.5,
+        qty: 1,
+        image_url: null,
+      },
     ]),
   ).toBeCloseTo(305.5, 5);
   expect(cartTotal([])).toBe(0);

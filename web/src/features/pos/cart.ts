@@ -13,6 +13,7 @@ function toLine(item: MenuItem): CartLine {
     name: item.name,
     price: item.price,
     qty: 1,
+    image_url: item.image_url,
   };
 }
 

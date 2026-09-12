@@ -3,8 +3,8 @@ import { parsePaymentMode, validateCheckout } from './checkout';
 import type { CartLine } from './types';
 
 const LINES: CartLine[] = [
-  { product_id: 1, name: 'Latte', price: 120, qty: 2 },
-  { product_id: 2, name: 'Muffin', price: 65.5, qty: 1 },
+  { product_id: 1, name: 'Latte', price: 120, qty: 2, image_url: null },
+  { product_id: 2, name: 'Muffin', price: 65.5, qty: 1, image_url: null },
 ];
 
 test('parsePaymentMode accepts the three modes only', () => {
@@ -66,7 +66,7 @@ test('empty cart and bad quantities fail', () => {
   });
   expect(
     validateCheckout(
-      [{ product_id: 1, name: 'Latte', price: 120, qty: 0 }],
+      [{ product_id: 1, name: 'Latte', price: 120, qty: 0, image_url: null }],
       'gcash',
       null,
     ),

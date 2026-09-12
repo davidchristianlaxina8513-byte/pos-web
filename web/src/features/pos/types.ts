@@ -40,6 +40,8 @@ export interface CartLine {
   name: string;
   price: number;
   qty: number;
+  /** Carried for thumbnails in checkout rows; never sent to the RPC. */
+  image_url: string | null;
 }
 
 /** Running total, mirroring Expo `CartContext` (`price × qty` summed). */
