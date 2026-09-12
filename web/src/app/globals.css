@@ -17,4 +17,21 @@
   --color-muted: #6b6b6b;
   --color-border: #e0e0e0;
   --color-icon-circle: #e8f0e3;
+
+  /* Design v2 (Figma mockups, sampled): forest-green + sage + cream
+   * system. Additive only — legacy tokens above stay untouched until
+   * Phases B/C migrate the remaining screens. */
+  --color-pine: #3a5a39;
+  --color-pine-deep: #2e4a2d;
+  --color-leaf: #4c8a52;
+  --color-sage-100: #e7ede0;
+  --color-sage-200: #d5e0cb;
+  --color-sage-300: #b9cbae;
+  --color-mist: #eff0f6;
+  --color-peri: #e2e5fa;
+  --color-mint: #c2e5c9;
+
+  --radius-card: 20px;
+
+  --shadow-soft: 0 10px 30px rgb(31 51 32 / 0.1);
 }
