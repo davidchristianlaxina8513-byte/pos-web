@@ -12,6 +12,7 @@ import {
   BoxIcon,
   ChartIcon,
   CupIcon,
+  GearIcon,
   ReceiptIcon,
   SignOutIcon,
 } from '@/components/common/icons';
@@ -40,6 +41,12 @@ const TILES = [
     label: 'Menu',
     sub: 'Products & categories',
     icon: <CupIcon />,
+  },
+  {
+    href: '/admin/settings',
+    label: 'Settings',
+    sub: 'Profile & preferences',
+    icon: <GearIcon />,
   },
 ];
 
