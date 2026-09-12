@@ -119,6 +119,8 @@ test('restock queue: pending to ordered to received bumps inventory', async ({
   const card = testCard(page);
   await expect(card).toHaveCount(1);
   await expect(card.getByText('pending', { exact: true })).toBeVisible();
+  // Zeroed shelf → critical severity badge beside the status badge.
+  await expect(card.getByText('Critical', { exact: true })).toBeVisible();
 
   await card.getByRole('button', { name: 'Mark ordered' }).click();
   await expect(card.getByText('ordered', { exact: true })).toBeVisible();
@@ -157,6 +159,7 @@ test('restock print list groups the open queue by supplier', async ({
     'section[aria-label="Supplier print list"]',
   );
   await expect(printSection).toContainText('Cafe Elvira');
+  await expect(printSection).toContainText('Urgent — Out of Stock');
   await expect(printSection).toContainText('Latte');
   await expect(printSection).toContainText(`order ${TEST_PAR}`);
 
