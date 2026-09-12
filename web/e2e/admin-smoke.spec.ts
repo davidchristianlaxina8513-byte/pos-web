@@ -80,6 +80,7 @@ test('admin hub renders dashboard metrics and nav', async ({ page }) => {
     'Inventory',
     'Analytics',
     'Menu',
+    'Settings',
     'Users',
   ]) {
     await expect(page.getByRole('link', { name: label })).toBeVisible();
@@ -140,6 +141,20 @@ test('reports render summaries', async ({ page }) => {
   await page.getByRole('link', { name: '7 days' }).click();
   await expect(page).toHaveURL(/preset=7d/);
   await expect(page.getByText(/Revenue: ₱/)).toBeVisible();
+});
+
+test('settings shows sections and links to user management', async ({
+  page,
+}) => {
+  await signInAsAdmin(page);
+  await page.goto('/admin/settings');
+  await expect(page.getByText('Personal information')).toBeVisible();
+  await expect(page.getByText('Security & password')).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Preferences' }),
+  ).toBeVisible();
+  await page.getByRole('link', { name: 'User management' }).click();
+  await expect(page).toHaveURL(/\/admin\/users$/);
 });
 
 test('staff create, disable, and disabled login', async ({ page }) => {
