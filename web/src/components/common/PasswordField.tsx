@@ -9,13 +9,17 @@ export type PasswordFieldProps = Omit<FieldProps, 'type' | 'endSlot'> & {
 };
 
 /** Password input with a show/hide toggle in the trailing slot. */
-export function PasswordField({ name, ...props }: PasswordFieldProps) {
+export function PasswordField({
+  name,
+  autoComplete = 'current-password',
+  ...props
+}: PasswordFieldProps) {
   const [visible, setVisible] = useState(false);
   return (
     <Field
       name={name}
       type={visible ? 'text' : 'password'}
-      autoComplete="current-password"
+      autoComplete={autoComplete}
       endSlot={
         <button
           type="button"
