@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import {
   byUrgency,
   parseRestockStatus,
+  severityForRestock,
   statusesForFilter,
   type RestockFilter,
   type RestockRow,
@@ -83,4 +84,20 @@ export async function getOpenRestockCount(): Promise<number> {
     .in('status', ['pending', 'ordered']);
   if (error) throw error;
   return count ?? 0;
+}
+
+/**
+ * Actionable requests split by severity (derived from snapshots, same as
+ * the queue badges). Cheap single read, no migration.
+ */
+export async function getOpenRestockCounts(): Promise<{
+  critical: number;
+  low: number;
+}> {
+  const rows = await getRestockRequests('open');
+  let critical = 0;
+  for (const row of rows) {
+    if (severityForRestock(row) === 'critical') critical += 1;
+  }
+  return { critical, low: rows.length - critical };
 }
