@@ -42,7 +42,7 @@ export function SalesChart({ data }: SalesChartProps) {
               width={BAR_WIDTH}
               height={barHeight}
               rx={4}
-              fill="#364C35"
+              fill="#3A5A39"
             />
             <text
               x={x + BAR_WIDTH / 2}

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/common/Button';
+import { SearchIcon } from '@/components/common/icons';
 import { cn } from '@/lib/cn';
 import { STOCK_LABELS, type StockStatus } from '../status';
 import type { InventoryItem } from '../queries';
@@ -14,12 +15,12 @@ export interface InventoryListProps {
 type Filter = 'all' | 'low' | 'critical';
 
 const BADGE: Record<StockStatus, string> = {
-  ok: 'bg-success text-surface',
+  ok: 'bg-leaf text-surface',
   low: 'bg-warning text-surface',
   critical: 'bg-danger text-surface',
 };
 
-/** Filterable stock list with per-row stock-in links. */
+/** v2 filterable stock list with per-row stock-in links. */
 export function InventoryList({ items }: InventoryListProps) {
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
@@ -42,48 +43,61 @@ export function InventoryList({ items }: InventoryListProps) {
   );
   return (
     <div>
-      <div className="flex flex-wrap gap-2">
+      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
         {(['all', 'low', 'critical'] as Filter[]).map((value) => (
           <Button
             key={value}
             variant={filter === value ? 'primary' : 'secondary'}
             size="sm"
+            className={cn(
+              'shrink-0 rounded-full px-4 py-2',
+              filter === value
+                ? 'border-transparent bg-pine text-surface'
+                : 'border-border',
+            )}
             onClick={() => setFilter(value)}
           >
             {value === 'all' ? 'All' : STOCK_LABELS[value]}
           </Button>
         ))}
       </div>
-      <label className="mt-3 block">
-        <span className="text-muted">Search inventory</span>
+      <label className="relative mt-3 block">
+        <span className="sr-only">Search inventory</span>
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted"
+        >
+          <SearchIcon />
+        </span>
         <input
           type="search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search by product"
-          className="mt-1 block w-full rounded border border-border bg-surface px-3 py-2 text-foreground"
+          className="block h-[52px] w-full rounded-full border border-border bg-surface pr-4 pl-11 text-foreground shadow-soft placeholder:text-muted"
         />
       </label>
       {visible.length === 0 ? (
-        <p className="mt-4 text-muted">No items match.</p>
+        <p className="mt-6 text-center text-sm text-muted">No items match.</p>
       ) : (
-        <ul className="mt-4 grid gap-3">
+        <ul className="mt-4 flex flex-col gap-3">
           {visible.map((item) => (
             <li
               key={item.stock_id}
-              className="flex items-center justify-between gap-3 rounded border border-border bg-surface px-4 py-3"
+              className="flex items-center gap-3 rounded-card border border-border bg-surface p-3 shadow-soft"
             >
-              <div>
-                <p className="text-foreground">{item.product_name}</p>
-                <p className="text-muted">{item.product_category}</p>
-                <p className="text-foreground">On hand: {item.quantity}</p>
-                <p className="text-muted">
-                  Reorder at: {item.reorder_level}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[15px] font-bold text-foreground">
+                  {item.product_name}
+                </p>
+                <p className="text-sm text-muted">
+                  {item.product_category} · On hand: {item.quantity} · Reorder
+                  at: {item.reorder_level}
                   {item.par_level !== null ? ` · Par: ${item.par_level}` : null}
                 </p>
                 <span
                   className={cn(
-                    'mt-1 inline-block rounded px-2 py-0.5',
+                    'mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-bold',
                     BADGE[item.status],
                   )}
                 >
@@ -92,7 +106,7 @@ export function InventoryList({ items }: InventoryListProps) {
               </div>
               <Link
                 href={`/admin/inventory/stock-in/${item.stock_id}`}
-                className="rounded bg-primary px-3 py-1 font-medium text-surface"
+                className="flex h-11 shrink-0 items-center rounded-full bg-pine px-4 text-sm font-semibold text-surface"
               >
                 Stock In
               </Link>
