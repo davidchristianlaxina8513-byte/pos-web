@@ -74,7 +74,14 @@ test('admin hub renders dashboard metrics and nav', async ({ page }) => {
   await expect(page.getByText(/Total revenue: ₱/)).toBeVisible();
   await expect(page.getByText(/Total orders: \d+/)).toBeVisible();
   await expect(page.getByRole('img', { name: 'Revenue by day' })).toBeVisible();
-  for (const label of ['POS', 'Inventory', 'Menu', 'Reports', 'Users']) {
+  for (const label of [
+    'Register',
+    'Orders',
+    'Inventory',
+    'Analytics',
+    'Menu',
+    'Users',
+  ]) {
     await expect(page.getByRole('link', { name: label })).toBeVisible();
   }
 });
