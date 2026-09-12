@@ -2,7 +2,10 @@ import Link from 'next/link';
 import { requireRole } from '@/features/auth/queries';
 import { signOut } from '@/features/auth/actions';
 import { getDashboard } from '@/features/reports/queries';
-import { getOpenRestockCount } from '@/features/restock/queries';
+import {
+  getOpenRestockCount,
+  getOpenRestockCounts,
+} from '@/features/restock/queries';
 import { SalesChart } from '@/features/reports/components/SalesChart';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
@@ -19,9 +22,10 @@ const NAV = [
 /** Admin hub: metrics, weekly chart, low stock, top products. */
 export default async function AdminPage() {
   const profile = await requireRole('admin');
-  const [dashboard, openRestockCount] = await Promise.all([
+  const [dashboard, openRestockCount, severityCounts] = await Promise.all([
     getDashboard(),
     getOpenRestockCount(),
+    getOpenRestockCounts(),
   ]);
   return (
     <main className="bg-background text-foreground">
@@ -75,7 +79,8 @@ export default async function AdminPage() {
           {openRestockCount > 0 ? (
             <p className="mt-2">
               <Link href="/admin/restock" className="font-medium">
-                Open restock requests: {openRestockCount}
+                Open restock requests: {openRestockCount} (
+                {severityCounts.critical} critical, {severityCounts.low} low)
               </Link>
             </p>
           ) : null}
