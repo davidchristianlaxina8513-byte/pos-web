@@ -63,8 +63,8 @@ test('pos smoke: cash sale deducts stock and renders a receipt', async ({
 }) => {
   await page.goto('/login');
   await page.getByLabel('Email').fill(CASHIER_EMAIL);
-  await page.getByLabel('Password').fill(CASHIER_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByLabel('Password', { exact: true }).fill(CASHIER_PASSWORD);
+  await page.getByRole('button', { name: 'Log In' }).click();
   await expect(page).toHaveURL(/\/pos$/);
 
   const addButton = page.getByRole('button', { name: /^Add / }).first();
@@ -77,9 +77,13 @@ test('pos smoke: cash sale deducts stock and renders a receipt', async ({
   const stockBefore = await stockFor(productId);
   expect(stockBefore).toBeGreaterThanOrEqual(SALE_QTY);
 
-  for (let i = 0; i < SALE_QTY; i += 1) {
-    await addButton.click();
-  }
+  // v2 cards swap the add tile for a stepper after the first unit, so the
+  // second unit goes through the stepper (same cart reducer path).
+  await addButton.click();
+  await page
+    .getByRole('button', { name: `Increase ${itemName}` })
+    .first()
+    .click();
   const totalText = (await page.getByText(/^Total: ₱/).textContent()) ?? '';
   const total = Number(totalText.replace(/^Total: ₱/, ''));
   expect(Number.isFinite(total) && total > 0).toBe(true);
@@ -87,7 +91,7 @@ test('pos smoke: cash sale deducts stock and renders a receipt', async ({
   await page.getByRole('button', { name: 'Checkout' }).click();
   await expect(page.getByRole('dialog', { name: 'Checkout' })).toBeVisible();
   await page.getByLabel('Amount received').fill(String(total + 100));
-  await page.getByRole('button', { name: 'Confirm sale' }).click();
+  await page.getByRole('button', { name: 'Process Checkout' }).click();
 
   await expect(page).toHaveURL(/\/pos\/receipt\//);
   await expect(page.getByText(/Order #\d+/)).toBeVisible();

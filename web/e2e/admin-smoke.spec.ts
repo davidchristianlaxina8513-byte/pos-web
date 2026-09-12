@@ -64,8 +64,8 @@ async function productIdByName(name: string): Promise<number> {
 async function signInAsAdmin(page: Page): Promise<void> {
   await page.goto('/login');
   await page.getByLabel('Email').fill(ADMIN_EMAIL);
-  await page.getByLabel('Password').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByLabel('Password', { exact: true }).fill(ADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Log In' }).click();
   await expect(page).toHaveURL(/\/admin$/);
 }
 
@@ -82,8 +82,8 @@ test('admin hub renders dashboard metrics and nav', async ({ page }) => {
 test('cashier cannot reach admin pages', async ({ page }) => {
   await page.goto('/login');
   await page.getByLabel('Email').fill('cashier@elvira.cafe');
-  await page.getByLabel('Password').fill('cashier123');
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByLabel('Password', { exact: true }).fill('cashier123');
+  await page.getByRole('button', { name: 'Log In' }).click();
   await expect(page).toHaveURL(/\/pos$/);
   await page.goto('/admin/inventory');
   await expect(page).toHaveURL(/\/pos$/);
@@ -141,7 +141,7 @@ test('staff create, disable, and disabled login', async ({ page }) => {
   const password = 'e2e-secret-1';
   await page.goto('/admin/users');
   await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password').fill(password);
+  await page.getByLabel('Password', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Create account' }).click();
   // The action confirms via notice; a full reload re-reads the staff list
   // deterministically (avoids router-cache timing on the dev server).
@@ -165,8 +165,8 @@ test('staff create, disable, and disabled login', async ({ page }) => {
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page).toHaveURL(/\/login$/);
   await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password').fill(password);
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByLabel('Password', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Log In' }).click();
   await expect(page).toHaveURL(/error=account_disabled/);
   await expect(
     page.getByText('This account is disabled. Ask an admin to check it.'),

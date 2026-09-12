@@ -90,8 +90,8 @@ async function forceLowStock(): Promise<{ stockId: number }> {
 async function signInAsAdmin(page: Page): Promise<void> {
   await page.goto('/login');
   await page.getByLabel('Email').fill(ADMIN_EMAIL);
-  await page.getByLabel('Password').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByLabel('Password', { exact: true }).fill(ADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Log In' }).click();
   // Generous timeout: the first navigation cold-compiles the admin routes.
   await expect(page).toHaveURL(/\/admin$/, { timeout: 30_000 });
 }
@@ -200,8 +200,8 @@ test('restock cancel requires a reason and lands in Cancelled', async ({
 test('cashier cannot reach the restock page', async ({ page }) => {
   await page.goto('/login');
   await page.getByLabel('Email').fill('cashier@elvira.cafe');
-  await page.getByLabel('Password').fill('cashier123');
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByLabel('Password', { exact: true }).fill('cashier123');
+  await page.getByRole('button', { name: 'Log In' }).click();
   await expect(page).toHaveURL(/\/pos$/);
   await page.goto('/admin/restock');
   await expect(page).toHaveURL(/\/pos$/);
