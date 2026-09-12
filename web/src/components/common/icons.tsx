@@ -153,3 +153,58 @@ export function LeafMark({ className }: { className?: string }) {
     </Base>
   );
 }
+
+export function ReceiptIcon({ className }: { className?: string }) {
+  return (
+    <Base className={className}>
+      <path d="M6 3h12v18l-2-1.5L14 21l-2-1.5L10 21l-2-1.5L6 21V3Z" />
+      <path d="M9 8h6M9 12h6" />
+    </Base>
+  );
+}
+
+export function BoxIcon({ className }: { className?: string }) {
+  return (
+    <Base className={className}>
+      <path d="M3 8l9-4 9 4v8l-9 4-9-4V8Z" />
+      <path d="M3 8l9 4 9-4M12 12v8" />
+    </Base>
+  );
+}
+
+export function ChartIcon({ className }: { className?: string }) {
+  return (
+    <Base className={className}>
+      <path d="M4 20V4" />
+      <path d="M4 20h16" />
+      <path d="M8 16v-5M12 16V8M16 16v-3M20 16V6" />
+    </Base>
+  );
+}
+
+export function CupIcon({ className }: { className?: string }) {
+  return (
+    <Base className={className}>
+      <path d="M5 9h11v6a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5V9Z" />
+      <path d="M16 10h2a2.5 2.5 0 0 1 0 5h-2M7 5.5c0-1 .8-1 .8-2M11 5.5c0-1 .8-1 .8-2" />
+    </Base>
+  );
+}
+
+export function GearIcon({ className }: { className?: string }) {
+  return (
+    <Base className={className}>
+      <circle cx="12" cy="12" r="3.2" />
+      <path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M18.5 5.5l-2.1 2.1M7.6 16.4l-2.1 2.1" />
+    </Base>
+  );
+}
+
+export function CycleIcon({ className }: { className?: string }) {
+  return (
+    <Base className={className}>
+      <path d="M20 12a8 8 0 0 1-14.2 5M4 12a8 8 0 0 1 14.2-5" />
+      <path d="M18 3v4h-4M6 21v-4h4" />
+    </Base>
+  );
+}
