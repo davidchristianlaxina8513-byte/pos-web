@@ -15,7 +15,10 @@ import {
 } from '../actions';
 import {
   groupBySupplier,
+  SEVERITY_LABELS,
+  severityForRestock,
   type RestockRow,
+  type RestockSeverity,
   type RestockStatus,
 } from '../restock';
 
@@ -30,6 +33,12 @@ const BADGE: Record<RestockStatus, string> = {
   cancelled: 'bg-disabled text-foreground',
 };
 
+/** Severity colors mirror the inventory list (critical → danger). */
+const SEVERITY_BADGE: Record<RestockSeverity, string> = {
+  critical: 'bg-danger text-surface',
+  low: 'bg-warning text-surface',
+};
+
 function formatManila(value: string | null): string | null {
   if (!value) return null;
   return new Date(value).toLocaleString('en-PH', {
@@ -41,6 +50,7 @@ function formatManila(value: string | null): string | null {
 
 function RestockCard({ row }: { row: RestockRow }) {
   const router = useRouter();
+  const severity = severityForRestock(row);
   const [quantityText, setQuantityText] = useState(
     String(row.suggested_quantity),
   );
@@ -90,8 +100,20 @@ function RestockCard({ row }: { row: RestockRow }) {
     <Card
       title={row.product_name}
       actions={
-        <span className={cn('rounded px-2 py-0.5 text-sm', BADGE[row.status])}>
-          {row.status}
+        <span className="flex gap-1">
+          <span
+            className={cn(
+              'rounded px-2 py-0.5 text-sm',
+              SEVERITY_BADGE[severity],
+            )}
+          >
+            {SEVERITY_LABELS[severity]}
+          </span>
+          <span
+            className={cn('rounded px-2 py-0.5 text-sm', BADGE[row.status])}
+          >
+            {row.status}
+          </span>
         </span>
       }
     >

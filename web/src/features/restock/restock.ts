@@ -2,6 +2,7 @@
  * Pure restock shapes + helpers (no server imports — safe for client
  * components and unit tests). Database reads live in `./queries`.
  */
+import { getStockStatus } from '../inventory/status';
 
 export type RestockStatus = 'pending' | 'ordered' | 'received' | 'cancelled';
 
@@ -54,11 +55,44 @@ export function statusesForFilter(filter: RestockFilter): RestockStatus[] {
 
 /** Most urgent first: pending before ordered, then oldest request first. */
 export function byUrgency(a: RestockRow, b: RestockRow): number {
-  if (a.status !== b.status) {
-    return a.status === 'pending' ? -1 : 1;
-  }
+  const severityRank = severityForRestock(a) === 'critical' ? 0 : 1;
+  const otherSeverityRank = severityForRestock(b) === 'critical' ? 0 : 1;
+  if (severityRank !== otherSeverityRank)
+    return severityRank - otherSeverityRank;
+  const statusRank = STATUS_RANK[a.status] - STATUS_RANK[b.status];
+  if (statusRank !== 0) return statusRank;
   return a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0;
 }
+
+/** Severity of a request, derived from its snapshots — never stored. */
+export type RestockSeverity = 'critical' | 'low';
+
+export const SEVERITY_LABELS: Record<RestockSeverity, string> = {
+  critical: 'Critical',
+  low: 'Low',
+};
+
+/**
+ * Classifies a request with the same `getStockStatus` math the inventory
+ * list uses (single source of truth — no second threshold concept). An
+ * open request whose stock recovered above its reorder point still needs
+ * an admin to close it, so the unactionable `ok` outcome displays as Low.
+ */
+export function severityForRestock(row: RestockRow): RestockSeverity {
+  return getStockStatus(
+    row.current_stock_snapshot,
+    row.reorder_point_snapshot,
+  ) === 'critical'
+    ? 'critical'
+    : 'low';
+}
+
+const STATUS_RANK: Record<RestockStatus, number> = {
+  pending: 0,
+  ordered: 1,
+  received: 2,
+  cancelled: 3,
+};
 
 /** Groups rows by supplier for the printable list; null/blank → 'Unassigned'. */
 export function groupBySupplier(
@@ -75,6 +109,31 @@ export function groupBySupplier(
     supplier,
     rows: groupRows,
   }));
+}
+
+export interface PrintSection {
+  title: string;
+  groups: { supplier: string; rows: RestockRow[] }[];
+}
+
+/**
+ * Printable supplier handoff: critical items in their own labeled section
+ * first, then low items — supplier-grouped within each severity.
+ */
+export function groupPrintSections(rows: RestockRow[]): PrintSection[] {
+  const critical = rows.filter((row) => severityForRestock(row) === 'critical');
+  const low = rows.filter((row) => severityForRestock(row) !== 'critical');
+  const sections: PrintSection[] = [];
+  if (critical.length > 0) {
+    sections.push({
+      title: 'Urgent — Out of Stock',
+      groups: groupBySupplier(critical),
+    });
+  }
+  if (low.length > 0) {
+    sections.push({ title: 'Low Stock', groups: groupBySupplier(low) });
+  }
+  return sections;
 }
 
 /**

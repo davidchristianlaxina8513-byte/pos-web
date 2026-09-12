@@ -7,7 +7,7 @@ import {
   getRestockRequests,
 } from '@/features/restock/queries';
 import {
-  groupBySupplier,
+  groupPrintSections,
   parseRestockFilter,
   type RestockFilter,
 } from '@/features/restock/restock';
@@ -48,7 +48,7 @@ export default async function RestockPage({
   // The supplier handoff always covers the actionable set, whatever tab
   // is on screen.
   const printable = filter === 'open' ? requests : (openRequests ?? []);
-  const groups = groupBySupplier(printable);
+  const sections = groupPrintSections(printable);
   const query = (value: RestockFilter) => `/admin/restock?status=${value}`;
   return (
     <main className="bg-background text-foreground">
@@ -102,21 +102,34 @@ export default async function RestockPage({
         <p>
           {formatManilaDay(new Date())} · {printable.length} open requests
         </p>
-        {groups.length === 0 ? (
+        {sections.length === 0 ? (
           <p>Nothing to order.</p>
         ) : (
-          groups.map((group) => (
-            <section key={group.supplier}>
-              <h2>{group.supplier}</h2>
-              <ul>
-                {group.rows.map((row) => (
-                  <li key={row.request_id}>
-                    {row.product_name} — order {row.suggested_quantity} (on hand{' '}
-                    {row.current_stock_snapshot}, reorder at{' '}
-                    {row.reorder_point_snapshot}, par {row.par_level_snapshot})
-                  </li>
-                ))}
-              </ul>
+          sections.map((section) => (
+            <section key={section.title}>
+              <h2>
+                {section.title} (
+                {section.groups.reduce(
+                  (sum, group) => sum + group.rows.length,
+                  0,
+                )}{' '}
+                items)
+              </h2>
+              {section.groups.map((group) => (
+                <section key={group.supplier}>
+                  <h3>{group.supplier}</h3>
+                  <ul>
+                    {group.rows.map((row) => (
+                      <li key={row.request_id}>
+                        {row.product_name} — order {row.suggested_quantity} (on
+                        hand {row.current_stock_snapshot}, reorder at{' '}
+                        {row.reorder_point_snapshot}, par{' '}
+                        {row.par_level_snapshot})
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
             </section>
           ))
         )}
