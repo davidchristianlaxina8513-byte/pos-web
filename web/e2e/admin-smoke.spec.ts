@@ -126,6 +126,36 @@ test('mobile drawer opens from the hamburger and navigates', async ({
   await expect(page).toHaveURL(/\/admin$/);
 });
 
+test('avatar links to the role profile page', async ({ page }) => {
+  await signInAsAdmin(page);
+  await page.goto('/pos');
+  await page.getByRole('link', { name: 'View profile' }).click();
+  await expect(page).toHaveURL(/\/admin\/settings$/);
+  await expect(page.getByText('Personal information')).toBeVisible();
+
+  // Admins share the settings page — direct /profile visits redirect.
+  await page.goto('/profile');
+  await expect(page).toHaveURL(/\/admin\/settings$/);
+
+  // Cashiers get the lightweight profile view, never admin settings.
+  await page.goto('/pos');
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await page.getByLabel('Email').fill('cashier@elvira.cafe');
+  await page.getByLabel('Password', { exact: true }).fill('cashier123');
+  await page.getByRole('button', { name: 'Log In' }).click();
+  await expect(page).toHaveURL(/\/pos$/);
+  await page.getByRole('link', { name: 'View profile' }).click();
+  await expect(page).toHaveURL(/\/profile$/);
+  await expect(page.getByLabel('Email')).toHaveValue('cashier@elvira.cafe');
+  await expect(page.getByLabel('Role')).toHaveValue('Cashier');
+  await expect(
+    page.getByRole('button', { name: 'Sign out' }).first(),
+  ).toBeVisible();
+  await page.goto('/admin/settings');
+  await expect(page).toHaveURL(/\/pos$/);
+});
+
 test('cashier cannot reach admin pages', async ({ page }) => {
   await page.goto('/login');
   await page.getByLabel('Email').fill('cashier@elvira.cafe');
