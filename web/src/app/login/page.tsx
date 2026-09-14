@@ -3,12 +3,7 @@ import { LoginHero } from '@/features/auth/components/LoginHero';
 import { Button } from '@/components/common/Button';
 import { Field } from '@/components/common/Field';
 import { PasswordField } from '@/components/common/PasswordField';
-import {
-  ArrowRightIcon,
-  LeafMark,
-  LockIcon,
-  PersonIcon,
-} from '@/components/common/icons';
+import { ArrowRightIcon, LeafMark } from '@/components/common/icons';
 import pkg from '../../../package.json';
 
 const ERRORS: Record<string, string> = {
@@ -21,7 +16,7 @@ const ERRORS: Record<string, string> = {
 const HERO_INPUT =
   'h-[52px] rounded-2xl border-transparent bg-mist px-3.5 text-[15px]';
 
-/** v2 login: illustrated hero, icon fields, pill Log In, version strip. */
+/** v2 login: illustrated hero, plain fields, pill Log In, version strip. */
 export default async function LoginPage({
   searchParams,
 }: {
@@ -64,7 +59,6 @@ export default async function LoginPage({
             placeholder="Enter your email"
             required
             inputClassName={HERO_INPUT}
-            startIcon={<PersonIcon className="h-5 w-5" />}
           />
           <PasswordField
             label="Password"
@@ -72,7 +66,6 @@ export default async function LoginPage({
             placeholder="Enter your password"
             required
             inputClassName={HERO_INPUT}
-            startIcon={<LockIcon className="h-5 w-5" />}
           />
           <Button
             type="submit"
