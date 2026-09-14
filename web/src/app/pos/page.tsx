@@ -17,7 +17,7 @@ export default async function PosPage() {
         profile.role === 'admin' ? (
           <Link
             href="/admin"
-            className="rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold shadow-soft"
+            className="action-focus rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold shadow-soft"
           >
             Dashboard
           </Link>

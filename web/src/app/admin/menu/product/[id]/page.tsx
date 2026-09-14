@@ -28,7 +28,7 @@ export default async function EditProductPage({
       actions={
         <Link
           href="/admin/menu"
-          className="rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold shadow-soft"
+          className="action-focus rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold shadow-soft"
         >
           Back to Menu
         </Link>

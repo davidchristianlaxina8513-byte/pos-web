@@ -9,7 +9,9 @@ import { resolveRange } from '@/features/reports/aggregate';
 import type { ReportPreset } from '@/features/reports/aggregate';
 import { SalesChart } from '@/features/reports/components/SalesChart';
 import { Card } from '@/components/common/Card';
+import { EmptyState } from '@/components/common/EmptyState';
 import { IconTile } from '@/components/common/IconTile';
+import { ChartIcon } from '@/components/common/icons';
 import { StaffShell } from '@/components/layout/staff-shell';
 import { cn } from '@/lib/cn';
 
@@ -49,10 +51,10 @@ export default async function ReportsPage({
             href={query(entry.value)}
             aria-current={preset === entry.value ? 'page' : undefined}
             className={cn(
-              'shrink-0 rounded-full px-4 py-2 text-sm font-semibold',
+              'action-focus shrink-0 rounded-full px-4 py-2 text-sm font-semibold',
               preset === entry.value
                 ? 'bg-pine text-surface'
-                : 'border border-border bg-surface text-foreground',
+                : 'border border-border bg-surface text-foreground hover:bg-mist',
             )}
           >
             {entry.label}
@@ -85,7 +87,7 @@ export default async function ReportsPage({
         </label>
         <button
           type="submit"
-          className="flex h-11 items-center rounded-full bg-pine px-4 text-sm font-semibold text-surface"
+          className="action-focus flex h-11 items-center rounded-full bg-pine px-4 text-sm font-semibold text-surface"
         >
           Apply
         </button>
@@ -142,7 +144,11 @@ export default async function ReportsPage({
           className="rounded-card border-border shadow-soft"
         >
           {top.length === 0 ? (
-            <p className="text-muted">No sales in range.</p>
+            <EmptyState
+              icon={<ChartIcon />}
+              title="No sales in range"
+              sub="Try a wider date range."
+            />
           ) : (
             <ol>
               {top.map((row) => (

@@ -117,7 +117,7 @@ export function UsersManager({ users, currentUserId }: UsersManagerProps) {
           {users.map((user) => (
             <li
               key={user.user_id}
-              className="flex items-center gap-3 rounded-card border border-border bg-surface p-3"
+              className="card-hover flex items-center gap-3 rounded-card border border-border bg-surface p-3"
             >
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[15px] font-bold text-foreground">

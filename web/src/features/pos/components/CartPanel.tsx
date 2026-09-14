@@ -2,8 +2,9 @@
 
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
+import { EmptyState } from '@/components/common/EmptyState';
 import { QtyStepper } from '@/components/common/QtyStepper';
-import { ArrowRightIcon } from '@/components/common/icons';
+import { ArrowRightIcon, CartIcon } from '@/components/common/icons';
 import { cartTotal, type CartLine } from '../types';
 
 export interface CartPanelProps {
@@ -31,9 +32,11 @@ export function CartPanel({
         className="rounded-card border-border shadow-soft"
       >
         {lines.length === 0 ? (
-          <p className="text-sm text-muted">
-            Cart is empty. Add items from the menu.
-          </p>
+          <EmptyState
+            icon={<CartIcon />}
+            title="Cart is empty"
+            sub="Add items from the menu."
+          />
         ) : (
           <ul className="flex flex-col gap-3">
             {lines.map((line) => (

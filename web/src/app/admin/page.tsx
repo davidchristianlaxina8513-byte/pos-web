@@ -7,6 +7,7 @@ import {
 } from '@/features/restock/queries';
 import { SalesChart } from '@/features/reports/components/SalesChart';
 import { Card } from '@/components/common/Card';
+import { EmptyState } from '@/components/common/EmptyState';
 import { IconTile } from '@/components/common/IconTile';
 import {
   ArrowRightIcon,
@@ -70,7 +71,7 @@ export default async function AdminPage() {
       <nav aria-label="Admin sections" className="flex flex-col gap-3">
         <Link
           href="/pos"
-          className="flex items-center gap-3 rounded-card bg-pine p-4 text-surface shadow-soft"
+          className="card-hover action-focus flex items-center gap-3 rounded-card bg-pine p-4 text-surface shadow-soft"
         >
           <IconTile tone="pine" className="border border-surface/30">
             <ReceiptIcon />
@@ -90,7 +91,7 @@ export default async function AdminPage() {
             <Link
               key={tile.label}
               href={tile.href}
-              className="relative flex flex-col gap-2 rounded-card border border-border bg-surface p-4 shadow-soft"
+              className="card-hover action-focus relative flex flex-col gap-2 rounded-card border border-border bg-surface p-4 shadow-soft"
             >
               {tile.label === 'Inventory' && lowCount > 0 ? (
                 <span className="absolute top-3 right-3 rounded-full bg-danger px-2 py-0.5 text-xs font-bold text-surface">
@@ -110,14 +111,14 @@ export default async function AdminPage() {
         <div className="flex flex-wrap gap-2">
           <Link
             href="/admin/restock"
-            className="rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold shadow-soft"
+            className="card-hover action-focus rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold shadow-soft"
           >
             Restock
             {openRestockCount > 0 ? ` (${openRestockCount} open)` : null}
           </Link>
           <Link
             href="/admin/users"
-            className="rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold shadow-soft"
+            className="card-hover action-focus rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold shadow-soft"
           >
             Users
           </Link>
@@ -212,7 +213,11 @@ export default async function AdminPage() {
           className="rounded-card border-border shadow-soft"
         >
           {dashboard.topProducts.length === 0 ? (
-            <p className="text-sm text-muted">No sales yet.</p>
+            <EmptyState
+              icon={<ChartIcon />}
+              title="No sales yet"
+              sub="Completed sales will show up here."
+            />
           ) : (
             <ol className="flex flex-col gap-2">
               {dashboard.topProducts.map((row, index) => (

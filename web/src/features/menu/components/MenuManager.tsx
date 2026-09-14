@@ -5,8 +5,10 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
+import { EmptyState } from '@/components/common/EmptyState';
 import { Field } from '@/components/common/Field';
-import { SearchIcon } from '@/components/common/icons';
+import { IconTile } from '@/components/common/IconTile';
+import { CupIcon, SearchIcon } from '@/components/common/icons';
 import { cn } from '@/lib/cn';
 import { createCategory, deleteCategory } from '../actions';
 import { UNCATEGORIZED } from '../validate';
@@ -85,7 +87,7 @@ export function MenuManager({ categories, items }: MenuManagerProps) {
     <div>
       <Link
         href="/admin/menu/product/new"
-        className="flex h-11 items-center justify-center rounded-full bg-pine px-4 text-sm font-semibold text-surface"
+        className="action-focus flex h-11 items-center justify-center rounded-full bg-pine px-4 text-sm font-semibold text-surface"
       >
         Add product
       </Link>
@@ -97,7 +99,7 @@ export function MenuManager({ categories, items }: MenuManagerProps) {
             'shrink-0 rounded-full px-4 py-2',
             activeCategory === null
               ? 'border-transparent bg-pine text-surface'
-              : 'border-border',
+              : 'border-border hover:bg-mist',
           )}
           onClick={() => setActiveCategory(null)}
         >
@@ -114,7 +116,7 @@ export function MenuManager({ categories, items }: MenuManagerProps) {
               'shrink-0 rounded-full px-4 py-2',
               activeCategory === category.category_id
                 ? 'border-transparent bg-pine text-surface'
-                : 'border-border',
+                : 'border-border hover:bg-mist',
             )}
             onClick={() => setActiveCategory(category.category_id)}
           >
@@ -139,14 +141,21 @@ export function MenuManager({ categories, items }: MenuManagerProps) {
         />
       </label>
       {visible.length === 0 ? (
-        <p className="mt-6 text-center text-sm text-muted">No items match.</p>
+        <EmptyState
+          icon={<SearchIcon />}
+          title="No items match"
+          sub="Try a different search or category."
+        />
       ) : (
         <ul className="mt-4 flex flex-col gap-3">
           {visible.map((item) => (
             <li
               key={item.product_id}
-              className="flex items-center gap-3 rounded-card border border-border bg-surface p-3 shadow-soft"
+              className="card-hover flex items-center gap-3 rounded-card border border-border bg-surface p-3 shadow-soft"
             >
+              <IconTile tone="sage">
+                <CupIcon />
+              </IconTile>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[15px] font-bold text-foreground">
                   {item.name}
@@ -158,7 +167,7 @@ export function MenuManager({ categories, items }: MenuManagerProps) {
               </div>
               <Link
                 href={`/admin/menu/product/${item.product_id}`}
-                className="flex h-11 shrink-0 items-center rounded-full bg-pine px-4 text-sm font-semibold text-surface"
+                className="action-focus flex h-11 shrink-0 items-center rounded-full bg-pine px-4 text-sm font-semibold text-surface"
               >
                 Edit
               </Link>

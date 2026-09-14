@@ -24,7 +24,10 @@ export default async function ReceiptPage({
     <main className="min-h-screen bg-mist text-foreground">
       <div className="mx-auto w-full max-w-md px-4 py-6">
         <div className="print:hidden">
-          <Link href="/pos" className="text-sm font-semibold text-pine-deep">
+          <Link
+            href="/pos"
+            className="action-focus rounded text-sm font-semibold text-pine-deep"
+          >
             Back to POS
           </Link>
         </div>
@@ -129,7 +132,7 @@ export default async function ReceiptPage({
         <div className="mt-6 flex flex-col gap-2 print:hidden">
           <Link
             href="/pos"
-            className="flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-pine text-base font-semibold text-surface shadow-active"
+            className="action-focus flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-pine text-base font-semibold text-surface shadow-active"
           >
             <span aria-hidden="true" className="text-xl leading-none">
               +

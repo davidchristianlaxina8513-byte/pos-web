@@ -56,7 +56,7 @@ export default async function SettingsPage() {
 
         <Link
           href="/admin/users"
-          className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 shadow-soft"
+          className="card-hover action-focus flex items-center gap-3 rounded-card border border-border bg-surface p-4 shadow-soft"
         >
           <IconTile tone="peri">
             <PersonIcon />

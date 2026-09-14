@@ -61,7 +61,7 @@ export default async function ProfilePage() {
         <form action={signOut}>
           <button
             type="submit"
-            className="flex h-[52px] w-full items-center justify-center gap-2 rounded-full border border-border bg-surface text-base font-semibold shadow-soft"
+            className="action-focus flex h-[52px] w-full items-center justify-center gap-2 rounded-full border border-border bg-surface text-base font-semibold shadow-soft"
           >
             <SignOutIcon className="h-4 w-4" />
             Sign out

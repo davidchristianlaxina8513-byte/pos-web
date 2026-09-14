@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/common/Button';
 import { QtyStepper } from '@/components/common/QtyStepper';
+import { EmptyState } from '@/components/common/EmptyState';
 import { CartIcon, SearchIcon, SlidersIcon } from '@/components/common/icons';
 import { cn } from '@/lib/cn';
 import {
@@ -117,7 +118,7 @@ export function MenuGrid({
             'shrink-0 rounded-full px-4 py-2',
             activeCategory === null
               ? 'border-transparent bg-pine text-surface'
-              : 'border-border',
+              : 'border-border hover:bg-mist',
           )}
           onClick={() => setActiveCategory(null)}
         >
@@ -134,7 +135,7 @@ export function MenuGrid({
               'shrink-0 rounded-full px-4 py-2',
               activeCategory === category.category_id
                 ? 'border-transparent bg-pine text-surface'
-                : 'border-border',
+                : 'border-border hover:bg-mist',
             )}
             onClick={() => setActiveCategory(category.category_id)}
           >
@@ -143,7 +144,11 @@ export function MenuGrid({
         ))}
       </div>
       {visible.length === 0 ? (
-        <p className="mt-6 text-center text-sm text-muted">No items match.</p>
+        <EmptyState
+          icon={<SearchIcon />}
+          title="No items match"
+          sub="Try a different search or category."
+        />
       ) : (
         <ul className="mt-4 flex flex-col gap-3">
           {visible.map((item) => {

@@ -3,7 +3,9 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/common/Button';
-import { SearchIcon } from '@/components/common/icons';
+import { EmptyState } from '@/components/common/EmptyState';
+import { IconTile } from '@/components/common/IconTile';
+import { BoxIcon, SearchIcon } from '@/components/common/icons';
 import { cn } from '@/lib/cn';
 import { STOCK_LABELS, type StockStatus } from '../status';
 import type { InventoryItem } from '../queries';
@@ -53,7 +55,7 @@ export function InventoryList({ items }: InventoryListProps) {
               'shrink-0 rounded-full px-4 py-2',
               filter === value
                 ? 'border-transparent bg-pine text-surface'
-                : 'border-border',
+                : 'border-border hover:bg-mist',
             )}
             onClick={() => setFilter(value)}
           >
@@ -78,14 +80,21 @@ export function InventoryList({ items }: InventoryListProps) {
         />
       </label>
       {visible.length === 0 ? (
-        <p className="mt-6 text-center text-sm text-muted">No items match.</p>
+        <EmptyState
+          icon={<SearchIcon />}
+          title="No items match"
+          sub="Try a different search or filter."
+        />
       ) : (
         <ul className="mt-4 flex flex-col gap-3">
           {visible.map((item) => (
             <li
               key={item.stock_id}
-              className="flex items-center gap-3 rounded-card border border-border bg-surface p-3 shadow-soft"
+              className="card-hover flex items-center gap-3 rounded-card border border-border bg-surface p-3 shadow-soft"
             >
+              <IconTile tone="sage">
+                <BoxIcon />
+              </IconTile>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[15px] font-bold text-foreground">
                   {item.product_name}
@@ -106,7 +115,7 @@ export function InventoryList({ items }: InventoryListProps) {
               </div>
               <Link
                 href={`/admin/inventory/stock-in/${item.stock_id}`}
-                className="flex h-11 shrink-0 items-center rounded-full bg-pine px-4 text-sm font-semibold text-surface"
+                className="action-focus flex h-11 shrink-0 items-center rounded-full bg-pine px-4 text-sm font-semibold text-surface"
               >
                 Stock In
               </Link>

@@ -119,7 +119,7 @@ export function StaffShell({
             type="button"
             aria-label="Close menu"
             onClick={() => setOpen(false)}
-            className="flex h-11 w-11 items-center justify-center rounded-full text-pine-deep lg:hidden"
+            className="action-focus flex h-11 w-11 items-center justify-center rounded-full text-pine-deep lg:hidden"
           >
             <CloseIcon />
           </button>
@@ -155,7 +155,7 @@ export function StaffShell({
           <Link
             href={profileHref}
             aria-label="View profile"
-            className="flex items-center gap-2 rounded-2xl px-1 py-1 hover:bg-mist"
+            className="action-focus flex items-center gap-2 rounded-2xl px-1 py-1 hover:bg-mist"
           >
             <Avatar name={email} />
             <p className="min-w-0 flex-1 truncate text-xs text-muted">
@@ -165,7 +165,7 @@ export function StaffShell({
           <form action={signOut} className="mt-2">
             <button
               type="submit"
-              className="flex w-full items-center justify-center gap-2 rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold shadow-soft"
+              className="action-focus flex w-full items-center justify-center gap-2 rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold shadow-soft"
             >
               <SignOutIcon className="h-4 w-4" />
               Sign out
@@ -183,14 +183,14 @@ export function StaffShell({
               aria-expanded={open}
               aria-controls="staff-primary-nav"
               onClick={() => setOpen((value) => !value)}
-              className="flex h-11 w-11 items-center justify-center rounded-full text-pine-deep"
+              className="action-focus flex h-11 w-11 items-center justify-center rounded-full text-pine-deep"
             >
               {open ? <CloseIcon /> : <MenuIcon />}
             </button>
             <Link
               href={profileHref}
               aria-label="View profile"
-              className="flex min-w-0 flex-1 items-center gap-1 rounded-full"
+              className="action-focus flex min-w-0 flex-1 items-center gap-1 rounded-full"
             >
               <Avatar name={email} />
               <p className="min-w-0 flex-1 truncate text-xs text-muted">
@@ -202,7 +202,7 @@ export function StaffShell({
                 type="submit"
                 aria-label="Sign out"
                 title="Sign out"
-                className="flex h-11 w-11 items-center justify-center rounded-full text-pine-deep"
+                className="action-focus flex h-11 w-11 items-center justify-center rounded-full text-pine-deep"
               >
                 <SignOutIcon />
               </button>

@@ -4,8 +4,9 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
+import { EmptyState } from '@/components/common/EmptyState';
 import { Field } from '@/components/common/Field';
-import { SearchIcon } from '@/components/common/icons';
+import { CycleIcon, SearchIcon } from '@/components/common/icons';
 import { cn } from '@/lib/cn';
 import {
   markRestockCancelled,
@@ -350,9 +351,11 @@ export function RestockList({ rows }: RestockListProps) {
         />
       </label>
       {groups.length === 0 ? (
-        <p className="mt-6 text-center text-sm text-muted">
-          No requests in this view.
-        </p>
+        <EmptyState
+          icon={<CycleIcon />}
+          title="No requests in this view"
+          sub="Requests appear here when stock runs low."
+        />
       ) : (
         groups.map((group) => (
           <section key={group.supplier} className="mt-4">
