@@ -77,8 +77,37 @@
   animation: page-enter 200ms ease-out;
 }
 
+/* Add-to-cart confirmation toast: quick rise-in, holds ~1.5s, then fades.
+ * The parent unmounts it at ~1.8s; the exit fade is pure CSS so no extra
+ * JS timing is needed. */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes toast-out {
+  to {
+    opacity: 0;
+  }
+}
+
+.animate-toast-in {
+  animation:
+    toast-in 180ms ease-out,
+    toast-out 300ms ease-in 1500ms forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-page-enter {
+    animation: none;
+  }
+  .animate-toast-in {
     animation: none;
   }
   .animate-pulse {
