@@ -113,9 +113,12 @@ test('mobile drawer opens from the hamburger and navigates', async ({
   await page.setViewportSize({ width: 390, height: 844 });
   await signInAsAdmin(page);
   await page.goto('/pos');
-  await expect(page.locator('#staff-primary-nav')).not.toBeVisible();
+  // The closed drawer is translated off-canvas (it keeps a bounding box,
+  // so visibility assertions can't see the state — assert the class).
+  const nav = page.locator('#staff-primary-nav');
+  await expect(nav).toHaveClass(/-translate-x-full/);
   await page.getByRole('button', { name: 'Open menu' }).click();
-  await expect(page.locator('#staff-primary-nav')).toBeVisible();
+  await expect(nav).toHaveClass(/translate-x-0/);
   await page
     .locator('#staff-primary-nav')
     .getByRole('link', { name: 'Dashboard' })
