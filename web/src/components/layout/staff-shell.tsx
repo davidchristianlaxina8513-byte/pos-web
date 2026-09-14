@@ -209,7 +209,7 @@ export function StaffShell({
             </form>
           </div>
         </header>
-        <main className="mx-auto w-full max-w-6xl px-4 pt-4 pb-8">
+        <main className="animate-page-enter mx-auto w-full max-w-6xl px-4 pt-4 pb-8">
           <div className="mb-3 flex flex-wrap items-start gap-2 print:hidden">
             <div className="min-w-0 flex-1">
               <h1 className="truncate text-xl font-extrabold tracking-tight">
