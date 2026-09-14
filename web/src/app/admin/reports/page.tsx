@@ -9,7 +9,9 @@ import { resolveRange } from '@/features/reports/aggregate';
 import type { ReportPreset } from '@/features/reports/aggregate';
 import { SalesChart } from '@/features/reports/components/SalesChart';
 import { Card } from '@/components/common/Card';
+import { IconTile } from '@/components/common/IconTile';
 import { StaffShell } from '@/components/layout/staff-shell';
+import { cn } from '@/lib/cn';
 
 const PRESETS: { value: ReportPreset; label: string }[] = [
   { value: 'today', label: 'Today' },
@@ -40,53 +42,81 @@ export default async function ReportsPage({
   const query = (value: ReportPreset) => `/admin/reports?preset=${value}`;
   return (
     <StaffShell email={profile.email} role={profile.role} title="Reports">
-      <div className="flex flex-wrap gap-2">
+      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
         {PRESETS.map((entry) => (
           <Link
             key={entry.value}
             href={query(entry.value)}
             aria-current={preset === entry.value ? 'page' : undefined}
-            className={
+            className={cn(
+              'shrink-0 rounded-full px-4 py-2 text-sm font-semibold',
               preset === entry.value
-                ? 'rounded bg-primary px-3 py-1 font-medium text-surface'
-                : 'rounded border border-border bg-surface px-3 py-1 font-medium text-foreground'
-            }
+                ? 'bg-pine text-surface'
+                : 'border border-border bg-surface text-foreground',
+            )}
           >
             {entry.label}
           </Link>
         ))}
       </div>
-      <form method="get" action="/admin/reports" className="mt-3 flex gap-2">
+      <form
+        method="get"
+        action="/admin/reports"
+        className="mt-3 flex flex-wrap items-end gap-2"
+      >
         <input type="hidden" name="preset" value={preset} />
-        <label>
-          <span className="text-muted">From</span>
+        <label className="block">
+          <span className="text-sm text-muted">From</span>
           <input
             type="date"
             name="from"
             defaultValue={params.from ?? ''}
-            className="ml-1 rounded border border-border bg-surface px-2 py-1 text-foreground"
+            className="mt-1 block h-[52px] rounded-2xl border border-border bg-mist px-3.5 text-foreground"
           />
         </label>
-        <label>
-          <span className="text-muted">To</span>
+        <label className="block">
+          <span className="text-sm text-muted">To</span>
           <input
             type="date"
             name="to"
             defaultValue={params.to ?? ''}
-            className="ml-1 rounded border border-border bg-surface px-2 py-1 text-foreground"
+            className="mt-1 block h-[52px] rounded-2xl border border-border bg-mist px-3.5 text-foreground"
           />
         </label>
         <button
           type="submit"
-          className="rounded bg-primary px-3 py-1 font-medium text-surface"
+          className="flex h-11 items-center rounded-full bg-pine px-4 text-sm font-semibold text-surface"
         >
           Apply
         </button>
       </form>
-      <div className="mt-4 grid gap-4">
-        <Card title="Sales summary">
-          <p>Revenue: ₱{report.summary.revenue.toFixed(2)}</p>
-          <p>Orders: {report.summary.orders}</p>
+      <div className="mt-4 grid gap-3">
+        <div className="grid grid-cols-2 gap-3">
+          <Card className="rounded-card border-border shadow-soft">
+            <div className="flex items-center gap-3">
+              <IconTile tone="mint" className="text-base font-extrabold">
+                ₱
+              </IconTile>
+              <p className="text-[15px] font-bold text-foreground">
+                Revenue: ₱{report.summary.revenue.toFixed(2)}
+              </p>
+            </div>
+          </Card>
+          <Card className="rounded-card border-border shadow-soft">
+            <div className="flex items-center gap-3">
+              <IconTile tone="sage" className="text-base font-extrabold">
+                #
+              </IconTile>
+              <p className="text-[15px] font-bold text-foreground">
+                Orders: {report.summary.orders}
+              </p>
+            </div>
+          </Card>
+        </div>
+        <Card
+          title="Sales summary"
+          className="rounded-card border-border shadow-soft"
+        >
           <p>Average order: ₱{report.summary.averageOrderValue.toFixed(2)}</p>
           <ul className="mt-2">
             {report.summary.breakdown.map((row) => (
@@ -96,7 +126,7 @@ export default async function ReportsPage({
             ))}
           </ul>
         </Card>
-        <Card title="Daily">
+        <Card title="Daily" className="rounded-card border-border shadow-soft">
           <SalesChart data={report.daily} />
           <ul className="mt-2">
             {report.daily.map((day) => (
@@ -107,7 +137,10 @@ export default async function ReportsPage({
             ))}
           </ul>
         </Card>
-        <Card title="Top products">
+        <Card
+          title="Top products"
+          className="rounded-card border-border shadow-soft"
+        >
           {top.length === 0 ? (
             <p className="text-muted">No sales in range.</p>
           ) : (
@@ -121,7 +154,10 @@ export default async function ReportsPage({
             </ol>
           )}
         </Card>
-        <Card title="Inventory summary">
+        <Card
+          title="Inventory summary"
+          className="rounded-card border-border shadow-soft"
+        >
           <p>Items: {inventory.totalItems}</p>
           <p>Low: {inventory.lowStockCount}</p>
           <p>Out of stock: {inventory.outOfStockCount}</p>
