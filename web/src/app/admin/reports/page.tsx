@@ -9,6 +9,7 @@ import { resolveRange } from '@/features/reports/aggregate';
 import type { ReportPreset } from '@/features/reports/aggregate';
 import { SalesChart } from '@/features/reports/components/SalesChart';
 import { Card } from '@/components/common/Card';
+import { StaffShell } from '@/components/layout/staff-shell';
 
 const PRESETS: { value: ReportPreset; label: string }[] = [
   { value: 'today', label: 'Today' },
@@ -27,7 +28,7 @@ export default async function ReportsPage({
 }: {
   searchParams: Promise<{ preset?: string; from?: string; to?: string }>;
 }) {
-  await requireRole('admin');
+  const profile = await requireRole('admin');
   const params = await searchParams;
   const preset = parsePreset(params.preset);
   const range = resolveRange(preset, params.from ?? null, params.to ?? null);
@@ -38,17 +39,8 @@ export default async function ReportsPage({
   ]);
   const query = (value: ReportPreset) => `/admin/reports?preset=${value}`;
   return (
-    <main className="bg-background text-foreground">
-      <h1>Reports</h1>
-      <p className="mt-1">
-        <Link
-          href="/admin"
-          className="rounded border border-border bg-surface px-3 py-1 font-medium text-foreground"
-        >
-          Back to Admin
-        </Link>
-      </p>
-      <div className="mt-3 flex flex-wrap gap-2">
+    <StaffShell email={profile.email} role={profile.role} title="Reports">
+      <div className="flex flex-wrap gap-2">
         {PRESETS.map((entry) => (
           <Link
             key={entry.value}
@@ -136,6 +128,6 @@ export default async function ReportsPage({
           <p>Stock value: ₱{inventory.stockValue.toFixed(2)}</p>
         </Card>
       </div>
-    </main>
+    </StaffShell>
   );
 }

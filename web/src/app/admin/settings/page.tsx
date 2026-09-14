@@ -1,8 +1,6 @@
 import Link from 'next/link';
 import { requireRole } from '@/features/auth/queries';
-import { signOut } from '@/features/auth/actions';
 import { PasswordSection } from '@/features/settings/components/PasswordSection';
-import { Avatar } from '@/components/common/Avatar';
 import { Card } from '@/components/common/Card';
 import { Field } from '@/components/common/Field';
 import { IconTile } from '@/components/common/IconTile';
@@ -10,8 +8,8 @@ import {
   ArrowRightIcon,
   LockIcon,
   PersonIcon,
-  SignOutIcon,
 } from '@/components/common/icons';
+import { StaffShell } from '@/components/layout/staff-shell';
 
 const UPCOMING = [
   {
@@ -26,41 +24,13 @@ const UPCOMING = [
 export default async function SettingsPage() {
   const profile = await requireRole('admin');
   return (
-    <main className="min-h-screen bg-mist text-foreground">
-      <header className="border-b border-border bg-surface">
-        <div className="mx-auto flex w-full max-w-6xl items-center gap-3 px-4 py-3">
-          <Avatar name={profile.email} />
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate text-[15px] font-extrabold tracking-tight">
-              Settings
-            </h1>
-            <p className="truncate text-xs text-muted">
-              Signed in as {profile.email}
-            </p>
-          </div>
-          <form action={signOut}>
-            <button
-              type="submit"
-              aria-label="Sign out"
-              title="Sign out"
-              className="flex h-11 w-11 items-center justify-center rounded-full text-pine-deep"
-            >
-              <SignOutIcon />
-            </button>
-          </form>
-        </div>
-      </header>
-
-      <div className="mx-auto grid w-full max-w-6xl gap-3 px-4 pt-4 pb-8">
-        <div className="flex flex-wrap gap-2">
-          <Link
-            href="/admin"
-            className="rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold shadow-soft"
-          >
-            Back to Admin
-          </Link>
-        </div>
-
+    <StaffShell
+      email={profile.email}
+      role={profile.role}
+      title="Settings"
+      subtitle={`Signed in as ${profile.email}`}
+    >
+      <div className="grid gap-3">
         <Card
           title="Personal information"
           className="rounded-card border-border shadow-soft"
@@ -154,6 +124,6 @@ export default async function SettingsPage() {
           </p>
         </Card>
       </div>
-    </main>
+    </StaffShell>
   );
 }

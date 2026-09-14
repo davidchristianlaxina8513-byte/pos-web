@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { requireRole } from '@/features/auth/queries';
-import { signOut } from '@/features/auth/actions';
 import {
   getOpenRequests,
   getOpenRestockCount,
@@ -12,7 +11,7 @@ import {
   type RestockFilter,
 } from '@/features/restock/restock';
 import { RestockList } from '@/features/restock/components/RestockList';
-import { Button } from '@/components/common/Button';
+import { StaffShell } from '@/components/layout/staff-shell';
 import { PrintButton } from './print-button';
 
 const TABS: { value: RestockFilter; label: string }[] = [
@@ -51,32 +50,14 @@ export default async function RestockPage({
   const sections = groupPrintSections(printable);
   const query = (value: RestockFilter) => `/admin/restock?status=${value}`;
   return (
-    <main className="bg-background text-foreground">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1>Restock requests</h1>
-          <p className="text-muted">
-            {openCount} open · Signed in as {profile.email}
-          </p>
-        </div>
-        <div className="flex gap-2 print:hidden">
-          <PrintButton />
-          <form action={signOut}>
-            <Button variant="secondary" size="sm" type="submit">
-              Sign out
-            </Button>
-          </form>
-        </div>
-      </header>
-      <p className="mt-1 print:hidden">
-        <Link
-          href="/admin"
-          className="rounded border border-border bg-surface px-3 py-1 font-medium text-foreground"
-        >
-          Back to Admin
-        </Link>
-      </p>
-      <div className="mt-3 flex flex-wrap gap-2 print:hidden">
+    <StaffShell
+      email={profile.email}
+      role={profile.role}
+      title="Restock requests"
+      subtitle={`${openCount} open · Signed in as ${profile.email}`}
+      actions={<PrintButton />}
+    >
+      <div className="flex flex-wrap gap-2 print:hidden">
         {TABS.map((entry) => (
           <Link
             key={entry.value}
@@ -134,6 +115,6 @@ export default async function RestockPage({
           ))
         )}
       </section>
-    </main>
+    </StaffShell>
   );
 }
