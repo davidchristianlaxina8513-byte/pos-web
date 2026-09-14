@@ -70,6 +70,9 @@ export function StaffShell({
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const items = role === 'admin' ? ADMIN_NAV : CASHIER_NAV;
+  // Admins own a full settings page (personal info + password); cashiers
+  // get a lightweight profile view — never an admin route.
+  const profileHref = role === 'admin' ? '/admin/settings' : '/profile';
 
   useEffect(() => {
     if (!open) return;
@@ -149,12 +152,16 @@ export function StaffShell({
           </ul>
         </nav>
         <div className="border-t border-border p-3">
-          <div className="flex items-center gap-2">
+          <Link
+            href={profileHref}
+            aria-label="View profile"
+            className="flex items-center gap-2 rounded-2xl px-1 py-1 hover:bg-mist"
+          >
             <Avatar name={email} />
             <p className="min-w-0 flex-1 truncate text-xs text-muted">
               {email}
             </p>
-          </div>
+          </Link>
           <form action={signOut} className="mt-2">
             <button
               type="submit"
@@ -180,10 +187,16 @@ export function StaffShell({
             >
               {open ? <CloseIcon /> : <MenuIcon />}
             </button>
-            <Avatar name={email} />
-            <p className="min-w-0 flex-1 truncate text-xs text-muted">
-              {email}
-            </p>
+            <Link
+              href={profileHref}
+              aria-label="View profile"
+              className="flex min-w-0 flex-1 items-center gap-1 rounded-full"
+            >
+              <Avatar name={email} />
+              <p className="min-w-0 flex-1 truncate text-xs text-muted">
+                {email}
+              </p>
+            </Link>
             <form action={signOut}>
               <button
                 type="submit"
