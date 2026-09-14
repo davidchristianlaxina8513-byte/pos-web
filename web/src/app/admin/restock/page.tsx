@@ -12,6 +12,7 @@ import {
 } from '@/features/restock/restock';
 import { RestockList } from '@/features/restock/components/RestockList';
 import { StaffShell } from '@/components/layout/staff-shell';
+import { cn } from '@/lib/cn';
 import { PrintButton } from './print-button';
 
 const TABS: { value: RestockFilter; label: string }[] = [
@@ -57,17 +58,18 @@ export default async function RestockPage({
       subtitle={`${openCount} open · Signed in as ${profile.email}`}
       actions={<PrintButton />}
     >
-      <div className="flex flex-wrap gap-2 print:hidden">
+      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 print:hidden">
         {TABS.map((entry) => (
           <Link
             key={entry.value}
             href={query(entry.value)}
             aria-current={filter === entry.value ? 'page' : undefined}
-            className={
+            className={cn(
+              'shrink-0 rounded-full px-4 py-2 text-sm font-semibold',
               filter === entry.value
-                ? 'rounded bg-primary px-3 py-1 font-medium text-surface'
-                : 'rounded border border-border bg-surface px-3 py-1 font-medium text-foreground'
-            }
+                ? 'bg-pine text-surface'
+                : 'border border-border bg-surface text-foreground',
+            )}
           >
             {entry.label}
           </Link>
