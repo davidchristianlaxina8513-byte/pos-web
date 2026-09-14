@@ -25,6 +25,7 @@
 
 ## In Progress
 
+- Figma web redesign (`feature/web-design-v2`, synced with dev 2026-09-12 incl. restock severity — merge `c33d652`; Phase B staff shell landed 2026-09-14: shared `StaffShell` sidebar/drawer across all admin + POS pages, hub-scoped e2e + drawer/mobile tests; web gates green: typecheck/vitest 54/54/build; Playwright 11/12 with the suite-first hub login assert flaking on cold dev-server start)
 - Agent-system rollout (this change): verify playbook links, confirm workflow on next feature branch
 - **Web migration (approved 2026-09-09, phased rewrite):** Expo stays the live baseline until cutover. Phases 0–2 done; next is Phase 3 (Back office — detailed plan at execution time).
   - Completed Phase 0: scaffold alongside Expo; CI extended with `web` job
