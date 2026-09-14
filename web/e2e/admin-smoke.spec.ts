@@ -74,6 +74,8 @@ test('admin hub renders dashboard metrics and nav', async ({ page }) => {
   await expect(page.getByText(/Total revenue: ₱/)).toBeVisible();
   await expect(page.getByText(/Total orders: \d+/)).toBeVisible();
   await expect(page.getByRole('img', { name: 'Revenue by day' })).toBeVisible();
+  // Scoped to the hub tiles: the sidebar carries same-named section links.
+  const hubNav = page.locator('nav[aria-label="Admin sections"]');
   for (const label of [
     'Register',
     'Orders',
@@ -83,8 +85,42 @@ test('admin hub renders dashboard metrics and nav', async ({ page }) => {
     'Settings',
     'Users',
   ]) {
-    await expect(page.getByRole('link', { name: label })).toBeVisible();
+    await expect(hubNav.getByRole('link', { name: label })).toBeVisible();
   }
+});
+
+test('pos header links admin to dashboard, cashier sees no dashboard link', async ({
+  page,
+}) => {
+  await signInAsAdmin(page);
+  await page.goto('/pos');
+  await page.locator('main').getByRole('link', { name: 'Dashboard' }).click();
+  await expect(page).toHaveURL(/\/admin$/);
+
+  await page.goto('/pos');
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await page.getByLabel('Email').fill('cashier@elvira.cafe');
+  await page.getByLabel('Password', { exact: true }).fill('cashier123');
+  await page.getByRole('button', { name: 'Log In' }).click();
+  await expect(page).toHaveURL(/\/pos$/);
+  await expect(page.getByRole('link', { name: 'Dashboard' })).toHaveCount(0);
+});
+
+test('mobile drawer opens from the hamburger and navigates', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await signInAsAdmin(page);
+  await page.goto('/pos');
+  await expect(page.locator('#staff-primary-nav')).not.toBeVisible();
+  await page.getByRole('button', { name: 'Open menu' }).click();
+  await expect(page.locator('#staff-primary-nav')).toBeVisible();
+  await page
+    .locator('#staff-primary-nav')
+    .getByRole('link', { name: 'Dashboard' })
+    .click();
+  await expect(page).toHaveURL(/\/admin$/);
 });
 
 test('cashier cannot reach admin pages', async ({ page }) => {

@@ -112,7 +112,12 @@ test('restock queue: pending to ordered to received bumps inventory', async ({
   page,
 }) => {
   await signInAsAdmin(page);
-  await expect(page.getByRole('link', { name: /Restock/ })).toBeVisible();
+  // Scoped to the hub tiles: the sidebar carries a same-named Restock link.
+  await expect(
+    page
+      .locator('nav[aria-label="Admin sections"]')
+      .getByRole('link', { name: /Restock/ }),
+  ).toBeVisible();
 
   await forceLowStock();
   await page.goto('/admin/restock');
