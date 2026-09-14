@@ -46,6 +46,7 @@ export function StockInForm({ stockId }: StockInFormProps) {
         placeholder="0"
         value={quantityText}
         onChange={(event) => setQuantityText(event.target.value)}
+        inputClassName="h-[52px] rounded-2xl border-border bg-mist"
       />
       <Field
         label="Supplier (optional)"
@@ -54,6 +55,7 @@ export function StockInForm({ stockId }: StockInFormProps) {
         autoCapitalize="words"
         value={supplier}
         onChange={(event) => setSupplier(event.target.value)}
+        inputClassName="h-[52px] rounded-2xl border-border bg-mist"
       />
       {error ? (
         <p role="alert" className="text-danger">
@@ -63,6 +65,7 @@ export function StockInForm({ stockId }: StockInFormProps) {
       <Button
         onClick={handleSubmit}
         disabled={!quantityIsValid || isSubmitting}
+        className="h-[52px] rounded-full bg-pine text-base text-surface"
       >
         {isSubmitting ? 'Saving…' : 'Save stock-in'}
       </Button>

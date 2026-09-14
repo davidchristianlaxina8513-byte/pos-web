@@ -59,8 +59,11 @@ export function UsersManager({ users, currentUserId }: UsersManagerProps) {
   };
 
   return (
-    <div className="grid gap-4">
-      <Card title="Add staff">
+    <div className="flex flex-col gap-3">
+      <Card
+        title="Add staff"
+        className="rounded-card border-border shadow-soft"
+      >
         <div className="flex max-w-md flex-col gap-3">
           <Field
             label="Email"
@@ -69,6 +72,7 @@ export function UsersManager({ users, currentUserId }: UsersManagerProps) {
             autoComplete="email"
             value={username}
             onChange={(event) => setUsername(event.target.value)}
+            inputClassName="h-[52px] rounded-2xl border-border bg-mist"
           />
           <Field
             label="Password"
@@ -77,13 +81,14 @@ export function UsersManager({ users, currentUserId }: UsersManagerProps) {
             autoComplete="new-password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
+            inputClassName="h-[52px] rounded-2xl border-border bg-mist"
           />
           <label className="block">
             <span className="text-foreground">Role</span>
             <select
               value={role}
               onChange={(event) => setRole(event.target.value as UserRole)}
-              className="mt-1 block w-full rounded border border-border bg-surface px-3 py-2 text-foreground"
+              className="mt-1 block h-[52px] w-full rounded-2xl border border-border bg-mist px-3.5 text-foreground"
             >
               <option value="cashier">Cashier</option>
               <option value="admin">Administrator</option>
@@ -95,21 +100,30 @@ export function UsersManager({ users, currentUserId }: UsersManagerProps) {
             </p>
           ) : null}
           {notice ? <p className="text-success">{notice}</p> : null}
-          <Button onClick={handleCreate} disabled={busy}>
+          <Button
+            onClick={handleCreate}
+            disabled={busy}
+            className="h-[52px] rounded-full bg-pine text-base text-surface"
+          >
             {busy ? 'Saving…' : 'Create account'}
           </Button>
         </div>
       </Card>
-      <Card title={`Staff (${users.length})`}>
-        <ul className="flex flex-col gap-2">
+      <Card
+        title={`Staff (${users.length})`}
+        className="rounded-card border-border shadow-soft"
+      >
+        <ul className="flex flex-col gap-3">
           {users.map((user) => (
             <li
               key={user.user_id}
-              className="flex items-center justify-between gap-2"
+              className="flex items-center gap-3 rounded-card border border-border bg-surface p-3"
             >
-              <div>
-                <p className="text-foreground">{user.username}</p>
-                <p className="text-muted">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[15px] font-bold text-foreground">
+                  {user.username}
+                </p>
+                <p className="text-sm text-muted">
                   {user.role === 'admin' ? 'Administrator' : 'Cashier'} ·{' '}
                   {user.is_active === false ? 'Disabled' : 'Active'}
                   {user.user_id === currentUserId ? ' · You' : null}
@@ -119,6 +133,7 @@ export function UsersManager({ users, currentUserId }: UsersManagerProps) {
                 <Button
                   variant="secondary"
                   size="sm"
+                  className="shrink-0 rounded-full"
                   disabled={busy}
                   onClick={() => handleToggle(user)}
                 >
