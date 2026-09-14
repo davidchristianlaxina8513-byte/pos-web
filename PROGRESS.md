@@ -20,21 +20,20 @@
 - Web migration Phase 1: SSR Supabase clients + session proxy, `/login` with role routing (`/pos` cashier, `/admin` admin), server-side role gates; live-verified as both demo users (2026-09-11)
 - Automatic restock tracking (2026-09-11): `0008_reorder_tracking.sql` (`par_level`, `reorder_requests`, low-stock trigger, admin-only RLS — 14/14 probes green); web `/admin/restock` + print; mobile `Restock` screen + PDF share; `par_level` editing (mobile product form, web inline); demo seed pars
 - Web migration Phase 2: POS core on web (2026-09-11) — menu → session cart → `process_sale` checkout (cash/GCash/Maya) → receipt + browser print; `/pos` open to cashier+admin via `requireStaff`; Playwright smoke (cashier cash sale, stock deducts, receipt renders) green against dev Supabase; 30/30 vitest green
-- Web migration Phase 3 (2026-09-11, on `feature/web-back-office` stacked on Phase 2 branch): 3a inventory list + `adjust_stock` stock-in; 3b menu/category CRUD + photo upload to `product-images` + auto inventory row on create (fixes Expo gap); 3c admin dashboard (SVG chart, low-stock, top-5) + filtered reports (Manila-day bucketing, voided excluded); 3d user list + `set_user_active` toggle + web enforces `is_active=false` at sign-in/session (Expo leaves it unenforced); 48/48 vitest green
+- Web migration Phase 3 (2026-09-11, merged into `dev` via `1514c26`): 3a inventory list + `adjust_stock` stock-in; 3b menu/category CRUD + photo upload to `product-images` + auto inventory row on create (fixes Expo gap); 3c admin dashboard (SVG chart, low-stock, top-5) + filtered reports (Manila-day bucketing, voided excluded); 3d user list + `set_user_active` toggle + web enforces `is_active=false` at sign-in/session (Expo leaves it unenforced); 48/48 vitest green; staff-create e2e green after `create-user` deploy (`933110f`)
 - Line-ending normalization (2026-09-11): committed root `.gitattributes` (`* text=auto eol=lf`, `*.{cmd,bat}` kept CRLF, image/archive binaries excluded) — no pos-template predecessor existed; repo has no tracked files needing CRLF. Verified on a Windows checkout: working tree renormalized LF-only with zero content change, `typecheck`/`lint`/`build` green (`lint` went from 13573 `Delete ␍` errors to 0)
 
 ## In Progress
 
-- Figma web redesign (`feature/web-design-v2`, synced with dev 2026-09-12 incl. restock severity — merge `c33d652`; Phase B staff shell landed 2026-09-14: shared `StaffShell` sidebar/drawer across all admin + POS pages, hub-scoped e2e + drawer/mobile tests; web gates green: typecheck/vitest 54/54/build; Playwright 11/12 with the suite-first hub login assert flaking on cold dev-server start)
+- Figma web redesign (`feature/web-design-v2`, synced with dev 2026-09-12 incl. restock severity — merge `c33d652`; Phase B staff shell landed 2026-09-14: shared `StaffShell` sidebar/drawer across all admin + POS pages, hub-scoped e2e + drawer/mobile tests; web gates green: typecheck/lint/vitest 54/54/build; Playwright 11/12 with the suite-first hub login assert flaking on cold dev-server start)
 - Agent-system rollout (this change): verify playbook links, confirm workflow on next feature branch
-- **Web migration (approved 2026-09-09, phased rewrite):** Expo stays the live baseline until cutover. Phases 0–2 done; next is Phase 3 (Back office — detailed plan at execution time).
+- **Web migration (approved 2026-09-09, phased rewrite):** Expo stays the live baseline until cutover. Phases 0–3 done and merged into `dev`; remaining is Phase 4 (Cutover).
   - Completed Phase 0: scaffold alongside Expo; CI extended with `web` job
   - Completed Phase 1: auth + role routing + Supabase clients/proxy; RLS role reads verified live (`user_read_own`)
   - Completed Phase 2: POS core (menu/cart/checkout/receipt + Playwright smoke green)
-  - Phase 3 done on `feature/web-back-office`: 3a inventory, 3b menu, 3c reports, 3d users; admin e2e 6/6 + pos smoke green (7/7 total) against dev Supabase
+  - Completed Phase 3 (merged into `dev` via `1514c26`): 3a inventory, 3b menu, 3c reports, 3d users; admin e2e 6/6 + pos smoke green (7/7 total) against dev Supabase
   - Remaining phases:
-  1. **Phase 3 — Back office:** unblock staff-create e2e (deploy `create-user`), merge
-  2. **Phase 4 — Cutover:** parity check vs Expo, flip baseline to web, archive Expo track
+  1. **Phase 4 — Cutover:** parity check vs Expo, flip baseline to web, archive Expo track
   - Web-track playbooks (`stack/nextjs`, `styling/tailwind`, `platform/web`, `capabilities/supabase/nextjs`) activate phase by phase; Expo stays untouched until Phase 4.
 
 ## Up Next
