@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { requireRole } from '@/features/auth/queries';
 import {
   getInventoryReport,
+  getReceiptRecords,
   getSalesReport,
   getTopProducts,
 } from '@/features/reports/queries';
@@ -11,7 +12,7 @@ import { SalesChart } from '@/features/reports/components/SalesChart';
 import { Card } from '@/components/common/Card';
 import { EmptyState } from '@/components/common/EmptyState';
 import { IconTile } from '@/components/common/IconTile';
-import { ChartIcon } from '@/components/common/icons';
+import { ChartIcon, ReceiptIcon } from '@/components/common/icons';
 import { StaffShell } from '@/components/layout/staff-shell';
 import { cn } from '@/lib/cn';
 
@@ -26,6 +27,12 @@ function parsePreset(value: string | undefined): ReportPreset {
   return value === '7d' || value === '30d' || value === 'all' ? value : 'today';
 }
 
+const PAYMENT_LABELS = {
+  cash: 'Cash',
+  gcash: 'GCash',
+  maya: 'Maya',
+} as const;
+
 /** Filtered sales + top products + inventory summary. */
 export default async function ReportsPage({
   searchParams,
@@ -36,10 +43,11 @@ export default async function ReportsPage({
   const params = await searchParams;
   const preset = parsePreset(params.preset);
   const range = resolveRange(preset, params.from ?? null, params.to ?? null);
-  const [report, top, inventory] = await Promise.all([
+  const [report, top, inventory, ledger] = await Promise.all([
     getSalesReport(range),
     getTopProducts(range),
     getInventoryReport(),
+    getReceiptRecords(range),
   ]);
   const query = (value: ReportPreset) => `/admin/reports?preset=${value}`;
   return (
@@ -93,7 +101,7 @@ export default async function ReportsPage({
         </button>
       </form>
       <div className="mt-4 grid gap-3">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Card className="rounded-card border-border shadow-soft">
             <div className="flex items-center gap-3">
               <IconTile tone="mint" className="text-base font-extrabold">
@@ -128,8 +136,13 @@ export default async function ReportsPage({
             ))}
           </ul>
         </Card>
-        <Card title="Daily" className="rounded-card border-border shadow-soft">
-          <SalesChart data={report.daily} />
+        <Card
+          title="Daily"
+          className="min-w-0 rounded-card border-border shadow-soft"
+        >
+          <div className="overflow-x-auto">
+            <SalesChart data={report.daily} />
+          </div>
           <ul className="mt-2">
             {report.daily.map((day) => (
               <li key={day.date}>
@@ -159,6 +172,91 @@ export default async function ReportsPage({
               ))}
             </ol>
           )}
+        </Card>
+        <Card
+          title="Receipts"
+          className="min-w-0 rounded-card border-border shadow-soft"
+        >
+          {ledger.receipts.length === 0 ? (
+            <EmptyState
+              icon={<ReceiptIcon />}
+              title="No receipts in range"
+              sub="Completed sales will show up here."
+            />
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {ledger.receipts.map((receipt) => (
+                <li key={receipt.transaction_id}>
+                  <Link
+                    href={`/pos/receipt/${receipt.transaction_id}`}
+                    aria-label={`View receipt ${receipt.order_number !== null ? `Order #${receipt.order_number}` : 'receipt'}`}
+                    className="action-focus flex items-center gap-3 rounded-2xl bg-mist p-3"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-bold">
+                        {receipt.order_number !== null
+                          ? `Order #${receipt.order_number}`
+                          : 'Receipt'}
+                      </span>
+                      <span className="block truncate text-xs text-muted">
+                        {new Date(receipt.date).toLocaleString()} ·{' '}
+                        {PAYMENT_LABELS[receipt.payment_mode]}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-sm font-extrabold">
+                      ₱{receipt.total_amount.toFixed(2)}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+          {ledger.receiptsTruncated ? (
+            <p className="mt-2 text-xs text-muted">
+              Showing the latest 50 receipts.
+            </p>
+          ) : null}
+        </Card>
+        <Card
+          title="Items sold"
+          className="min-w-0 rounded-card border-border shadow-soft"
+        >
+          {ledger.lines.length === 0 ? (
+            <EmptyState
+              icon={<ChartIcon />}
+              title="No items sold in range"
+              sub="Completed sales will show up here."
+            />
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {ledger.lines.map((line, index) => (
+                <li
+                  key={`${line.transaction_id}-${line.product_name}-${index}`}
+                  className="flex items-center gap-3 rounded-2xl bg-mist p-3"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-bold">
+                      {line.product_name}
+                    </span>
+                    <span className="block truncate text-xs text-muted">
+                      {line.quantity} × ₱{line.unit_price.toFixed(2)}
+                      {line.order_number !== null
+                        ? ` · Order #${line.order_number}`
+                        : null}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-sm font-extrabold">
+                    ₱{line.subtotal.toFixed(2)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {ledger.linesTruncated ? (
+            <p className="mt-2 text-xs text-muted">
+              Showing the latest 100 sold lines.
+            </p>
+          ) : null}
         </Card>
         <Card
           title="Inventory summary"

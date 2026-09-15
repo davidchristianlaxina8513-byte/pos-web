@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
 
 const CASHIER_EMAIL = 'cashier@elvira.cafe';
@@ -67,19 +67,34 @@ test('pos smoke: cash sale deducts stock and renders a receipt', async ({
   await page.getByRole('button', { name: 'Log In' }).click();
   await expect(page).toHaveURL(/\/pos$/);
 
-  const addButton = page.getByRole('button', { name: /^Add / }).first();
-  const itemName = ((await addButton.getAttribute('aria-label')) ?? '').replace(
-    /^Add | to cart$/g,
-    '',
-  );
+  const candidates = page.getByRole('button', { name: /^Add / });
+  // The menu streams in after navigation commits; count() doesn't retry.
+  await expect(candidates.first()).toBeVisible();
+  const candidateCount = await candidates.count();
+  let itemName = '';
+  let addButton: Locator | null = null;
+  for (let index = 0; index < candidateCount; index += 1) {
+    const candidate = candidates.nth(index);
+    if (await candidate.isDisabled()) continue;
+    const label = (await candidate.getAttribute('aria-label')) ?? '';
+    const name = label.replace(/^Add | to cart$/g, '').trim();
+    if (!name) continue;
+    // The shared dev catalog drains as the suite buys stock, so only take
+    // an item that still has enough units for this sale.
+    if ((await stockFor(await productIdByName(name))) < SALE_QTY) continue;
+    itemName = name;
+    addButton = candidate;
+    break;
+  }
   expect(itemName.length).toBeGreaterThan(0);
+  expect(addButton).not.toBeNull();
   const productId = await productIdByName(itemName);
   const stockBefore = await stockFor(productId);
   expect(stockBefore).toBeGreaterThanOrEqual(SALE_QTY);
 
   // v2 cards swap the add tile for a stepper after the first unit, so the
   // second unit goes through the stepper (same cart reducer path).
-  await addButton.click();
+  await addButton?.click();
   await page
     .getByRole('button', { name: `Increase ${itemName}` })
     .first()

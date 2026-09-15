@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 const ADMIN_EMAIL = 'admin@elvira.cafe';
@@ -210,6 +210,61 @@ test('reports render summaries', async ({ page }) => {
   await page.getByRole('link', { name: '7 days' }).click();
   await expect(page).toHaveURL(/preset=7d/);
   await expect(page.getByText(/Revenue: ₱/)).toBeVisible();
+});
+
+test('reports list receipts and sold items for a new sale', async ({
+  page,
+}) => {
+  await signInAsAdmin(page);
+  await page.goto('/pos');
+  // Demo stock shifts underfoot (the team shares this DB), so take the
+  // first *enabled* Add button rather than assuming the top row sells.
+  const candidates = page.getByRole('button', { name: /^Add / });
+  await expect(candidates.first()).toBeVisible();
+  const candidateCount = await candidates.count();
+  let itemName = '';
+  let addButton: Locator | null = null;
+  for (let index = 0; index < candidateCount; index += 1) {
+    const candidate = candidates.nth(index);
+    if (await candidate.isDisabled()) continue;
+    const label = (await candidate.getAttribute('aria-label')) ?? '';
+    const name = label.replace(/^Add | to cart$/g, '').trim();
+    if (!name) continue;
+    itemName = name;
+    addButton = candidate;
+    break;
+  }
+  expect(itemName.length).toBeGreaterThan(0);
+  expect(addButton).not.toBeNull();
+  await addButton?.click();
+  const totalText = (await page.getByText(/^Total: ₱/).textContent()) ?? '';
+  const total = Number(totalText.replace(/^Total: ₱/, ''));
+  expect(Number.isFinite(total) && total > 0).toBe(true);
+  await page.getByRole('button', { name: 'Checkout' }).click();
+  await page.getByLabel('Amount received').fill(String(total + 25));
+  await page.getByRole('button', { name: 'Process Checkout' }).click();
+  await expect(page).toHaveURL(/\/pos\/receipt\//);
+  const orderText = (await page.getByText(/Order #\d+/).textContent()) ?? '';
+  const orderMatch = /Order #(\d+)/.exec(orderText);
+  expect(orderMatch).not.toBeNull();
+  const orderNumber = orderMatch?.[1] ?? '';
+
+  await page.goto('/admin/reports');
+  const receiptsCard = page.locator('section', {
+    has: page.getByRole('heading', { name: 'Receipts' }),
+  });
+  const itemsCard = page.locator('section', {
+    has: page.getByRole('heading', { name: 'Items sold' }),
+  });
+  await expect(page.getByRole('heading', { name: 'Receipts' })).toBeVisible();
+  await expect(receiptsCard.getByText(`Order #${orderNumber}`)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Items sold' })).toBeVisible();
+  await expect(itemsCard.getByText(itemName).first()).toBeVisible();
+  await receiptsCard
+    .getByRole('link', { name: `View receipt Order #${orderNumber}` })
+    .click();
+  await expect(page).toHaveURL(/\/pos\/receipt\//);
+  await expect(page.getByText(`Order #${orderNumber}`)).toBeVisible();
 });
 
 test('settings shows sections and links to user management', async ({

@@ -10,8 +10,12 @@ import {
   activeSales,
   aggregateTopProducts,
   buildDaySales,
+  buildReceiptLedger,
   summarizeSales,
   type DaySales,
+  type LedgerItem,
+  type LedgerTransaction,
+  type ReceiptLedger,
   type ReportRange,
   type SaleRow,
   type SalesSummary,
@@ -218,6 +222,106 @@ export async function getTopProducts(
       : [],
   );
   return aggregateTopProducts(soldItems, names, limit);
+}
+
+/** Record-level ledger for the Reports page: receipts + sold lines in range. */
+export async function getReceiptRecords(
+  range: ReportRange,
+): Promise<ReceiptLedger> {
+  await requireRole('admin');
+  const supabase = await createClient();
+  let query = supabase
+    .from('transactions')
+    .select('id, order_number, date, total_amount, payment_mode, status')
+    .order('date', { ascending: false });
+  if (range.from) query = query.gte('date', range.from.toISOString());
+  if (range.to) query = query.lt('date', range.to.toISOString());
+  const { data: txnsData, error: txnError } = await query;
+  if (txnError) throw txnError;
+  const txns: LedgerTransaction[] = (
+    (txnsData ?? []) as {
+      id: unknown;
+      order_number: unknown;
+      date: unknown;
+      total_amount: unknown;
+      payment_mode: unknown;
+      status: unknown;
+    }[]
+  ).flatMap((row) => {
+    const mode = parsePaymentMode(row.payment_mode);
+    const total = Number(row.total_amount);
+    if (
+      typeof row.id !== 'string' ||
+      typeof row.date !== 'string' ||
+      !Number.isFinite(total) ||
+      !mode
+    ) {
+      return [];
+    }
+    return [
+      {
+        id: row.id,
+        order_number:
+          typeof row.order_number === 'number' ? row.order_number : null,
+        date: row.date,
+        total_amount: total,
+        payment_mode: mode,
+        status: typeof row.status === 'string' ? row.status : null,
+      },
+    ];
+  });
+  const activeIds = txns
+    .filter((txn) => txn.status !== 'voided')
+    .map((txn) => txn.id);
+  if (activeIds.length === 0) {
+    return {
+      receipts: [],
+      lines: [],
+      receiptsTruncated: false,
+      linesTruncated: false,
+    };
+  }
+  const { data: itemsData, error: itemsError } = await supabase
+    .from('transaction_items')
+    .select('transaction_id, product_id, quantity, subtotal')
+    .in('transaction_id', activeIds);
+  if (itemsError) throw itemsError;
+  const items: LedgerItem[] = (
+    (itemsData ?? []) as {
+      transaction_id: unknown;
+      product_id: unknown;
+      quantity: unknown;
+      subtotal: unknown;
+    }[]
+  ).flatMap((row) =>
+    typeof row.transaction_id === 'string' &&
+    typeof row.product_id === 'number' &&
+    Number.isFinite(Number(row.quantity)) &&
+    Number.isFinite(Number(row.subtotal))
+      ? [
+          {
+            transaction_id: row.transaction_id,
+            product_id: row.product_id,
+            quantity: Number(row.quantity),
+            subtotal: Number(row.subtotal),
+          },
+        ]
+      : [],
+  );
+  const { data: productsData, error: productsError } = await supabase
+    .from('product')
+    .select('product_id, name');
+  if (productsError) throw productsError;
+  const names = new Map<number, string>();
+  for (const row of (productsData ?? []) as {
+    product_id: unknown;
+    name: unknown;
+  }[]) {
+    if (typeof row.product_id === 'number' && typeof row.name === 'string') {
+      names.set(row.product_id, row.name);
+    }
+  }
+  return buildReceiptLedger(txns, items, names);
 }
 
 export interface InventoryReportRow {

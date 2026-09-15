@@ -153,6 +153,121 @@ export interface SoldItem {
   subtotal: number;
 }
 
+export interface LedgerTransaction {
+  id: string;
+  order_number: number | null;
+  date: string;
+  total_amount: number;
+  payment_mode: PaymentMode;
+  status: string | null;
+}
+
+export interface LedgerItem {
+  transaction_id: string;
+  product_id: number;
+  quantity: number;
+  subtotal: number;
+}
+
+export interface ReceiptRecordItem {
+  product_id: number;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  subtotal: number;
+}
+
+export interface ReceiptRecord {
+  transaction_id: string;
+  order_number: number | null;
+  date: string;
+  total_amount: number;
+  payment_mode: PaymentMode;
+  items: ReceiptRecordItem[];
+}
+
+export interface SoldLine {
+  transaction_id: string;
+  order_number: number | null;
+  date: string;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  subtotal: number;
+}
+
+export interface ReceiptLedger {
+  receipts: ReceiptRecord[];
+  lines: SoldLine[];
+  receiptsTruncated: boolean;
+  linesTruncated: boolean;
+}
+
+/**
+ * Record-level report ledger: one row per receipt plus one row per sold
+ * line, newest first. Voided transactions are dropped (same rule as
+ * `activeSales`). Both lists are capped so the Reports page stays fast;
+ * truncation flags let the UI say so.
+ */
+export function buildReceiptLedger(
+  txns: LedgerTransaction[],
+  items: LedgerItem[],
+  names: Map<number, string>,
+  receiptLimit = 50,
+  lineLimit = 100,
+): ReceiptLedger {
+  const active = txns
+    .filter((txn) => txn.status !== 'voided')
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  const receiptsTruncated = active.length > receiptLimit;
+  const kept = active.slice(0, receiptLimit);
+  const keptIds = new Set(kept.map((txn) => txn.id));
+  const byTxn = new Map<string, ReceiptRecordItem[]>();
+  for (const item of items) {
+    if (!keptIds.has(item.transaction_id)) continue;
+    const list = byTxn.get(item.transaction_id) ?? [];
+    list.push({
+      product_id: item.product_id,
+      product_name: names.get(item.product_id) ?? `Product #${item.product_id}`,
+      quantity: item.quantity,
+      unit_price:
+        item.quantity > 0 ? item.subtotal / item.quantity : item.subtotal,
+      subtotal: item.subtotal,
+    });
+    byTxn.set(item.transaction_id, list);
+  }
+  const receipts: ReceiptRecord[] = kept.map((txn) => ({
+    transaction_id: txn.id,
+    order_number: txn.order_number,
+    date: txn.date,
+    total_amount: txn.total_amount,
+    payment_mode: txn.payment_mode,
+    items: byTxn.get(txn.id) ?? [],
+  }));
+  const lines: SoldLine[] = [];
+  for (const receipt of receipts) {
+    for (const item of receipt.items) {
+      if (lines.length >= lineLimit) break;
+      lines.push({
+        transaction_id: receipt.transaction_id,
+        order_number: receipt.order_number,
+        date: receipt.date,
+        product_name: item.product_name,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        subtotal: item.subtotal,
+      });
+    }
+    if (lines.length >= lineLimit) break;
+  }
+  return {
+    receipts,
+    lines,
+    receiptsTruncated,
+    linesTruncated: lines.length >= lineLimit,
+  };
+}
+
 /** Top products by revenue, mirroring Expo `aggregateTopProducts`. */
 export function aggregateTopProducts(
   items: SoldItem[],
