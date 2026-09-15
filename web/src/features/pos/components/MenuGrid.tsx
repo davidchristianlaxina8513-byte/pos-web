@@ -82,7 +82,7 @@ export function MenuGrid({
     setSearch('');
   };
   return (
-    <div>
+    <div className="min-w-0">
       <div className="flex items-center gap-2">
         <label className="relative block flex-1">
           <span className="sr-only">Search menu</span>

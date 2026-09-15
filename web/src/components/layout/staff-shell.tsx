@@ -97,7 +97,7 @@ export function StaffShell({
         id="staff-primary-nav"
         aria-label="Primary"
         className={cn(
-          'fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-border bg-surface transition-transform print:hidden',
+          'fixed inset-y-0 left-0 z-40 flex w-72 max-w-[85vw] flex-col border-r border-border bg-surface transition-transform print:hidden',
           open ? 'translate-x-0' : '-translate-x-full',
           'lg:static lg:z-auto lg:translate-x-0',
         )}

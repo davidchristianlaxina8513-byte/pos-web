@@ -3,7 +3,7 @@ export default function AdminLoading() {
   return (
     <div aria-hidden="true" className="flex animate-pulse flex-col gap-3">
       <div className="h-24 rounded-card bg-sage-200" />
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {[0, 1, 2, 3].map((key) => (
           <div
             key={key}
@@ -11,7 +11,7 @@ export default function AdminLoading() {
           />
         ))}
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {[0, 1].map((key) => (
           <div
             key={key}

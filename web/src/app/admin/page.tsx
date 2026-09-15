@@ -86,7 +86,7 @@ export default async function AdminPage() {
           </span>
           <ArrowRightIcon className="h-6 w-6" />
         </Link>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {TILES.map((tile) => (
             <Link
               key={tile.label}
@@ -126,7 +126,7 @@ export default async function AdminPage() {
       </nav>
 
       <div className="mt-4 grid gap-3">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Card className="rounded-card border-border shadow-soft">
             <div className="flex items-center gap-3">
               <IconTile tone="mint" className="text-base font-extrabold">

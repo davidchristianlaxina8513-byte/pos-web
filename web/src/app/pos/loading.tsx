@@ -11,7 +11,7 @@ export default function PosLoading() {
         ))}
       </div>
       <div className="h-[52px] rounded-full bg-surface shadow-soft" />
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {[0, 1, 2, 3].map((key) => (
           <div
             key={key}
