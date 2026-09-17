@@ -69,7 +69,13 @@
 
 <!-- Record date, approver, rationale, affected files, and recovery path. -->
 
-- (none)
+- 2026-09-18 (project owner approval): added `react-aria-components ^1.x`
+  to `web/` for shared Modal/Select behavior + accessibility (focus trap,
+  keyboard nav, dialog semantics). Appearance stays in project tokens
+  (`globals.css` + `components/common`); no visual redesign. Affects
+  `web/src/components/layout/modal/Modal.tsx` and
+  `web/src/components/ui/select/Select.tsx`. Recovery: uninstall the dep
+  and revert those two components to the prior native implementations.
 
 ## Notes
 
