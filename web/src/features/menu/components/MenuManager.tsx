@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { Field } from '@/components/common/Field';
 import { IconTile } from '@/components/common/IconTile';
 import { CupIcon, SearchIcon } from '@/components/common/icons';
+import { Select } from '@/components/ui/select/Select';
 import { cn } from '@/lib/cn';
 import { createCategory, deleteCategory } from '../actions';
 import { UNCATEGORIZED } from '../validate';
@@ -197,26 +198,21 @@ export function MenuManager({ categories, items }: MenuManagerProps) {
             Add
           </Button>
         </div>
-        <label className="mt-3 block">
-          <span className="text-foreground">Delete category</span>
-          <select
-            value={deleteId}
-            onChange={(event) => {
-              setDeleteId(event.target.value);
-              setConfirmDelete(false);
-            }}
-            className="mt-1 block h-[52px] w-full rounded-2xl border border-border bg-mist px-3.5 text-foreground"
-          >
-            <option value="">Select a category</option>
-            {categories
-              .filter((category) => category.name !== UNCATEGORIZED)
-              .map((category) => (
-                <option key={category.category_id} value={category.category_id}>
-                  {category.name}
-                </option>
-              ))}
-          </select>
-        </label>
+        <Select
+          label="Delete category"
+          placeholder="Select a category"
+          options={categories
+            .filter((category) => category.name !== UNCATEGORIZED)
+            .map((category) => ({
+              id: category.category_id,
+              label: category.name,
+            }))}
+          value={deleteId}
+          onChange={(next) => {
+            setDeleteId(next);
+            setConfirmDelete(false);
+          }}
+        />
         <p className="mt-1 text-muted">
           Products in a deleted category move to {UNCATEGORIZED}.
         </p>

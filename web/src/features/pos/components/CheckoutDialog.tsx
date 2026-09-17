@@ -7,7 +7,7 @@ import { Field } from '@/components/common/Field';
 import { IconTile } from '@/components/common/IconTile';
 import { QtyStepper } from '@/components/common/QtyStepper';
 import { SectionLabel } from '@/components/common/SectionLabel';
-import { ArrowLeftIcon, InfoIcon } from '@/components/common/icons';
+import { Modal } from '@/components/layout/modal/Modal';
 import { cn } from '@/lib/cn';
 import { checkoutSale } from '../actions';
 import { validateCheckout } from '../checkout';
@@ -96,159 +96,141 @@ export function CheckoutDialog({
   };
 
   return (
-    <div
-      className="fixed inset-0 flex items-end justify-center bg-pine-deep/50 sm:items-center sm:p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Checkout"
+    <Modal
+      title="Check Out"
+      isOpen
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      isDismissDisabled={isProcessing}
     >
-      <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-card bg-surface p-4 shadow-soft sm:rounded-card">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isProcessing}
-            aria-label="Back"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-mist text-foreground"
+      <ul className="flex flex-col gap-3">
+        {lines.map((line) => (
+          <li
+            key={line.product_id}
+            className="flex items-center gap-3 rounded-card border border-border bg-surface p-3 shadow-soft"
           >
-            <ArrowLeftIcon />
-          </button>
-          <h2 className="flex-1 text-center text-lg font-extrabold tracking-tight">
-            Check Out
-          </h2>
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted">
-            <InfoIcon />
-          </span>
-        </div>
-
-        <ul className="mt-4 flex flex-col gap-3">
-          {lines.map((line) => (
-            <li
-              key={line.product_id}
-              className="flex items-center gap-3 rounded-card border border-border bg-surface p-3 shadow-soft"
-            >
-              <LineThumb line={line} />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[15px] font-bold text-foreground">
-                  {line.name}
-                </p>
-                <p className="text-sm font-semibold text-leaf">
-                  ₱{line.price.toFixed(2)}
-                </p>
-              </div>
-              <QtyStepper
-                value={line.qty}
-                itemName={line.name}
-                onIncrement={() => onIncrement(line.product_id)}
-                onDecrement={() => onDecrement(line.product_id)}
-              />
-            </li>
-          ))}
-        </ul>
-
-        <div className="mt-4 border-t border-border pt-4">
-          <SectionLabel>Payment detail</SectionLabel>
-          <div className="mt-2 flex items-center justify-between text-sm">
-            <span className="text-muted">Subtotal</span>
-            <span className="font-semibold">₱{total.toFixed(2)}</span>
-          </div>
-          <div className="mt-1 flex items-center justify-between">
-            <span className="text-base font-bold">Total</span>
-            <span className="text-lg font-extrabold text-leaf">
-              ₱{total.toFixed(2)}
-            </span>
-          </div>
-        </div>
-
-        <fieldset className="mt-4">
-          <SectionLabel as="legend">Payment method</SectionLabel>
-          <div className="mt-2 flex flex-col gap-2">
-            {MODES.map((mode) => {
-              const selected = method === mode.value;
-              return (
-                <button
-                  key={mode.value}
-                  type="button"
-                  onClick={() => setMethod(mode.value)}
-                  aria-pressed={selected}
-                  className={cn(
-                    'flex items-center gap-3 rounded-2xl border bg-surface p-3 text-left shadow-soft',
-                    selected ? 'border-pine' : 'border-border',
-                  )}
-                >
-                  <IconTile tone="sage" className="h-9 w-9 text-sm font-bold">
-                    {mode.mark}
-                  </IconTile>
-                  <span className="flex-1 text-sm font-bold text-foreground">
-                    {mode.label}
-                  </span>
-                  {selected ? (
-                    <span
-                      aria-hidden="true"
-                      className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-pine text-xs text-surface"
-                    >
-                      ✓
-                    </span>
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
-        </fieldset>
-        {method === 'cash' ? (
-          <div className="mt-4">
-            <Field
-              label="Amount received"
-              labelClassName="text-xs font-semibold tracking-wider text-muted uppercase"
-              name="amountReceived"
-              type="number"
-              min={0}
-              step="any"
-              inputMode="decimal"
-              inputClassName="h-[52px] rounded-2xl border-border bg-mist"
-              value={amountText}
-              onChange={(event) => setAmountText(event.target.value)}
-            />
-            <div className="mt-3 flex items-center justify-between">
-              <SectionLabel>Change</SectionLabel>
-              <p
-                className={cn(
-                  'text-lg font-extrabold',
-                  change !== null && change < 0 ? 'text-danger' : 'text-pine',
-                )}
-              >
-                {change !== null && change >= 0 ? `₱${change.toFixed(2)}` : '—'}
+            <LineThumb line={line} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[15px] font-bold text-foreground">
+                {line.name}
+              </p>
+              <p className="text-sm font-semibold text-leaf">
+                ₱{line.price.toFixed(2)}
               </p>
             </div>
-          </div>
-        ) : (
-          <p className="mt-4 rounded-2xl bg-sage-100 p-3 text-sm text-pine-deep">
-            {WALLET_HINT[method]}
-          </p>
-        )}
-        {error ? (
-          <p role="alert" className="mt-3 text-center text-sm text-danger">
-            {error}
-          </p>
-        ) : null}
-        <div className="mt-4 flex flex-col gap-2">
-          <Button
-            className="h-[52px] w-full rounded-full bg-pine text-base text-surface"
-            onClick={handleConfirm}
-            disabled={!validation.ok || isProcessing}
-          >
-            {isProcessing ? 'Processing…' : 'Process Checkout'}
-          </Button>
-          <Button
-            variant="secondary"
-            className="h-12 w-full rounded-full"
-            onClick={onClose}
-            disabled={isProcessing}
-          >
-            Cancel
-          </Button>
+            <QtyStepper
+              value={line.qty}
+              itemName={line.name}
+              onIncrement={() => onIncrement(line.product_id)}
+              onDecrement={() => onDecrement(line.product_id)}
+            />
+          </li>
+        ))}
+      </ul>
+
+      <div className="mt-4 border-t border-border pt-4">
+        <SectionLabel>Payment detail</SectionLabel>
+        <div className="mt-2 flex items-center justify-between text-sm">
+          <span className="text-muted">Subtotal</span>
+          <span className="font-semibold">₱{total.toFixed(2)}</span>
+        </div>
+        <div className="mt-1 flex items-center justify-between">
+          <span className="text-base font-bold">Total</span>
+          <span className="text-lg font-extrabold text-leaf">
+            ₱{total.toFixed(2)}
+          </span>
         </div>
       </div>
-    </div>
+
+      <fieldset className="mt-4">
+        <SectionLabel as="legend">Payment method</SectionLabel>
+        <div className="mt-2 flex flex-col gap-2">
+          {MODES.map((mode) => {
+            const selected = method === mode.value;
+            return (
+              <button
+                key={mode.value}
+                type="button"
+                onClick={() => setMethod(mode.value)}
+                aria-pressed={selected}
+                className={cn(
+                  'flex items-center gap-3 rounded-2xl border bg-surface p-3 text-left shadow-soft',
+                  selected ? 'border-pine' : 'border-border',
+                )}
+              >
+                <IconTile tone="sage" className="h-9 w-9 text-sm font-bold">
+                  {mode.mark}
+                </IconTile>
+                <span className="flex-1 text-sm font-bold text-foreground">
+                  {mode.label}
+                </span>
+                {selected ? (
+                  <span
+                    aria-hidden="true"
+                    className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-pine text-xs text-surface"
+                  >
+                    ✓
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      </fieldset>
+      {method === 'cash' ? (
+        <div className="mt-4">
+          <Field
+            label="Amount received"
+            labelClassName="text-xs font-semibold tracking-wider text-muted uppercase"
+            name="amountReceived"
+            type="number"
+            min={0}
+            step="any"
+            inputMode="decimal"
+            inputClassName="h-[52px] rounded-2xl border-border bg-mist"
+            value={amountText}
+            onChange={(event) => setAmountText(event.target.value)}
+          />
+          <div className="mt-3 flex items-center justify-between">
+            <SectionLabel>Change</SectionLabel>
+            <p
+              className={cn(
+                'text-lg font-extrabold',
+                change !== null && change < 0 ? 'text-danger' : 'text-pine',
+              )}
+            >
+              {change !== null && change >= 0 ? `₱${change.toFixed(2)}` : '—'}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <p className="mt-4 rounded-2xl bg-sage-100 p-3 text-sm text-pine-deep">
+          {WALLET_HINT[method]}
+        </p>
+      )}
+      {error ? (
+        <p role="alert" className="mt-3 text-center text-sm text-danger">
+          {error}
+        </p>
+      ) : null}
+      <div className="mt-4 flex flex-col gap-2">
+        <Button
+          className="h-[52px] w-full rounded-full bg-pine text-base text-surface"
+          onClick={handleConfirm}
+          disabled={!validation.ok || isProcessing}
+        >
+          {isProcessing ? 'Processing…' : 'Process Checkout'}
+        </Button>
+        <Button
+          variant="secondary"
+          className="h-12 w-full rounded-full"
+          onClick={onClose}
+          disabled={isProcessing}
+        >
+          Cancel
+        </Button>
+      </div>
+    </Modal>
   );
 }

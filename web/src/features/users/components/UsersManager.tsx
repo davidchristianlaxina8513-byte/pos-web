@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
 import { Field } from '@/components/common/Field';
+import { Select } from '@/components/ui/select/Select';
 import { createStaff, setStaffActive } from '../actions';
 import type { StaffUser } from '../queries';
 import type { UserRole } from '@/features/auth/roles';
@@ -13,6 +14,11 @@ export interface UsersManagerProps {
   users: StaffUser[];
   currentUserId: string;
 }
+
+const ROLE_OPTIONS = [
+  { id: 'cashier', label: 'Cashier' },
+  { id: 'admin', label: 'Administrator' },
+];
 
 /** Staff list + create form + enable/disable with confirm. */
 export function UsersManager({ users, currentUserId }: UsersManagerProps) {
@@ -83,17 +89,12 @@ export function UsersManager({ users, currentUserId }: UsersManagerProps) {
             onChange={(event) => setPassword(event.target.value)}
             inputClassName="h-[52px] rounded-2xl border-border bg-mist"
           />
-          <label className="block">
-            <span className="text-foreground">Role</span>
-            <select
-              value={role}
-              onChange={(event) => setRole(event.target.value as UserRole)}
-              className="mt-1 block h-[52px] w-full rounded-2xl border border-border bg-mist px-3.5 text-foreground"
-            >
-              <option value="cashier">Cashier</option>
-              <option value="admin">Administrator</option>
-            </select>
-          </label>
+          <Select
+            label="Role"
+            options={ROLE_OPTIONS}
+            value={role}
+            onChange={(next) => setRole(next as UserRole)}
+          />
           {error ? (
             <p role="alert" className="text-danger">
               {error}

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/common/Button';
 import { Field } from '@/components/common/Field';
-import { SectionLabel } from '@/components/common/SectionLabel';
+import { Select } from '@/components/ui/select/Select';
 import {
   createProduct,
   deleteProduct,
@@ -152,22 +152,17 @@ export function ProductForm({ categories, initial }: ProductFormProps) {
         onChange={(event) => setName(event.target.value)}
         inputClassName={PILL_INPUT}
       />
-      <div>
-        <SectionLabel as="p">Category</SectionLabel>
-        <select
-          aria-label="Category"
-          value={categoryId}
-          onChange={(event) => setCategoryId(event.target.value)}
-          className="mt-1 block h-[52px] w-full rounded-2xl border border-border bg-mist px-3.5 text-foreground"
-        >
-          <option value="">Select a category</option>
-          {categories.map((category) => (
-            <option key={category.category_id} value={category.category_id}>
-              {category.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      <Select
+        label="Category"
+        labelClassName="text-xs font-semibold tracking-wider text-muted uppercase"
+        placeholder="Select a category"
+        options={categories.map((category) => ({
+          id: category.category_id,
+          label: category.name,
+        }))}
+        value={categoryId}
+        onChange={setCategoryId}
+      />
       <Field
         label="Price"
         name="price"
