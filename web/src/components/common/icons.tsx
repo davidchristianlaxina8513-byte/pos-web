@@ -224,3 +224,11 @@ export function CloseIcon({ className }: { className?: string }) {
     </Base>
   );
 }
+
+export function ChevronDownIcon({ className }: { className?: string }) {
+  return (
+    <Base className={className}>
+      <path d="m6 9 6 6 6-6" />
+    </Base>
+  );
+}
