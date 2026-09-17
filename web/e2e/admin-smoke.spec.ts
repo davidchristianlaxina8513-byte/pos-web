@@ -185,7 +185,10 @@ test('menu product create and delete round-trip', async ({ page }) => {
   const name = `E2E Item ${Date.now()}`;
   await page.goto('/admin/menu/product/new');
   await page.getByLabel('Name').fill(name);
-  await page.getByLabel('Category').selectOption({ index: 1 });
+  // React Aria select: open the trigger, then pick the second category
+  // (mirrors the old `selectOption({ index: 1 })`).
+  await page.getByLabel('Category').click();
+  await page.getByRole('option').nth(1).click();
   await page.getByLabel('Price').fill('9.99');
   await page.getByRole('button', { name: 'Add product' }).click();
   await expect(page).toHaveURL(/\/admin\/menu$/);

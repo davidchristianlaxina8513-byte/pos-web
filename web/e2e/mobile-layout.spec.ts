@@ -96,7 +96,7 @@ test('mobile POS cash sale completes at 390px', async ({ page }) => {
   expect(Number.isFinite(total) && total > 0).toBe(true);
 
   await page.getByRole('button', { name: 'Checkout' }).click();
-  await expect(page.getByRole('dialog', { name: 'Checkout' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Check Out' })).toBeVisible();
   await assertNoPageOverflow(page);
   await page.getByLabel('Amount received').fill(String(total + 50));
   await page.getByRole('button', { name: 'Process Checkout' }).click();

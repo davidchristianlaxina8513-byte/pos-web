@@ -104,7 +104,7 @@ test('pos smoke: cash sale deducts stock and renders a receipt', async ({
   expect(Number.isFinite(total) && total > 0).toBe(true);
 
   await page.getByRole('button', { name: 'Checkout' }).click();
-  await expect(page.getByRole('dialog', { name: 'Checkout' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Check Out' })).toBeVisible();
   await page.getByLabel('Amount received').fill(String(total + 100));
   await page.getByRole('button', { name: 'Process Checkout' }).click();
 
