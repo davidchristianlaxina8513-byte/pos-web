@@ -34,8 +34,22 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: 0,
+  // Cold runs need headroom: the default 30s test timeout can kill a
+  // heavy first-load navigation (route compile + queries on cold DB
+  // connections) before the assertion timeouts below even apply.
+  timeout: 90_000,
+  // Cold dev-server boots (route compile + cold DB connections) make many
+  // first-load assertions exceed the 5s default. 15s is a ceiling only —
+  // warm assertions still resolve immediately. The heaviest first
+  // navigations (hub login, first sale receipt) carry their own 30s
+  // timeouts at the call site.
+  expect: {
+    timeout: 15_000,
+  },
   use: {
     baseURL: `http://localhost:${PORT}`,
+    // First-load navigations on a cold dev server (compile + data fetch).
+    navigationTimeout: 60_000,
   },
   webServer: {
     command: `npm run dev -- --port ${PORT}`,

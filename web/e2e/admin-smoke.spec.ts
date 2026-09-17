@@ -66,7 +66,8 @@ async function signInAsAdmin(page: Page): Promise<void> {
   await page.getByLabel('Email').fill(ADMIN_EMAIL);
   await page.getByLabel('Password', { exact: true }).fill(ADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Log In' }).click();
-  await expect(page).toHaveURL(/\/admin$/);
+  // Generous timeout: the suite-first login cold-compiles the admin routes.
+  await expect(page).toHaveURL(/\/admin$/, { timeout: 30_000 });
 }
 
 test('admin hub renders dashboard metrics and nav', async ({ page }) => {
@@ -194,7 +195,10 @@ test('menu product create and delete round-trip', async ({ page }) => {
     .locator('li', { hasText: name })
     .getByRole('link', { name: 'Edit' })
     .click();
-  await expect(page.getByLabel('Name')).toHaveValue(name);
+  // Generous timeout: the edit page cold-compiles on first visit.
+  await expect(page.getByLabel('Name')).toHaveValue(name, {
+    timeout: 30_000,
+  });
   await page.getByRole('button', { name: 'Delete' }).click();
   await page.getByRole('button', { name: 'Confirm delete' }).click();
   await expect(page).toHaveURL(/\/admin\/menu$/);
@@ -243,7 +247,9 @@ test('reports list receipts and sold items for a new sale', async ({
   await page.getByRole('button', { name: 'Checkout' }).click();
   await page.getByLabel('Amount received').fill(String(total + 25));
   await page.getByRole('button', { name: 'Process Checkout' }).click();
-  await expect(page).toHaveURL(/\/pos\/receipt\//);
+
+  // Generous timeout: the receipt route cold-compiles on first sale.
+  await expect(page).toHaveURL(/\/pos\/receipt\//, { timeout: 30_000 });
   const orderText = (await page.getByText(/Order #\d+/).textContent()) ?? '';
   const orderMatch = /Order #(\d+)/.exec(orderText);
   expect(orderMatch).not.toBeNull();
