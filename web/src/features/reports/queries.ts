@@ -87,18 +87,18 @@ export async function getDashboard(
 ): Promise<DashboardData> {
   await requireRole('admin');
   const supabase = await createClient();
-  const [{ rows }, inventoryItems] = await Promise.all([
+  // The items + product-name reads don't depend on the sales rows, so all
+  // four fire together instead of in series.
+  const [{ rows }, inventoryItems, itemsRes, productsRes] = await Promise.all([
     fetchSales(),
     getInventoryItems(),
+    supabase.from('transaction_items').select('product_id, quantity, subtotal'),
+    supabase.from('product').select('product_id, name'),
   ]);
   const active = activeSales(rows);
   const summary = summarizeSales(active);
-  const { data: itemsData } = await supabase
-    .from('transaction_items')
-    .select('product_id, quantity, subtotal');
-  const { data: productsData } = await supabase
-    .from('product')
-    .select('product_id, name');
+  const { data: itemsData } = itemsRes;
+  const { data: productsData } = productsRes;
   const names = new Map<number, string>();
   for (const row of (productsData ?? []) as {
     product_id: unknown;
@@ -178,7 +178,13 @@ export async function getTopProducts(
   let query = supabase.from('transactions').select('id, date, status');
   if (range.from) query = query.gte('date', range.from.toISOString());
   if (range.to) query = query.lt('date', range.to.toISOString());
-  const { data: txns, error: txnError } = await query;
+  // The product-name map doesn't depend on the txn ids, so both fire
+  // together; only the items read waits on the active ids.
+  const [txnRes, productsRes] = await Promise.all([
+    query,
+    supabase.from('product').select('product_id, name'),
+  ]);
+  const { data: txns, error: txnError } = txnRes;
   if (txnError) throw txnError;
   const activeIds = ((txns ?? []) as { id: unknown; status: unknown }[])
     .filter((row) => row.status !== 'voided' && typeof row.id === 'string')
@@ -189,9 +195,7 @@ export async function getTopProducts(
     .select('product_id, quantity, subtotal')
     .in('transaction_id', activeIds);
   if (itemsError) throw itemsError;
-  const { data: productsData, error: productsError } = await supabase
-    .from('product')
-    .select('product_id, name');
+  const { data: productsData, error: productsError } = productsRes;
   if (productsError) throw productsError;
   const names = new Map<number, string>();
   for (const row of (productsData ?? []) as {
@@ -236,7 +240,13 @@ export async function getReceiptRecords(
     .order('date', { ascending: false });
   if (range.from) query = query.gte('date', range.from.toISOString());
   if (range.to) query = query.lt('date', range.to.toISOString());
-  const { data: txnsData, error: txnError } = await query;
+  // The product-name map doesn't depend on the txn ids, so both fire
+  // together; only the items read waits on the active ids.
+  const [txnRes, productsRes] = await Promise.all([
+    query,
+    supabase.from('product').select('product_id, name'),
+  ]);
+  const { data: txnsData, error: txnError } = txnRes;
   if (txnError) throw txnError;
   const txns: LedgerTransaction[] = (
     (txnsData ?? []) as {
@@ -308,9 +318,7 @@ export async function getReceiptRecords(
         ]
       : [],
   );
-  const { data: productsData, error: productsError } = await supabase
-    .from('product')
-    .select('product_id, name');
+  const { data: productsData, error: productsError } = productsRes;
   if (productsError) throw productsError;
   const names = new Map<number, string>();
   for (const row of (productsData ?? []) as {

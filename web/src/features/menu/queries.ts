@@ -38,16 +38,19 @@ export async function getEditableProduct(
   productId: number,
 ): Promise<EditableProduct | null> {
   await requireRole('admin');
-  const menu = await getMenu();
+  const supabase = await createClient();
+  // The catalog read and the one-row par lookup are independent.
+  const [menu, parRes] = await Promise.all([
+    getMenu(),
+    supabase
+      .from('inventory')
+      .select('par_level')
+      .eq('product_id', productId)
+      .maybeSingle(),
+  ]);
   const item = menu.items.find((entry) => entry.product_id === productId);
   if (!item) return null;
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from('inventory')
-    .select('par_level')
-    .eq('product_id', productId)
-    .maybeSingle();
-  const par = (data as { par_level: unknown } | null)?.par_level;
+  const par = (parRes.data as { par_level: unknown } | null)?.par_level;
   return {
     ...item,
     par_level: typeof par === 'number' ? par : null,
