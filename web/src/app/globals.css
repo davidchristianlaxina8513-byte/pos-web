@@ -1,4 +1,4 @@
-/* web/src/app/globals.css — tokens mapped from root src/theme/colors.ts */
+/* Web design tokens for Cafe Elvira. */
 @import 'tailwindcss';
 
 @theme {
@@ -30,11 +30,58 @@
   --color-mist: #eff0f6;
   --color-peri: #e2e5fa;
   --color-mint: #c2e5c9;
+  --color-login-background: #f6f5ef;
 
   --radius-card: 20px;
 
   --shadow-soft: 0 10px 30px rgb(31 51 32 / 0.1);
   --shadow-hover: 0 14px 36px rgb(31 51 32 / 0.16);
+}
+
+:root {
+  color-scheme: light;
+}
+
+html[data-theme='dark'] {
+  color-scheme: dark;
+  --color-background: #101511;
+  --color-foreground: #f3f6f3;
+  --color-muted: #b5c0b7;
+  --color-border: #3a463c;
+  --color-mist: #151c17;
+  --color-login-background: #101511;
+  --color-secondary: #b6c9b4;
+  --color-danger-surface: #3a1d1d;
+  --color-danger-border: #713b38;
+  --color-sage-100: #273329;
+  --color-sage-200: #334336;
+  --color-sage-300: #415545;
+  --color-peri: #303448;
+  --color-mint: #294431;
+  --shadow-soft: 0 10px 30px rgb(0 0 0 / 0.25);
+  --shadow-hover: 0 14px 36px rgb(0 0 0 / 0.34);
+}
+
+html[data-theme='dark'] body {
+  background-color: var(--color-background);
+}
+
+/* `surface` is also used as light text on pine buttons. Override only its
+ * background utility so button text keeps its existing contrast. */
+html[data-theme='dark'] .bg-surface,
+html[data-theme='dark'] .bg-white {
+  background-color: #1c251e;
+}
+
+html[data-theme='dark'] .text-pine,
+html[data-theme='dark'] .text-pine-deep,
+html[data-theme='dark'] .text-leaf {
+  color: #a9cfac;
+}
+
+html[data-theme='dark'] input:disabled {
+  color: var(--color-muted);
+  opacity: 1;
 }
 
 /* Clickable cards/rows lift on hover (same pine-tinted depth scale). */

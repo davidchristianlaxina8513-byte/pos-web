@@ -30,10 +30,10 @@ export function ProductForm({ categories, initial }: ProductFormProps) {
   const [priceText, setPriceText] = useState(
     initial ? String(initial.price) : '',
   );
-  const [parText, setParText] = useState(
-    initial?.par_level !== null && initial?.par_level !== undefined
-      ? String(initial.par_level)
-      : '',
+  const [defaultQuotaText, setDefaultQuotaText] = useState(
+    initial?.daily_quota_limit === null
+      ? ''
+      : String(initial?.daily_quota_limit ?? ''),
   );
   const [isAvailable, setIsAvailable] = useState(initial?.is_available ?? true);
   const [imageUrl, setImageUrl] = useState<string | null>(
@@ -71,7 +71,7 @@ export function ProductForm({ categories, initial }: ProductFormProps) {
           name,
           category_id: categoryId,
           priceText,
-          parText,
+          defaultQuotaText,
           is_available: isAvailable,
           image_url: imageUrl,
         })
@@ -79,6 +79,7 @@ export function ProductForm({ categories, initial }: ProductFormProps) {
           name,
           category_id: categoryId,
           priceText,
+          defaultQuotaText,
           image_url: imageUrl,
         });
     if (!result.ok) {
@@ -188,20 +189,17 @@ export function ProductForm({ categories, initial }: ProductFormProps) {
           </span>
         </span>
       </label>
-      {isEditing ? (
-        <Field
-          label="Par level (optional)"
-          name="par"
-          type="number"
-          min={0}
-          step={1}
-          inputMode="numeric"
-          placeholder="Unset"
-          value={parText}
-          onChange={(event) => setParText(event.target.value)}
-          inputClassName={PILL_INPUT}
-        />
-      ) : null}
+      <Field
+        label="Default daily production quota (blank = unlimited)"
+        name="defaultQuota"
+        type="number"
+        min={0}
+        step={1}
+        inputMode="numeric"
+        value={defaultQuotaText}
+        onChange={(event) => setDefaultQuotaText(event.target.value)}
+        inputClassName={PILL_INPUT}
+      />
       {error ? (
         <p role="alert" className="text-center text-sm text-danger">
           {error}

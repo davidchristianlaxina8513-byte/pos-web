@@ -17,7 +17,7 @@ interface UserRow {
 }
 
 /**
- * Mirrors Expo `authApi.getUserProfile`: reads the caller's own `user` row.
+ * Reads the caller's own `user` row.
  * Allowed by RLS policy `user_read_own` (0003_rbac) — no migration changes.
  * Uses claims (not `getSession()` alone) per the Supabase-Next.js playbook.
  *

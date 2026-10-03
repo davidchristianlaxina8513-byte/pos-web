@@ -11,12 +11,14 @@ function item(overrides: Partial<MenuItem> = {}): MenuItem {
     image_url: null,
     category_id: 'cat-1',
     category_name: 'Hot Drinks',
-    stock_quantity: 5,
+    today_quota_limit: 10,
+    sold_quantity: 5,
+    remaining_quantity: 5,
     ...overrides,
   };
 }
 
-test('mapMenuItems joins stock snapshots onto products', () => {
+test('mapMenuItems joins quota snapshots onto products', () => {
   const items = mapMenuItems(
     [
       {
@@ -39,8 +41,12 @@ test('mapMenuItems joins stock snapshots onto products', () => {
       },
     ],
     [
-      { product_id: 1, quantity: 5 },
-      { product_id: 1, quantity: 3 },
+      {
+        product_id: 1,
+        today_quota_limit: 10,
+        sold_quantity: 2,
+        remaining_quantity: 8,
+      },
     ],
   );
   expect(items).toHaveLength(2);
@@ -48,13 +54,13 @@ test('mapMenuItems joins stock snapshots onto products', () => {
     product_id: 1,
     price: 120,
     category_name: 'Hot Drinks',
-    stock_quantity: 8,
+    remaining_quantity: 8,
   });
-  // numeric columns may arrive as strings; price is coerced like Expo.
+  // Numeric columns may arrive as strings; price is coerced.
   expect(items[1]).toMatchObject({
     product_id: 2,
     price: 65.5,
-    stock_quantity: 0,
+    remaining_quantity: 0,
   });
 });
 
@@ -85,10 +91,13 @@ test('mapMenuItems drops malformed rows', () => {
   expect(items).toEqual([]);
 });
 
-test('isSellable requires availability and on-hand stock', () => {
+test('isSellable requires availability and remaining daily quota', () => {
   expect(isSellable(item())).toBe(true);
+  expect(
+    isSellable(item({ today_quota_limit: null, remaining_quantity: null })),
+  ).toBe(true);
   expect(isSellable(item({ is_available: false }))).toBe(false);
-  expect(isSellable(item({ stock_quantity: 0 }))).toBe(false);
+  expect(isSellable(item({ remaining_quantity: 0 }))).toBe(false);
 });
 
 test('cartTotal sums price times qty', () => {

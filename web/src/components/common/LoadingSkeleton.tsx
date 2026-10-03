@@ -21,7 +21,7 @@ export function CardsSkeleton() {
   );
 }
 
-/** List pages: inventory, menu manager, restock queue, users. */
+/** List pages: menu manager, quota history, transactions, and users. */
 export function ListSkeleton() {
   return (
     <div aria-hidden="true" className="flex animate-pulse flex-col gap-3">
@@ -45,7 +45,7 @@ export function ListSkeleton() {
   );
 }
 
-/** Form pages: stock-in, product create/edit. */
+/** Product create/edit form loading state. */
 export function FormSkeleton() {
   return (
     <div aria-hidden="true" className="flex animate-pulse flex-col gap-3">

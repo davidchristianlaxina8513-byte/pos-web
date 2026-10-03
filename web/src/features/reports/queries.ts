@@ -1,11 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { requireRole } from '@/features/auth/queries';
-import { parsePaymentMode } from '@/features/pos/checkout';
-import {
-  getInventoryItems,
-  type InventoryItem,
-} from '@/features/inventory/queries';
-import { getStockStatus } from '@/features/inventory/status';
+import { parsePaymentMode, parsePaymentStatus } from '@/features/pos/checkout';
 import {
   activeSales,
   aggregateTopProducts,
@@ -77,21 +72,17 @@ export interface DashboardData {
   revenue: number;
   orders: number;
   weekly: DaySales[];
-  lowStock: { product_name: string; quantity: number }[];
   topProducts: TopProduct[];
 }
 
-/** Dashboard metrics: all-time revenue/orders, 7-day chart, low stock, top 5. */
+/** Dashboard metrics: all-time revenue/orders, 7-day chart, and top 5. */
 export async function getDashboard(
   now: Date = new Date(),
 ): Promise<DashboardData> {
   await requireRole('admin');
   const supabase = await createClient();
-  // The items + product-name reads don't depend on the sales rows, so all
-  // four fire together instead of in series.
-  const [{ rows }, inventoryItems, itemsRes, productsRes] = await Promise.all([
+  const [{ rows }, itemsRes, productsRes] = await Promise.all([
     fetchSales(),
-    getInventoryItems(),
     supabase.from('transaction_items').select('product_id, quantity, subtotal'),
     supabase.from('product').select('product_id, name'),
   ]);
@@ -131,29 +122,27 @@ export async function getDashboard(
     revenue: summary.revenue,
     orders: summary.orders,
     weekly: buildDaySales(active, 7, now),
-    lowStock: inventoryItems
-      .filter(
-        (item) => getStockStatus(item.quantity, item.reorder_level) !== 'ok',
-      )
-      .sort((a, b) => a.quantity - b.quantity)
-      .slice(0, 5)
-      .map((item) => ({
-        product_name: item.product_name,
-        quantity: item.quantity,
-      })),
     topProducts: aggregateTopProducts(soldItems, names, 5),
   };
 }
 
 export interface SalesReport {
   summary: SalesSummary;
+  grossRevenue: number;
+  voidedRevenue: number;
+  netRevenue: number;
   daily: DaySales[];
 }
 
 /** Filtered sales summary + daily buckets (capped at 31 days of buckets). */
 export async function getSalesReport(range: ReportRange): Promise<SalesReport> {
   const { rows } = await fetchSales();
-  const active = activeSales(inRange(rows, range));
+  const ranged = inRange(rows, range);
+  const active = activeSales(ranged);
+  const grossRevenue = ranged.reduce((sum, row) => sum + row.total_amount, 0);
+  const voidedRevenue = ranged
+    .filter((row) => row.status === 'voided')
+    .reduce((sum, row) => sum + row.total_amount, 0);
   const spanDays =
     range.from && range.to
       ? Math.max(
@@ -164,6 +153,9 @@ export async function getSalesReport(range: ReportRange): Promise<SalesReport> {
   const end = range.to ?? new Date();
   return {
     summary: summarizeSales(active),
+    grossRevenue,
+    voidedRevenue,
+    netRevenue: grossRevenue - voidedRevenue,
     daily: buildDaySales(active, Math.min(spanDays, 31), end),
   };
 }
@@ -231,12 +223,20 @@ export async function getTopProducts(
 /** Record-level ledger for the Reports page: receipts + sold lines in range. */
 export async function getReceiptRecords(
   range: ReportRange,
+  filters: {
+    search?: string;
+    cashier?: string;
+    paymentMode?: string;
+    paymentStatus?: string;
+  } = {},
 ): Promise<ReceiptLedger> {
   await requireRole('admin');
   const supabase = await createClient();
   let query = supabase
     .from('transactions')
-    .select('id, order_number, date, total_amount, payment_mode, status')
+    .select(
+      'id, transaction_number, order_number, date, total_amount, payment_mode, payment_status, payment_reference, status, user:user!transactions_user_id_fkey(username), payment_evidence(evidence_id)',
+    )
     .order('date', { ascending: false });
   if (range.from) query = query.gte('date', range.from.toISOString());
   if (range.to) query = query.lt('date', range.to.toISOString());
@@ -251,38 +251,74 @@ export async function getReceiptRecords(
   const txns: LedgerTransaction[] = (
     (txnsData ?? []) as {
       id: unknown;
+      transaction_number: unknown;
       order_number: unknown;
       date: unknown;
       total_amount: unknown;
       payment_mode: unknown;
       status: unknown;
+      payment_status: unknown;
+      payment_reference: unknown;
+      user: unknown;
+      payment_evidence: unknown;
     }[]
-  ).flatMap((row) => {
-    const mode = parsePaymentMode(row.payment_mode);
-    const total = Number(row.total_amount);
-    if (
-      typeof row.id !== 'string' ||
-      typeof row.date !== 'string' ||
-      !Number.isFinite(total) ||
-      !mode
-    ) {
-      return [];
-    }
-    return [
-      {
-        id: row.id,
-        order_number:
-          typeof row.order_number === 'number' ? row.order_number : null,
-        date: row.date,
-        total_amount: total,
-        payment_mode: mode,
-        status: typeof row.status === 'string' ? row.status : null,
-      },
-    ];
-  });
-  const activeIds = txns
-    .filter((txn) => txn.status !== 'voided')
-    .map((txn) => txn.id);
+  )
+    .flatMap((row) => {
+      const mode = parsePaymentMode(row.payment_mode);
+      const paymentStatus = parsePaymentStatus(row.payment_status);
+      const total = Number(row.total_amount);
+      const userValue = row.user as
+        | { username?: unknown }
+        | { username?: unknown }[]
+        | null;
+      const user = Array.isArray(userValue) ? userValue[0] : userValue;
+      if (
+        typeof row.id !== 'string' ||
+        typeof row.transaction_number !== 'string' ||
+        typeof row.date !== 'string' ||
+        !Number.isFinite(total) ||
+        !mode ||
+        !paymentStatus
+      ) {
+        return [];
+      }
+      return [
+        {
+          id: row.id,
+          transaction_number: row.transaction_number,
+          order_number:
+            typeof row.order_number === 'number' ? row.order_number : null,
+          date: row.date,
+          total_amount: total,
+          payment_mode: mode,
+          status: typeof row.status === 'string' ? row.status : null,
+          payment_status: paymentStatus,
+          payment_reference:
+            typeof row.payment_reference === 'string'
+              ? row.payment_reference
+              : null,
+          cashier_name:
+            typeof user?.username === 'string' ? user.username : 'Staff',
+          has_payment_evidence:
+            Array.isArray(row.payment_evidence) &&
+            row.payment_evidence.length > 0,
+        },
+      ];
+    })
+    .filter((txn) => {
+      const search = filters.search?.trim().toLowerCase();
+      const cashier = filters.cashier?.trim().toLowerCase();
+      if (search && !txn.transaction_number.toLowerCase().includes(search))
+        return false;
+      if (cashier && !txn.cashier_name.toLowerCase().includes(cashier))
+        return false;
+      if (filters.paymentMode && txn.payment_mode !== filters.paymentMode)
+        return false;
+      if (filters.paymentStatus && txn.payment_status !== filters.paymentStatus)
+        return false;
+      return true;
+    });
+  const activeIds = txns.map((txn) => txn.id);
   if (activeIds.length === 0) {
     return {
       receipts: [],
@@ -330,46 +366,4 @@ export async function getReceiptRecords(
     }
   }
   return buildReceiptLedger(txns, items, names);
-}
-
-export interface InventoryReportRow {
-  product_name: string;
-  quantity: number;
-  reorder_level: number;
-  status: 'ok' | 'low' | 'critical';
-}
-
-export interface InventoryReport {
-  totalItems: number;
-  lowStockCount: number;
-  outOfStockCount: number;
-  stockValue: number;
-  rows: InventoryReportRow[];
-}
-
-/** Stock valuation + status counters, mirroring Expo `getInventoryReport`. */
-export async function getInventoryReport(): Promise<InventoryReport> {
-  const items: InventoryItem[] = await getInventoryItems();
-  let stockValue = 0;
-  let lowStockCount = 0;
-  let outOfStockCount = 0;
-  const rows = items.map((item) => {
-    const status = getStockStatus(item.quantity, item.reorder_level);
-    if (status === 'low') lowStockCount += 1;
-    if (status === 'critical') outOfStockCount += 1;
-    stockValue += item.price * item.quantity;
-    return {
-      product_name: item.product_name,
-      quantity: item.quantity,
-      reorder_level: item.reorder_level,
-      status,
-    };
-  });
-  return {
-    totalItems: items.length,
-    lowStockCount,
-    outOfStockCount,
-    stockValue,
-    rows,
-  };
 }

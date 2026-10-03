@@ -5,25 +5,25 @@ const BASE = {
   name: 'Latte',
   category_id: 'cat-1',
   priceText: '120',
-  parText: '',
+  defaultQuotaText: '30',
 };
 
-test('valid product passes with null par by default', () => {
+test('valid product includes its default daily quota', () => {
   expect(validateProduct(BASE)).toEqual({
     ok: true,
     value: {
       name: 'Latte',
       category_id: 'cat-1',
       price: 120,
-      parLevel: null,
+      dailyQuotaLimit: 30,
     },
   });
 });
 
-test('valid integer par passes', () => {
-  const result = validateProduct({ ...BASE, parText: '60' });
+test('valid integer default quota passes', () => {
+  const result = validateProduct({ ...BASE, defaultQuotaText: '60' });
   expect(result.ok).toBe(true);
-  if (result.ok) expect(result.value.parLevel).toBe(60);
+  if (result.ok) expect(result.value.dailyQuotaLimit).toBe(60);
 });
 
 test('name, category, and price are required and sane', () => {
@@ -45,14 +45,19 @@ test('name, category, and price are required and sane', () => {
   });
 });
 
-test('par must be a whole number when present', () => {
-  expect(validateProduct({ ...BASE, parText: '1.5' })).toEqual({
+test('daily quota may be unlimited or a nonnegative whole number', () => {
+  const unlimited = validateProduct({ ...BASE, defaultQuotaText: '' });
+  expect(unlimited.ok).toBe(true);
+  if (unlimited.ok) expect(unlimited.value.dailyQuotaLimit).toBeNull();
+  expect(validateProduct({ ...BASE, defaultQuotaText: '1.5' })).toEqual({
     ok: false,
-    error: 'Par level must be a whole number greater than or equal to zero.',
+    error:
+      'Daily quota must be blank or a whole number greater than or equal to zero.',
   });
-  expect(validateProduct({ ...BASE, parText: '-1' })).toEqual({
+  expect(validateProduct({ ...BASE, defaultQuotaText: '-1' })).toEqual({
     ok: false,
-    error: 'Par level must be a whole number greater than or equal to zero.',
+    error:
+      'Daily quota must be blank or a whole number greater than or equal to zero.',
   });
 });
 

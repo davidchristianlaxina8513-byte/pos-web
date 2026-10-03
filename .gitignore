@@ -2,24 +2,16 @@
 
 # dependencies
 node_modules/
+.dev-exports/
 
-# Expo
+# Old generated Expo output; untracked local folders may still exist.
 .expo/
 dist/
-web-build/
-expo-env.d.ts
 
-# Native
-.kotlin/
-*.orig.*
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
-
-# Metro
-.metro-health-check*
+# Next.js
+web/.next/
+web/test-results/
+web/playwright-report/
 
 # debug
 npm-debug.*
@@ -38,10 +30,6 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
-
-# generated native folders
-/ios
-/android
 
 # editor / scratch
 .vscode/

@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getReceipt } from '@/features/pos/actions';
+import { requireStaff } from '@/features/auth/queries';
+import { PaymentEvidenceActions } from '@/features/pos/components/PaymentEvidenceActions';
 import { Card } from '@/components/common/Card';
 import { CheckIcon } from '@/components/common/icons';
 import { PrintButton } from './print-button';
@@ -11,6 +13,13 @@ const PAYMENT_LABELS = {
   maya: 'Maya',
 } as const;
 
+const PAYMENT_STATUS_LABELS = {
+  paid: 'Paid',
+  pending_verification: 'Pending Verification',
+  verified: 'Verified',
+  rejected: 'Rejected',
+} as const;
+
 /** v2 receipt: success block, dashed-detail card, transaction + print. */
 export default async function ReceiptPage({
   params,
@@ -18,7 +27,10 @@ export default async function ReceiptPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const receipt = await getReceipt(id);
+  const [receipt, profile] = await Promise.all([
+    getReceipt(id),
+    requireStaff(),
+  ]);
   if (!receipt) notFound();
   return (
     <main className="min-h-screen bg-mist text-foreground">
@@ -40,7 +52,11 @@ export default async function ReceiptPage({
             <CheckIcon className="h-9 w-9" />
           </span>
           <h1 className="mt-4 text-2xl font-extrabold tracking-tight text-pine-deep">
-            Payment Successful
+            {receipt.payment_status === 'pending_verification'
+              ? 'Payment Evidence Submitted'
+              : receipt.payment_status === 'rejected'
+                ? 'Payment Requires Attention'
+                : 'Payment Successful'}
           </h1>
           <p className="mt-1 text-sm text-muted">Thank you for your visit!</p>
         </div>
@@ -48,6 +64,9 @@ export default async function ReceiptPage({
         <Card className="mt-6 rounded-card border-border shadow-soft">
           <div className="flex items-start justify-between gap-3">
             <div>
+              <p className="text-xs font-bold tracking-wider text-pine uppercase">
+                {receipt.transaction_number}
+              </p>
               {receipt.order_number !== null ? (
                 <p className="text-xs font-bold tracking-wider uppercase">
                   Order #{receipt.order_number}
@@ -110,6 +129,14 @@ export default async function ReceiptPage({
                 {PAYMENT_LABELS[receipt.payment_mode]}
               </span>
             </div>
+            <div className="mt-1 flex items-center justify-between">
+              <span className="text-xs font-semibold tracking-wider text-muted uppercase">
+                Payment status
+              </span>
+              <span className="font-semibold">
+                {PAYMENT_STATUS_LABELS[receipt.payment_status]}
+              </span>
+            </div>
             {receipt.payment_mode === 'cash' ? (
               <>
                 <p className="mt-1">
@@ -125,7 +152,28 @@ export default async function ReceiptPage({
                     : `₱${receipt.change_given.toFixed(2)}`}
                 </p>
               </>
-            ) : null}
+            ) : (
+              <>
+                <p className="mt-2">
+                  Reference: {receipt.payment_reference ?? '—'}
+                </p>
+                <p className="mt-1">
+                  Payment Evidence:{' '}
+                  {receipt.has_payment_evidence ? 'Available' : 'Unavailable'}
+                </p>
+                {receipt.payment_review_note ? (
+                  <p className="mt-1">
+                    Review note: {receipt.payment_review_note}
+                  </p>
+                ) : null}
+                <PaymentEvidenceActions
+                  transactionId={receipt.transaction_id}
+                  canReview={profile.role === 'admin'}
+                  pending={receipt.payment_status === 'pending_verification'}
+                  hasEvidence={receipt.has_payment_evidence}
+                />
+              </>
+            )}
           </div>
         </Card>
 

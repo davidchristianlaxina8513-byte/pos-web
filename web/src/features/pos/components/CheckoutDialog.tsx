@@ -10,8 +10,9 @@ import { SectionLabel } from '@/components/common/SectionLabel';
 import { Modal } from '@/components/layout/modal/Modal';
 import { cn } from '@/lib/cn';
 import { checkoutSale } from '../actions';
-import { validateCheckout } from '../checkout';
+import { validateCheckout, validateOnlinePayment } from '../checkout';
 import { cartTotal, type CartLine, type PaymentMode } from '../types';
+import { PaymentEvidenceCapture } from './PaymentEvidenceCapture';
 
 export interface CheckoutDialogProps {
   lines: CartLine[];
@@ -67,6 +68,8 @@ export function CheckoutDialog({
   const total = cartTotal(lines);
   const [method, setMethod] = useState<PaymentMode>('cash');
   const [amountText, setAmountText] = useState('');
+  const [paymentReference, setPaymentReference] = useState('');
+  const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -74,6 +77,11 @@ export function CheckoutDialog({
   const validation = useMemo(
     () => validateCheckout(lines, method, amountReceived),
     [lines, method, amountReceived],
+  );
+  const onlineError = validateOnlinePayment(
+    method,
+    paymentReference,
+    evidenceFile !== null,
   );
   const change =
     method === 'cash' &&
@@ -85,7 +93,15 @@ export function CheckoutDialog({
   const handleConfirm = async () => {
     setIsProcessing(true);
     setError(null);
-    const result = await checkoutSale(lines, method, amountReceived);
+    const evidenceData = evidenceFile ? new FormData() : null;
+    if (evidenceFile) evidenceData?.set('evidence', evidenceFile);
+    const result = await checkoutSale(
+      lines,
+      method,
+      amountReceived,
+      paymentReference,
+      evidenceData,
+    );
     if (!result.ok) {
       setError(result.error);
       setIsProcessing(false);
@@ -152,7 +168,14 @@ export function CheckoutDialog({
               <button
                 key={mode.value}
                 type="button"
-                onClick={() => setMethod(mode.value)}
+                onClick={() => {
+                  setMethod(mode.value);
+                  setError(null);
+                  if (mode.value === 'cash') {
+                    setPaymentReference('');
+                    setEvidenceFile(null);
+                  }
+                }}
                 aria-pressed={selected}
                 className={cn(
                   'flex items-center gap-3 rounded-2xl border bg-surface p-3 text-left shadow-soft',
@@ -205,9 +228,28 @@ export function CheckoutDialog({
           </div>
         </div>
       ) : (
-        <p className="mt-4 rounded-2xl bg-sage-100 p-3 text-sm text-pine-deep">
-          {WALLET_HINT[method]}
-        </p>
+        <div className="mt-4">
+          <p className="rounded-2xl bg-sage-100 p-3 text-sm text-pine-deep">
+            {WALLET_HINT[method]}
+          </p>
+          <div className="mt-3">
+            <Field
+              label="Online transaction reference"
+              name="paymentReference"
+              autoComplete="off"
+              minLength={6}
+              maxLength={64}
+              value={paymentReference}
+              onChange={(event) => setPaymentReference(event.target.value)}
+              placeholder="Enter reference number"
+            />
+          </div>
+          <PaymentEvidenceCapture
+            value={evidenceFile}
+            onChange={setEvidenceFile}
+            disabled={isProcessing}
+          />
+        </div>
       )}
       {error ? (
         <p role="alert" className="mt-3 text-center text-sm text-danger">
@@ -218,7 +260,7 @@ export function CheckoutDialog({
         <Button
           className="h-[52px] w-full rounded-full bg-pine text-base text-surface"
           onClick={handleConfirm}
-          disabled={!validation.ok || isProcessing}
+          disabled={!validation.ok || onlineError !== null || isProcessing}
         >
           {isProcessing ? 'Processing…' : 'Process Checkout'}
         </Button>

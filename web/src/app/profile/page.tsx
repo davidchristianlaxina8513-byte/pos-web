@@ -6,6 +6,7 @@ import { Card } from '@/components/common/Card';
 import { Field } from '@/components/common/Field';
 import { StaffShell } from '@/components/layout/staff-shell';
 import { SignOutIcon } from '@/components/common/icons';
+import { PreferencesPanel } from '@/features/settings/components/PreferencesPanel';
 
 /**
  * Lightweight staff profile (cashier-facing). Admins own the full
@@ -56,6 +57,13 @@ export default async function ProfilePage() {
               inputClassName="h-[52px] rounded-2xl border-border bg-mist"
             />
           </div>
+        </Card>
+
+        <Card
+          title="Preferences"
+          className="rounded-card border-border shadow-soft"
+        >
+          <PreferencesPanel />
         </Card>
 
         <form action={signOut}>

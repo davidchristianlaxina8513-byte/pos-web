@@ -6,9 +6,9 @@ import { usePathname } from 'next/navigation';
 import { signOut } from '@/features/auth/actions';
 import type { UserRole } from '@/features/auth/roles';
 import { Avatar } from '@/components/common/Avatar';
+import { PreferencesProvider } from '@/features/settings/components/PreferencesProvider';
 import { cn } from '@/lib/cn';
 import {
-  BoxIcon,
   CartIcon,
   ChartIcon,
   CloseIcon,
@@ -30,17 +30,32 @@ interface NavEntry {
 
 const ADMIN_NAV: NavEntry[] = [
   { href: '/admin', label: 'Dashboard', icon: <ChartIcon /> },
-  { href: '/pos', label: 'Register', icon: <CartIcon /> },
-  { href: '/admin/inventory', label: 'Inventory', icon: <BoxIcon /> },
-  { href: '/admin/menu', label: 'Menu', icon: <CupIcon /> },
-  { href: '/admin/restock', label: 'Restock', icon: <CycleIcon /> },
+  { href: '/pos', label: 'POS', icon: <CartIcon /> },
+  { href: '/admin/menu', label: 'Menu Management', icon: <CupIcon /> },
+  { href: '/today-products', label: "Today's Products", icon: <CycleIcon /> },
   { href: '/admin/reports', label: 'Reports', icon: <ReceiptIcon /> },
+  {
+    href: '/admin/cashier-operations',
+    label: 'Cashier Operations',
+    icon: <PersonIcon />,
+  },
   { href: '/admin/users', label: 'Users', icon: <PersonIcon /> },
+  { href: '/admin/audit', label: 'Audit Log', icon: <ReceiptIcon /> },
   { href: '/admin/settings', label: 'Settings', icon: <GearIcon /> },
 ];
 
 const CASHIER_NAV: NavEntry[] = [
-  { href: '/pos', label: 'Register', icon: <CartIcon /> },
+  { href: '/dashboard', label: 'Dashboard', icon: <ChartIcon /> },
+  { href: '/pos', label: 'POS', icon: <CartIcon /> },
+  { href: '/menu', label: 'Menu', icon: <CupIcon /> },
+  { href: '/today-products', label: "Today's Products", icon: <CycleIcon /> },
+  { href: '/daily-sales', label: 'Daily Sales', icon: <ReceiptIcon /> },
+  {
+    href: '/cashier-operations',
+    label: 'Cashier Operations',
+    icon: <PersonIcon />,
+  },
+  { href: '/profile', label: 'Profile', icon: <GearIcon /> },
 ];
 
 export interface StaffShellProps {
@@ -59,7 +74,7 @@ export interface StaffShellProps {
  * server-side (`requireRole`/`requireStaff` per page) — the nav list here is
  * an affordance only and never grants access.
  */
-export function StaffShell({
+function StaffShellContent({
   email,
   role,
   title,
@@ -225,5 +240,14 @@ export function StaffShell({
         </main>
       </div>
     </div>
+  );
+}
+
+/** Loads account-scoped display preferences around every staff screen. */
+export function StaffShell(props: StaffShellProps) {
+  return (
+    <PreferencesProvider identity={props.email}>
+      <StaffShellContent {...props} />
+    </PreferencesProvider>
   );
 }

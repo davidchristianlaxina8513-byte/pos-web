@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { landingForRole, parseRole } from './roles';
 
 /**
- * Mirrors Expo `AuthContext.login`: email+password sign-in, then role lookup
+ * Email and password sign-in, followed by role lookup
  * from the `user` table. Online-only — no offline profile cache on web.
  * Unknown roles fail closed (sign out + error, no cashier fallback).
  */
@@ -30,7 +30,7 @@ export async function signIn(formData: FormData) {
     await supabase.auth.signOut();
     redirect('/login?error=unknown_role');
   }
-  // Expo leaves `is_active` unenforced at login; the web fails closed so a
+  // Reject inactive accounts so a
   // disabled account cannot start a session.
   if (typed?.is_active === false) {
     await supabase.auth.signOut();

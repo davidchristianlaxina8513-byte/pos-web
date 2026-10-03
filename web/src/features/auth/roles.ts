@@ -1,12 +1,10 @@
 /**
- * Staff roles, mirroring the Expo app (`src/types/entities.ts` → `UserRole`,
- * `src/context/AuthContext.tsx`). The web reads the same `user` table row;
- * unlike Expo it fails closed on unknown roles (no cashier fallback).
+ * Staff roles from the `user` table. Unknown roles fail closed.
  */
 export type UserRole = 'admin' | 'cashier';
 
-export function landingForRole(role: UserRole): '/pos' | '/admin' {
-  return role === 'admin' ? '/admin' : '/pos';
+export function landingForRole(role: UserRole): '/dashboard' | '/admin' {
+  return role === 'admin' ? '/admin' : '/dashboard';
 }
 
 export function parseRole(value: unknown): UserRole | null {
@@ -14,14 +12,13 @@ export function parseRole(value: unknown): UserRole | null {
 }
 
 /**
- * POS sellers: both staff roles can sell (capability matrix — admin sees the
- * same Menu(POS) entry as cashier in the Expo app).
+ * Both staff roles can sell through the POS.
  */
 export function isStaffRole(role: UserRole): boolean {
   return role === 'admin' || role === 'cashier';
 }
 
-const ALLOWED_DESTINATIONS = ['/', '/pos', '/admin'] as const;
+const ALLOWED_DESTINATIONS = ['/', '/pos', '/admin', '/dashboard'] as const;
 
 type AppDestination = (typeof ALLOWED_DESTINATIONS)[number];
 

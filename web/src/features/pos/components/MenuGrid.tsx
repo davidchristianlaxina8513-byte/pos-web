@@ -20,13 +20,23 @@ export interface MenuGridProps {
   onAdd: (item: MenuItem) => void;
   onIncrement: (product_id: number) => void;
   onDecrement: (product_id: number) => void;
+  quotaAlerts?: boolean;
 }
 
-function stockHint(item: MenuItem): string | null {
+export function stockHint(item: MenuItem, quotaAlerts = true): string | null {
   if (!item.is_available) return 'Unavailable';
-  if (item.stock_quantity <= 0) return 'Out of stock';
-  if (item.stock_quantity <= 5) return `Only ${item.stock_quantity} left`;
-  return null;
+  if (item.remaining_quantity === null) return 'Unlimited today';
+  if (item.remaining_quantity <= 0) return 'Sold out for today';
+  if (
+    item.today_quota_limit !== null &&
+    item.today_quota_limit > 0 &&
+    item.remaining_quantity / item.today_quota_limit <= 0.25
+  ) {
+    return quotaAlerts
+      ? `Only ${item.remaining_quantity} left today`
+      : `${item.remaining_quantity} remaining today`;
+  }
+  return `${item.remaining_quantity} remaining today`;
 }
 
 function Thumb({ item }: { item: MenuItem }) {
@@ -60,6 +70,7 @@ export function MenuGrid({
   onAdd,
   onIncrement,
   onDecrement,
+  quotaAlerts = true,
 }: MenuGridProps) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -153,7 +164,7 @@ export function MenuGrid({
         <ul className="mt-4 flex flex-col gap-3">
           {visible.map((item) => {
             const sellable = isSellable(item);
-            const hint = stockHint(item);
+            const hint = stockHint(item, quotaAlerts);
             const qty = qtyById.get(item.product_id) ?? 0;
             return (
               <li
@@ -175,7 +186,11 @@ export function MenuGrid({
                     <p
                       className={cn(
                         'text-xs font-medium',
-                        sellable ? 'text-warning' : 'text-danger',
+                        item.remaining_quantity === null || !quotaAlerts
+                          ? 'text-muted'
+                          : sellable
+                            ? 'text-warning'
+                            : 'text-danger',
                       )}
                     >
                       {hint}

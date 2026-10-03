@@ -1,17 +1,14 @@
 import Link from 'next/link';
 import { requireRole } from '@/features/auth/queries';
+import { getAdminTodaySummary } from '@/features/dashboard/queries';
 import { getDashboard } from '@/features/reports/queries';
-import {
-  getOpenRestockCount,
-  getOpenRestockCounts,
-} from '@/features/restock/queries';
+import { getTodayProductQuotas } from '@/features/quotas/queries';
 import { SalesChart } from '@/features/reports/components/SalesChart';
 import { Card } from '@/components/common/Card';
 import { EmptyState } from '@/components/common/EmptyState';
 import { IconTile } from '@/components/common/IconTile';
 import {
   ArrowRightIcon,
-  BoxIcon,
   ChartIcon,
   CupIcon,
   GearIcon,
@@ -22,45 +19,53 @@ import { StaffShell } from '@/components/layout/staff-shell';
 const TILES = [
   {
     href: '/admin/reports',
-    label: 'Orders',
-    sub: 'Sales history',
-    icon: <ReceiptIcon />,
-  },
-  {
-    href: '/admin/inventory',
-    label: 'Inventory',
-    sub: 'Stock levels',
-    icon: <BoxIcon />,
-  },
-  {
-    href: '/admin/reports',
-    label: 'Analytics',
-    sub: 'Trends & top items',
+    label: 'Reports',
+    sub: 'Sales, transactions, and payments',
     icon: <ChartIcon />,
   },
   {
     href: '/admin/menu',
     label: 'Menu',
-    sub: 'Products & categories',
+    sub: 'Products and categories',
     icon: <CupIcon />,
   },
   {
     href: '/admin/settings',
     label: 'Settings',
-    sub: 'Profile & preferences',
+    sub: 'Profile and preferences',
     icon: <GearIcon />,
   },
 ];
 
-/** v2 admin home: welcome header, register tile, tile grid, dashboard. */
 export default async function AdminPage() {
   const profile = await requireRole('admin');
-  const [dashboard, openRestockCount, severityCounts] = await Promise.all([
+  const [dashboard, quotas, today] = await Promise.all([
     getDashboard(),
-    getOpenRestockCount(),
-    getOpenRestockCounts(),
+    getTodayProductQuotas(),
+    getAdminTodaySummary(),
   ]);
-  const lowCount = dashboard.lowStock.length;
+  const soldOut = quotas.filter((item) => item.status === 'sold_out');
+  const almostSoldOut = quotas.filter(
+    (item) => item.status === 'almost_sold_out',
+  );
+  const attention = [
+    soldOut.length
+      ? `${soldOut.length} product${soldOut.length === 1 ? '' : 's'} sold out today`
+      : null,
+    almostSoldOut.length
+      ? `${almostSoldOut.length} product${almostSoldOut.length === 1 ? '' : 's'} almost sold out`
+      : null,
+    today.pendingPayments
+      ? `${today.pendingPayments} online payment${today.pendingPayments === 1 ? '' : 's'} pending verification`
+      : null,
+    today.pendingTurnovers
+      ? `${today.pendingTurnovers} cash turnover${today.pendingTurnovers === 1 ? '' : 's'} pending verification`
+      : null,
+    today.discrepancyTurnovers
+      ? `${today.discrepancyTurnovers} cash turnover${today.discrepancyTurnovers === 1 ? '' : 's'} with a discrepancy`
+      : null,
+  ].filter((item): item is string => Boolean(item));
+
   return (
     <StaffShell
       email={profile.email}
@@ -93,11 +98,6 @@ export default async function AdminPage() {
               href={tile.href}
               className="card-hover action-focus relative flex flex-col gap-2 rounded-card border border-border bg-surface p-4 shadow-soft"
             >
-              {tile.label === 'Inventory' && lowCount > 0 ? (
-                <span className="absolute top-3 right-3 rounded-full bg-danger px-2 py-0.5 text-xs font-bold text-surface">
-                  {lowCount} low
-                </span>
-              ) : null}
               <IconTile tone="sage">{tile.icon}</IconTile>
               <span>
                 <span className="block text-[15px] font-extrabold tracking-tight">
@@ -110,11 +110,16 @@ export default async function AdminPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
-            href="/admin/restock"
+            href="/today-products"
             className="card-hover action-focus rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold shadow-soft"
           >
-            Restock
-            {openRestockCount > 0 ? ` (${openRestockCount} open)` : null}
+            Today&apos;s Products
+          </Link>
+          <Link
+            href="/admin/cashier-operations"
+            className="card-hover action-focus rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold shadow-soft"
+          >
+            Cashier Operations
           </Link>
           <Link
             href="/admin/users"
@@ -126,34 +131,63 @@ export default async function AdminPage() {
       </nav>
 
       <div className="mt-4 grid gap-3">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Card className="rounded-card border-border shadow-soft">
-            <div className="flex items-center gap-3">
-              <IconTile tone="mint" className="text-base font-extrabold">
-                ₱
-              </IconTile>
-              <p className="text-sm text-muted">
-                Total revenue:{' '}
-                <span className="block text-lg font-extrabold tracking-tight text-foreground">
-                  ₱{dashboard.revenue.toFixed(2)}
-                </span>
-              </p>
+        <Card
+          title="Today's Summary"
+          className="rounded-card border-border shadow-soft"
+        >
+          <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-5">
+            <div>
+              <dt className="text-muted">Total Sales</dt>
+              <dd className="text-lg font-extrabold">
+                ₱{today.totalSales.toFixed(2)}
+              </dd>
             </div>
-          </Card>
-          <Card className="rounded-card border-border shadow-soft">
-            <div className="flex items-center gap-3">
-              <IconTile tone="sage" className="text-base font-extrabold">
-                #
-              </IconTile>
-              <p className="text-sm text-muted">
-                Total orders:{' '}
-                <span className="block text-lg font-extrabold tracking-tight text-foreground">
-                  {dashboard.orders}
-                </span>
-              </p>
+            <div>
+              <dt className="text-muted">Transactions</dt>
+              <dd className="text-lg font-extrabold">{today.transactions}</dd>
             </div>
+            <div>
+              <dt className="text-muted">Products Sold</dt>
+              <dd className="text-lg font-extrabold">{today.productsSold}</dd>
+            </div>
+            <div>
+              <dt className="text-muted">Cash Sales</dt>
+              <dd className="text-lg font-extrabold">
+                ₱{today.cashSales.toFixed(2)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted">Online Sales</dt>
+              <dd className="text-lg font-extrabold">
+                ₱{today.onlineSales.toFixed(2)}
+              </dd>
+            </div>
+          </dl>
+        </Card>
+
+        {attention.length ? (
+          <Card
+            title="Needs Attention"
+            className="rounded-card border-border shadow-soft"
+          >
+            <ul className="space-y-2 text-sm">
+              {attention.map((item) => (
+                <li
+                  key={item}
+                  className="flex gap-2 rounded-2xl bg-warning/10 p-3"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="font-extrabold text-warning"
+                  >
+                    !
+                  </span>
+                  <span className="font-semibold">{item}</span>
+                </li>
+              ))}
+            </ul>
           </Card>
-        </div>
+        ) : null}
 
         <Card
           title="Last 7 days"
@@ -165,21 +199,26 @@ export default async function AdminPage() {
         </Card>
 
         <Card
-          title="Low stock"
+          title="Production Quota Status"
           className="rounded-card border-border shadow-soft"
           actions={
-            <Link href="/admin/restock" className="text-sm font-bold text-pine">
+            <Link
+              href="/today-products"
+              className="text-sm font-bold text-pine"
+            >
               View All
             </Link>
           }
         >
-          {lowCount === 0 ? (
-            <p className="text-sm text-muted">All stocked.</p>
+          {soldOut.length + almostSoldOut.length === 0 ? (
+            <p className="text-sm text-muted">
+              All limited products have healthy availability.
+            </p>
           ) : (
             <ul className="flex flex-col gap-2">
-              {dashboard.lowStock.map((row) => (
+              {[...soldOut, ...almostSoldOut].slice(0, 5).map((row) => (
                 <li
-                  key={row.product_name}
+                  key={row.product_id}
                   className="flex items-center gap-3 rounded-2xl bg-mist p-3"
                 >
                   <span
@@ -191,28 +230,22 @@ export default async function AdminPage() {
                   <div>
                     <p className="text-sm font-bold">{row.product_name}</p>
                     <p className="text-sm font-semibold text-danger">
-                      Only {row.quantity} units left
+                      {row.status === 'sold_out'
+                        ? 'Sold out for today'
+                        : `Only ${row.remaining_quantity} left today`}
                     </p>
                   </div>
                 </li>
               ))}
             </ul>
           )}
-          {openRestockCount > 0 ? (
-            <p className="mt-3 text-sm text-muted">
-              <Link href="/admin/restock" className="font-medium">
-                Open restock requests: {openRestockCount} (
-                {severityCounts.critical} critical, {severityCounts.low} low)
-              </Link>
-            </p>
-          ) : null}
         </Card>
 
         <Card
-          title="Top selling"
+          title="Today's Top Selling"
           className="rounded-card border-border shadow-soft"
         >
-          {dashboard.topProducts.length === 0 ? (
+          {today.topProducts.length === 0 ? (
             <EmptyState
               icon={<ChartIcon />}
               title="No sales yet"
@@ -220,7 +253,7 @@ export default async function AdminPage() {
             />
           ) : (
             <ol className="flex flex-col gap-2">
-              {dashboard.topProducts.map((row, index) => (
+              {today.topProducts.map((row, index) => (
                 <li
                   key={row.product_id}
                   className="flex items-center gap-3 rounded-2xl bg-mist p-3"
@@ -232,10 +265,8 @@ export default async function AdminPage() {
                     {index + 1}
                   </span>
                   <div>
-                    <p className="text-sm font-bold">{row.product_name}</p>
-                    <p className="text-sm text-muted">
-                      {row.quantity_sold} sold (₱{row.revenue.toFixed(2)})
-                    </p>
+                    <p className="text-sm font-bold">{row.name}</p>
+                    <p className="text-sm text-muted">{row.quantity} sold</p>
                   </div>
                 </li>
               ))}

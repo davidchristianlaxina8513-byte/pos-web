@@ -12,7 +12,9 @@ function menuItem(overrides: Partial<MenuItem> = {}): MenuItem {
     image_url: null,
     category_id: 'cat-1',
     category_name: 'Hot Drinks',
-    stock_quantity: 5,
+    today_quota_limit: 10,
+    sold_quantity: 5,
+    remaining_quantity: 5,
     ...overrides,
   };
 }

@@ -1,74 +1,106 @@
-# PROGRESS.md
+# Progress
 
-## Status
+## Current status
 
-🟢 Active (product complete; feature work per `docs/future-plans.md` sequencing)
+On 2026-10-03, the final quota-only feature completion and stabilization phase was completed against the verified `cafe-elvira-dev` Supabase project. Production was not contacted or modified.
 
----
+The web application now uses daily product quotas as its only availability mechanism. Cash and online checkout, transaction receipts/search, Admin payment review, cashier shifts, cash turnover, daily dashboards, reports, voids, users, audit records, authentication, and role enforcement are active.
 
-## Completed
+## Preferences and workflow consolidation (2026-10-03)
 
-- Core POS: menu → cart → checkout → payment (cash/GCash/Maya) → receipt (PDF share + thermal print)
-- Offline-first: SQLite cache reads, queued writes, reconnect sync with dedup
-- Inventory management: stock-in with supplier, reorder levels, stock badges
-- Menu + category management (admin), product photos
-- Transaction history (cashier: own; admin: all) + void with reason and stock restore
-- Reports (daily/weekly/monthly) + dashboard (revenue, chart, low-stock, top products)
-- User management via `create-user` edge function
-- Agent system: `AGENTS.md` + `CONTEXT.md` + `RULES.md` + `playbooks/` (copied from pos-template, adapted)
-- Web migration Phase 0: Next.js 16 + Tailwind v4 scaffold in `web/` (landing page only) + CI `web` job + `make web-dev` / `web-build` (2026-09-09)
-- Web migration Phase 1: SSR Supabase clients + session proxy, `/login` with role routing (`/pos` cashier, `/admin` admin), server-side role gates; live-verified as both demo users (2026-09-11)
-- Automatic restock tracking (2026-09-11): `0008_reorder_tracking.sql` (`par_level`, `reorder_requests`, low-stock trigger, admin-only RLS — 14/14 probes green); web `/admin/restock` + print; mobile `Restock` screen + PDF share; `par_level` editing (mobile product form, web inline); demo seed pars
-- Web migration Phase 2: POS core on web (2026-09-11) — menu → session cart → `process_sale` checkout (cash/GCash/Maya) → receipt + browser print; `/pos` open to cashier+admin via `requireStaff`; Playwright smoke (cashier cash sale, stock deducts, receipt renders) green against dev Supabase; 30/30 vitest green
-- Web migration Phase 3 (2026-09-11, merged into `dev` via `1514c26`): 3a inventory list + `adjust_stock` stock-in; 3b menu/category CRUD + photo upload to `product-images` + auto inventory row on create (fixes Expo gap); 3c admin dashboard (SVG chart, low-stock, top-5) + filtered reports (Manila-day bucketing, voided excluded); 3d user list + `set_user_active` toggle + web enforces `is_active=false` at sign-in/session (Expo leaves it unenforced); 48/48 vitest green; staff-create e2e green after `create-user` deploy (`933110f`)
-- Line-ending normalization (2026-09-11): committed root `.gitattributes` (`* text=auto eol=lf`, `*.{cmd,bat}` kept CRLF, image/archive binaries excluded) — no pos-template predecessor existed; repo has no tracked files needing CRLF. Verified on a Windows checkout: working tree renormalized LF-only with zero content change, `typecheck`/`lint`/`build` green (`lint` went from 13573 `Delete ␍` errors to 0)
-- Phone pass (2026-09-14, uncommitted on `feature/web-design-v2`): replaced flaky localtunnel share link (503s, swallowed CSS/JS + login POST → broken phone UI + Bad Gateway) with a Cloudflare Quick Tunnel; fixed real mobile overflow the desktop suite never caught — grid blowout on `/pos` (pill-row min-content stretched the single auto column; fixed with `min-w-0` on `MenuGrid` root) and on `/admin/reports?preset=30d` (30d chart stretched its grid column; fixed with `min-w-0` on the Daily card + `overflow-x-auto` chart wrapper). Also: explicit viewport export in `layout.tsx`, `grid-cols-2` → `grid-cols-1 sm:grid-cols-2` (admin hub, reports metrics, loadings), drawer capped at `max-w-[85vw]`. New `web/e2e/mobile-layout.spec.ts` (390×844 no-overflow assertions on login/admin/reports/POS + drawer); gates green: typecheck/lint/format/vitest/build + Playwright 19/19. Follow-up same day: team reported taps dead on phones over the tunnel — proved app-side flow works at 390px with a new mobile cash-sale test (add → cart → checkout → receipt), then switched the shared instance from `next dev` to `next start` (production server, same port/tunnel link) so phones get small minified bundles instead of huge dev-mode JS; mobile-layout 5/5 + pos-smoke re-verified green against the prod server.
-- Cart toast + login icons (2026-09-15, `58acae8` + `dab7413` on `feature/web-design-v2`): custom dependency-free `CartToast` (`role="status"`, auto-dismiss 1.8s, CSS enter/exit, `prefers-reduced-motion` → plain appear/disappear, `pointer-events-none` so taps pass through; total computed from the post-add reducer state); removed Email/Password `startIcon`s on `/login` (placeholders, labels, show/hide toggle kept). Mobile sale test asserts the toast text; gates green (typecheck/lint/format/vitest/build + e2e).
-- Restock auto-queue probe (2026-09-15, no code change): live test on dev DB (fully restored) confirmed `check_reorder_level()` queues BOTH severities when `par_level` is set — product_id 30 (qty 40, reorder 10, par 50): drop to 0 → `pending` request created (snapshot 0, suggested 50); set to 9 → same request refreshed (snapshot 9, suggested 41), no duplicate. Caveat found (needs approval, NOT fixed): `par_level IS NULL` rows never queue even at 0 stock, and web `createProduct` leaves `par_level` NULL (plus `writeParLevel` updates don't touch `quantity`, so the trigger never fires for them) — new products sit at 0 with no request until a quantity change occurs after par is set.
-- Reports record lists (2026-09-15): new Receipts card (Order #, date, total, method, link to receipt page; latest 50) + Items sold card (every sold line with qty × unit, subtotal, receipt #; latest 100) on `/admin/reports`, both following the page filter, voided excluded. `buildReceiptLedger` helper (vitest) + `getReceiptRecords` query. Also hardened sale-test selectors (first *enabled* in-stock Add button; wait for streamed menu before counting) after the shared dev DB drained top-row stock mid-suite. Gates green: typecheck/lint/format/vitest/build + Playwright 21/21.
+- Replaced the disabled Preferences placeholders with account-scoped browser settings for order confirmations, low-quota emphasis, language choice, and Light/Dark/System appearance.
+- Theme selection is applied across login, navigation, cards, forms, dialogs, POS, reports, and account pages using the existing design tokens. System appearance follows the browser preference.
+- English remains the complete interface language. The saved locale and language option structure support adding translation catalogs later; Filipino currently records the locale while shared interface copy remains English.
+- Order notifications control the existing POS add-to-cart confirmation. Quota alerts control the optional almost-sold-out wording and warning emphasis while required remaining and sold-out availability stays visible.
+- Consolidated Cashier Shift and Cash Turnover presentation into `/cashier-operations` for Cashiers and `/admin/cashier-operations` for Admins. Existing shift, expected-cash, turnover, discrepancy, verification, and role rules are unchanged.
+- Added cashier shift history to the combined page using the existing shift data and RLS. The turnover action now clearly states that submission ends the shift.
+- Kept the former shift and turnover URLs as compatibility redirects so saved links do not break.
+- Removed the duplicate Transactions dashboard tile. Reports is now the single Admin destination for sales summaries, transaction review, item details, top products, payment references/status, and evidence access.
+- No migration was needed and production was not contacted or modified. Daily product quotas remain the sole availability architecture; ingredients and restocking remain removed.
+- The wider visual redesign is intentionally postponed until functional development is complete.
+- Refinement verification passed: TypeScript, ESLint, Prettier, 51/51 unit tests across 11 files, a 24-route production build, and 29/29 authenticated/responsive Playwright tests.
 
-## In Progress
+## Implemented
 
-- Figma web redesign (`feature/web-design-v2`, synced with dev 2026-09-12 incl. restock severity — merge `c33d652`; Phase B staff shell landed 2026-09-14: shared `StaffShell` sidebar/drawer across all admin + POS pages, hub-scoped e2e + drawer/mobile tests; v2 content migration complete 2026-09-14: menu management, reports, restock queue, users, stock-in restyled to v2 tokens — no `bg-primary`/`bg-background` left in staff screens; follow-ups landed: clickable avatar → role profile (`/admin/settings` for admin, new `/profile` for cashier with admin redirect), 200ms page-enter transition (reduced-motion safe), edit-product photo change verified as already built (shared `ProductForm` + replace-on-save bucket cleanup), visual polish pass (EmptyState illustrations ×7, `/admin` + `/pos` loading skeletons, hover lift + focus rings + pine-dark action hover, leading row icons); web gates green: typecheck/lint/format/vitest 54/54/build; Playwright 15/15 green 2026-09-14 (first run 12/14: suite-first login hit the known cold-start timeout + the new drawer test asserted off-canvas visibility; fixed via translate-class assertion `8308c66`, green on warm-server retry; profile-link test added with Part 1))
-- Staff perf + e2e hardening (2026-09-18, `feature/web-design-v2`, unpushed: `1856818` + `dde7234` + `e6ce0af`): measured warm prod `/login` 450ms vs warm dev 287ms vs cold-dev first hit ~48s — slowness is a dev cold-compile artifact, prod already fast. Added route-matched `loading.tsx` skeletons for 11 staff child routes (shared `LoadingSkeleton`: cards/list/form variants); memoized `getSessionProfile` per request via React `cache()` + parallel `getClaims`/`getUser`; parallelized independent reads in `getDashboard`/`getTopProducts`/`getReceiptRecords`/`getEditableProduct`. E2E: suite-first hub login got the restock-spec 30s precedent, then two same-family cold flakes (first-visit edit page, first-sale receipt) got 30s call-site timeouts, then config-level `expect 15s` + `navigationTimeout 60s`/`timeout 90s` for the family — full suite green across 3 consecutive cold runs (21/21 ×3). Gates green: root + web typecheck/lint/vitest, web build, expo export; root `format:check` still flags the 3 known pre-existing files only.
-- Shared Modal + Select via React Aria (2026-09-18, `feature/web-design-v2`, unpushed: `ff543fb` + `7f8f7dd` + `7140ce1` + `ef1af9b`): new dep `react-aria-components@1.21.1` (approved deviation, recorded in `CONTEXT.md`); `layout/modal/Modal.tsx` (title-left/X-right, overlay/Escape guards, bottom-sheet responsive) + `ui/select/Select.tsx` (pill trigger, check-marked options, trigger-width popover) reusing v2 tokens only; added `ChevronDownIcon` to the hand-rolled icon family (no lucide in repo). Migrated `CheckoutDialog` (body untouched; header standardized) + the only 3 native selects (user role, product category, delete-category). Routes, inline cards, and two-tap confirms intentionally left as-is (no other dialogs exist; route→modal would break deep links + e2e URLs). E2E locators updated (dialog name, Aria option flow). Gates green: web typecheck/lint/vitest 56/56/build + full Playwright 21/21 cold + root prettier on touched files.
-- Agent-system rollout (this change): verify playbook links, confirm workflow on next feature branch
-- **Web migration (approved 2026-09-09, phased rewrite):** Expo stays the live baseline until cutover. Phases 0–3 done and merged into `dev`; remaining is Phase 4 (Cutover).
-  - Completed Phase 0: scaffold alongside Expo; CI extended with `web` job
-  - Completed Phase 1: auth + role routing + Supabase clients/proxy; RLS role reads verified live (`user_read_own`)
-  - Completed Phase 2: POS core (menu/cart/checkout/receipt + Playwright smoke green)
-  - Completed Phase 3 (merged into `dev` via `1514c26`): 3a inventory, 3b menu, 3c reports, 3d users; admin e2e 6/6 + pos smoke green (7/7 total) against dev Supabase
-  - Remaining phases:
-  1. **Phase 4 — Cutover:** parity check vs Expo, flip baseline to web, archive Expo track
-  - Web-track playbooks (`stack/nextjs`, `styling/tailwind`, `platform/web`, `capabilities/supabase/nextjs`) activate phase by phase; Expo stays untouched until Phase 4.
+- Kept nullable product `daily_quota_limit`: `NULL` is unlimited, `0` is sold out, and a positive integer is the Manila-day maximum.
+- Kept remaining availability derived from completed, nonvoided transaction items; no mutable remaining counter or midnight reset job exists.
+- Kept stable row locking in `process_sale()` to prevent concurrent final-unit overselling.
+- Renamed quota presentation to Good, Almost Sold Out, Sold Out, and Unlimited. Almost Sold Out is a positive remaining quantity at or below 25% of the daily quota; Sold Out is zero.
+- POS search and category filters work together client-side. Every product card shows remaining, sold-out, unlimited, or unavailable state.
+- Admin can manage products, availability, default quota, and today's quota. Cashier can read quotas and change today's quota only.
+- Cashier dashboard shows today's sales, transactions, products sold, limited units remaining, almost-sold-out and sold-out counts, recent transactions, quota status, and shift totals.
+- Admin dashboard shows today's sales, transactions, products sold, cash/online totals, top sellers, quota alerts, pending online payments, pending turnovers, and turnover discrepancies.
+- Every new transaction receives a database-generated unique `TXN-YYYYMMDD-#####` number.
+- Admin reports support date range, transaction-number search, cashier search, payment-method filter, payment-status filter, receipt details, voided transactions, product quantities, top products, and cash/online breakdown.
 
-## Up Next
+## Online payment
 
-- **Restock mobile parity (follow-up, web Phase B is web-only):** mobile
-  `RestockRequests` screen still marks received without an `adjust_stock`
-  bump and cancels without a reason — both now rejected/gated server-side
-  (`chk_reorder_cancel_reason`, ordered-only receive). Bring the mobile
-  screen to parity: received-qty input + `adjust_stock` via transport,
-  cancel-reason prompt mirroring the void-reason pattern.
+- Cash remains immediately Paid.
+- GCash and Maya require a 6–64 character reference and a confirmed evidence image before checkout.
+- Camera capture requests browser permission, supports preview/retake/confirm, reports denied/unavailable capture, and provides an image-upload fallback.
+- Server actions accept only JPEG, PNG, or WebP up to 5 MB, generate the object key, upload through the authenticated session, and remove the object if transaction creation fails.
+- The private `payment-evidence` bucket has authenticated owner/Admin policies and no public URL.
+- `payment_evidence` stores the transaction link, transaction number, reference, uploader, upload time, method, MIME type, size, and evidence status.
+- Online sales enter Pending Verification. Admin can view evidence through a short-lived signed URL and mark it Verified or Rejected. Rejection requires a reason.
+- Evidence submission and payment review are recorded in `audit_log`. The UI states that a photo is evidence submitted for review and does not automatically prove receipt of funds.
 
-- **Prettier drift (pre-existing on dev, found 2026-09-11):** `web/src/features/pos/actions.ts` + `web/src/features/pos/checkout.ts` fail root `prettier --check` (3.9.6; committed under web Phase 2 with 3.6.2-era formatting — HEAD blobs fail identically, so unrelated to line endings). Fix via `npx prettier --write` on those 2 files in a `style(web)` commit.
+## Cash turnover
 
-Per `docs/future-plans.md` sequencing:
+- Expected cash is derived as starting cash plus completed cash payments during the shift.
+- Online and voided transactions are excluded.
+- Counted cash immediately shows Cash Balanced or a signed cash difference.
+- A discrepancy reason is required in both the UI and `submit_cash_turnover()`.
+- Admin can inspect starting cash, cash sales, expected cash, counted cash, difference, reason, and review note, then verify or flag the turnover.
 
-1. **Phase 1 (P1):** Excel export → Personal Info editing (name/phone)
-2. **Phase 2 (P2):** Forgot Password → Password change → Dark Mode
-3. **Phase 3 (P3):** 2FA → Push notifications → Offline void
-4. **Web migration:** Next.js + Tailwind web build (activates web-track playbooks; see `CONTEXT.md` → Product Decisions)
+## Database changes
 
-## Blocked
+- `0012_daily_production_quota_simplification.sql` removed active ingredient, recipe, stock-in, evidence, reorder, par-level, and ingredient movement structures after the guarded DEV export.
+- `0013_final_feature_completion.sql` added transaction numbers, payment/reference/review fields, private evidence metadata and storage policies, payment review RPC, evidence-required online checkout, and discrepancy enforcement.
+- `0014_fix_payment_evidence_path_validation.sql` corrected the evidence object-key regex from `0013`; the first version expected a literal backslash and rejected valid uploaded paths.
+- Both new migrations were dry-run and applied only to linked project ref `ccqoegnvzancptqhmyoc` (`cafe-elvira-dev`).
+- Local and DEV migration history are aligned through `0014`.
+- DEV schema lint reports no errors.
 
-- (none — `create-user` deployed 2026-09-11; staff-create e2e green after deploy)
+## DEV seed
 
-## Decisions Made
+- The guarded seed continues to refuse targets outside the DEV allowlist.
+- Fixed Auth lookup pagination. The earlier seed read only the default first page, missed an existing documented account, and Supabase rejected the duplicate create attempt.
+- The seed now completes successfully, restores/updates the documented Admin and Cashier accounts, creates categories/products/quotas/demo transactions, and includes an unlimited product default.
+- Both documented accounts authenticated successfully throughout the final browser suite.
 
-- 2026-09-09: Adopt pos-template agent system (AGENTS/CONTEXT/RULES/playbooks), merged with existing pos-app AGENTS.md; skip `create-win-project.profile.json` (pos-app wasn't generator-created)
-- 2026-09-09: Web migration planned — `stack/nextjs`, `styling/tailwind`, `platform/web`, `capabilities/supabase/nextjs` playbooks marked web-track/advisory until migration lands
-- 2026-09-09: Web Phase 0 scaffold decisions — full 16-color token map (`textPrimary→foreground`, `textSecondary→muted`); `turbopack.root` set to silence dual-lockfile warning; `skipLibCheck` on + `jsx: react-jsx` (Next-mandated, matches pos-template); web `test` uses `--passWithNoTests`; root ESLint ignores `web/**`; generated `web/next-env.d.ts` committed (CI typechecks before build), `web/.next/` gitignored + prettier-ignored
-- 2026-09-11: Web Phase 1 auth decisions — `NEXT_PUBLIC_SUPABASE_ANON_KEY` kept (plan/`.env.example` naming; template `PUBLISHABLE_KEY` is the same value); unknown roles fail closed (sign-out + error, no Expo-style cashier fallback); `web/vitest.config.ts` (node env, `@` alias) so web tests don't inherit root jsdom config; no new deps (`zod`, testing-library deferred); `web/.env.local` holds real values, gitignored, never staged
-- 2026-09-11: Restock tracking decisions — trigger-on-`inventory` (not per-RPC hooks) covers all 5 write paths incl. offline replays; manual suggested-qty edits overwritten on next stock change (no override flag); recovery refreshes snapshots, never auto-closes; supplier pre-fills from latest movement; Expo list online-only (no SQLite mirror); web par editing inline on restock page (no web menu management until web Phase 3); seed upserts fire the trigger (2 legitimate demo requests for low-stock products 4 + 6); root `tsconfig.json` now excludes `web/` (separate toolchain, mirrors `eslint.config.js` `web/**` ignore)
-- 2026-09-11: Web Phase 2 POS decisions — `requireStaff` admits cashier+admin to `/pos` (capability matrix: both sell); web menu disables zero-stock items via live `inventory` qty (approved deviation from Expo `is_available`-only); cart is `useReducer` session state (no persistence, online-only); `checkoutSale` Server Action validates + calls final `process_sale` RPC, returns id only so receipt re-reads server-computed total/order_number; transaction id via `crypto.randomUUID()` (no uuid dep); receipt is server route + `window.print()` (no thermal); Playwright `@playwright/test@1.62.1` dev-only, `E2E_PORT` override (default 3001) + `.env.local` fallback loader in config, `test-results/` gitignored+prettier-ignored; `/login` restyled onto shared `Button`/`Field`/`Card` (behavior unchanged)
+## Removed architecture audit
+
+- No ingredient, recipe, stock-in, raw-material, stock-alert, restock, reorder, par-level, `inventory`, `stock_movements`, or `adjust_stock` reference remains in `web/src` or `scripts/seed.cjs`.
+- The only removed-architecture names in active test files are deliberate backend assertions that the dropped tables cannot be queried.
+- Old migration files retain historical definitions because migrations are forward-only. The current schema removes them through `0012`.
+- The ignored `.dev-exports/` archive remains the recovery reference for data exported before the DEV drop.
+
+## Verification
+
+Completed on 2026-10-03:
+
+- TypeScript: passed.
+- ESLint: passed.
+- Prettier format check: passed.
+- Unit tests: 51/51 passed across 11 files.
+- Production build: passed with 24 routes.
+- Supabase DEV seed: passed.
+- Supabase DEV schema lint: passed with no schema errors.
+- Full authenticated and responsive Playwright suite: 29/29 passed.
+- `git diff --check`: passed.
+
+Browser coverage includes Admin/Cashier/invalid login behavior, protected routes, persisted preferences and dark appearance, product creation/edit/delete, availability, finite/zero/unlimited quotas, Admin/Cashier quota permissions, concurrent quota enforcement, void restoration, POS search/categories/cart/cash checkout, private online evidence, missing-evidence backend denial, camera-permission denial and upload fallback, retake/confirm, evidence linking, transaction search, Admin payment verification, receipts, dashboards, consolidated Cashier Operations, role navigation, shifts, cash discrepancy reasons, turnover verification, reports, audit-sensitive backend authorization, and phone layouts.
+
+## Remaining limits
+
+- Sales, quotas, evidence upload, and reports require network connectivity.
+- Receipts use browser print; there is no native thermal-printer driver.
+- Camera capture depends on browser/device support and HTTPS permission rules. Automated coverage verifies denial and upload fallback; capture with real phone camera hardware still needs device acceptance testing.
+- A fresh local Supabase reset was not run because Docker Desktop is unavailable. The forward migrations were dry-run, applied, and linted on the verified DEV project.
+
+## Prior milestones
+
+- 2026-09-22: Converted the repository to web-only and removed Expo at the owner's request.
+- 2026-09-30: Resumed the DEV Supabase project and restored the documented Admin and Cashier accounts.
+- 2026-10-01: Added shifts, cash turnover, audit records, and the first daily-quota implementation.
+- 2026-10-02: Replaced the temporary ingredient architecture with the approved production-quota-only design.

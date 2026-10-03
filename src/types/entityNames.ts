@@ -1,7 +1,0 @@
-export type EntityName =
-  | 'user'
-  | 'product'
-  | 'transaction'
-  | 'transaction_item'
-  | 'inventory'
-  | 'stock_movement';

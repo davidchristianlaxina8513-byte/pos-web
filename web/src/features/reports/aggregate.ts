@@ -1,4 +1,4 @@
-import type { PaymentMode } from '@/features/pos/types';
+import type { PaymentMode, PaymentStatus } from '@/features/pos/types';
 
 export interface SaleRow {
   date: string;
@@ -88,7 +88,7 @@ function dayLabel(key: string): string {
 
 /**
  * Revenue/orders bucketed by Manila day for the last `dayCount` days
- * (ending today Manila time). Mirrors Expo `buildDaySales`.
+ * (ending today Manila time).
  */
 export function buildDaySales(
   rows: SaleRow[],
@@ -155,11 +155,16 @@ export interface SoldItem {
 
 export interface LedgerTransaction {
   id: string;
+  transaction_number: string;
   order_number: number | null;
   date: string;
   total_amount: number;
   payment_mode: PaymentMode;
   status: string | null;
+  payment_status: PaymentStatus;
+  payment_reference: string | null;
+  cashier_name: string;
+  has_payment_evidence: boolean;
 }
 
 export interface LedgerItem {
@@ -179,10 +184,16 @@ export interface ReceiptRecordItem {
 
 export interface ReceiptRecord {
   transaction_id: string;
+  transaction_number: string;
   order_number: number | null;
   date: string;
   total_amount: number;
   payment_mode: PaymentMode;
+  payment_status: PaymentStatus;
+  payment_reference: string | null;
+  cashier_name: string;
+  status: string | null;
+  has_payment_evidence: boolean;
   items: ReceiptRecordItem[];
 }
 
@@ -216,11 +227,11 @@ export function buildReceiptLedger(
   receiptLimit = 50,
   lineLimit = 100,
 ): ReceiptLedger {
-  const active = txns
-    .filter((txn) => txn.status !== 'voided')
-    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
-  const receiptsTruncated = active.length > receiptLimit;
-  const kept = active.slice(0, receiptLimit);
+  const ordered = [...txns].sort((a, b) =>
+    a.date < b.date ? 1 : a.date > b.date ? -1 : 0,
+  );
+  const receiptsTruncated = ordered.length > receiptLimit;
+  const kept = ordered.slice(0, receiptLimit);
   const keptIds = new Set(kept.map((txn) => txn.id));
   const byTxn = new Map<string, ReceiptRecordItem[]>();
   for (const item of items) {
@@ -238,14 +249,21 @@ export function buildReceiptLedger(
   }
   const receipts: ReceiptRecord[] = kept.map((txn) => ({
     transaction_id: txn.id,
+    transaction_number: txn.transaction_number,
     order_number: txn.order_number,
     date: txn.date,
     total_amount: txn.total_amount,
     payment_mode: txn.payment_mode,
+    payment_status: txn.payment_status,
+    payment_reference: txn.payment_reference,
+    cashier_name: txn.cashier_name,
+    status: txn.status,
+    has_payment_evidence: txn.has_payment_evidence,
     items: byTxn.get(txn.id) ?? [],
   }));
   const lines: SoldLine[] = [];
   for (const receipt of receipts) {
+    if (receipt.status === 'voided') continue;
     for (const item of receipt.items) {
       if (lines.length >= lineLimit) break;
       lines.push({
@@ -268,7 +286,7 @@ export function buildReceiptLedger(
   };
 }
 
-/** Top products by revenue, mirroring Expo `aggregateTopProducts`. */
+/** Top products by revenue. */
 export function aggregateTopProducts(
   items: SoldItem[],
   names: Map<number, string>,

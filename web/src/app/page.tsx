@@ -16,7 +16,7 @@ export default async function Home() {
       </p>
       <p>
         <a href={landing}>
-          Continue to {profile.role === 'admin' ? 'admin' : 'POS'}
+          Continue to {profile.role === 'admin' ? 'admin' : 'dashboard'}
         </a>
       </p>
       <form action={signOut}>

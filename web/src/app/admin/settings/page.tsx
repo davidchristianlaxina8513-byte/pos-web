@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { requireRole } from '@/features/auth/queries';
 import { PasswordSection } from '@/features/settings/components/PasswordSection';
+import { PreferencesPanel } from '@/features/settings/components/PreferencesPanel';
 import { Card } from '@/components/common/Card';
 import { Field } from '@/components/common/Field';
 import { IconTile } from '@/components/common/IconTile';
@@ -11,16 +12,7 @@ import {
 } from '@/components/common/icons';
 import { StaffShell } from '@/components/layout/staff-shell';
 
-const UPCOMING = [
-  {
-    label: 'Notification preferences',
-    sub: 'Order and stock alerts',
-  },
-  { label: 'Language', sub: 'Display language' },
-  { label: 'Dark mode', sub: 'Appearance' },
-];
-
-/** v2 admin settings: profile, staff entry, password, upcoming prefs. */
+/** Admin account, security, and browser preferences. */
 export default async function SettingsPage() {
   const profile = await requireRole('admin');
   return (
@@ -91,37 +83,7 @@ export default async function SettingsPage() {
           title="Preferences"
           className="rounded-card border-border shadow-soft"
         >
-          <ul className="flex flex-col gap-2">
-            {UPCOMING.map((entry) => (
-              <li
-                key={entry.label}
-                className="flex items-center gap-3 rounded-2xl bg-mist p-3 opacity-80"
-              >
-                <div className="flex-1">
-                  <p className="text-sm font-bold">{entry.label}</p>
-                  <p className="text-sm text-muted">{entry.sub}</p>
-                </div>
-                <span className="rounded-full bg-sage-200 px-2 py-0.5 text-xs font-bold text-pine-deep">
-                  Soon
-                </span>
-                <button
-                  type="button"
-                  disabled
-                  aria-label={`${entry.label} (coming soon)`}
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-surface text-muted"
-                >
-                  <span
-                    aria-hidden="true"
-                    className="block h-5 w-9 rounded-full bg-border"
-                  />
-                </button>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-3 text-sm text-muted">
-            These preferences have no backing feature yet and are intentionally
-            disabled.
-          </p>
+          <PreferencesPanel />
         </Card>
       </div>
     </StaffShell>

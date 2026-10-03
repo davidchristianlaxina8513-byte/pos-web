@@ -17,9 +17,23 @@ interface ProductDbRow {
   category: { name: unknown } | unknown[] | null;
 }
 
-interface InventoryDbRow {
+interface QuotaDbRow {
   product_id: unknown;
-  quantity: unknown;
+  today_quota_limit: unknown;
+  sold_quantity: unknown;
+  remaining_quantity: unknown;
+}
+
+interface ParsedQuota {
+  today_quota_limit: number | null;
+  sold_quantity: number;
+  remaining_quantity: number | null;
+}
+
+function nullableQuota(value: unknown): number | null | undefined {
+  if (value === null) return null;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : undefined;
 }
 
 function parseCategory(row: CategoryDbRow): MenuCategory | null {
@@ -31,7 +45,7 @@ function parseCategory(row: CategoryDbRow): MenuCategory | null {
 
 function parseItem(
   row: ProductDbRow,
-  stockByProduct: Map<number, number>,
+  quotaByProduct: Map<number, ParsedQuota>,
 ): MenuItem | null {
   const product_id = typeof row.product_id === 'number' ? row.product_id : null;
   const price = Number(row.price);
@@ -46,6 +60,7 @@ function parseItem(
   }
   const categoryName =
     row.category && !Array.isArray(row.category) ? row.category.name : null;
+  const quota = quotaByProduct.get(product_id);
   return {
     product_id,
     name: row.name,
@@ -55,33 +70,42 @@ function parseItem(
     category_id: row.category_id,
     category_name:
       typeof categoryName === 'string' ? categoryName : 'Uncategorized',
-    stock_quantity: stockByProduct.get(product_id) ?? 0,
+    today_quota_limit: quota ? quota.today_quota_limit : 0,
+    sold_quantity: Number(quota?.sold_quantity ?? 0),
+    remaining_quantity: quota ? quota.remaining_quantity : 0,
   };
 }
 
 /**
- * Join catalog rows with inventory snapshots. Pure (no I/O) so the mapping
+ * Join catalog rows with today's quota snapshots. Pure (no I/O) so the mapping
  * is unit-testable; `getMenu` supplies the rows.
  */
 export function mapMenuItems(
   products: ProductDbRow[],
-  inventory: InventoryDbRow[],
+  quotas: QuotaDbRow[],
 ): MenuItem[] {
-  const stockByProduct = new Map<number, number>();
-  for (const row of inventory) {
+  const quotaByProduct = new Map<number, ParsedQuota>();
+  for (const row of quotas) {
     if (typeof row.product_id === 'number') {
-      const qty = Number(row.quantity);
-      if (Number.isFinite(qty)) {
-        stockByProduct.set(
-          row.product_id,
-          (stockByProduct.get(row.product_id) ?? 0) + qty,
-        );
+      const todayQuota = nullableQuota(row.today_quota_limit);
+      const sold = Number(row.sold_quantity);
+      const remaining = nullableQuota(row.remaining_quantity);
+      if (
+        todayQuota !== undefined &&
+        remaining !== undefined &&
+        Number.isFinite(sold)
+      ) {
+        quotaByProduct.set(row.product_id, {
+          today_quota_limit: todayQuota,
+          sold_quantity: sold,
+          remaining_quantity: remaining,
+        });
       }
     }
   }
   const items: MenuItem[] = [];
   for (const row of products) {
-    const item = parseItem(row, stockByProduct);
+    const item = parseItem(row, quotaByProduct);
     if (item) items.push(item);
   }
   return items;
@@ -89,13 +113,13 @@ export function mapMenuItems(
 
 /**
  * Menu read for the POS screen. Server-only caller, staff-gated; RLS
- * (`product_read`, `category_read`, `inventory_read`) enforces cashier access.
+ * (`product_read`, `category_read`) enforces cashier access.
  * Request-scoped, never cached across users (permission-adjacent data).
  */
 export async function getMenu(): Promise<Menu> {
   await requireStaff();
   const supabase = await createClient();
-  const [categoriesRes, productsRes, inventoryRes] = await Promise.all([
+  const [categoriesRes, productsRes, quotasRes] = await Promise.all([
     supabase.from('category').select('category_id, name').order('name'),
     supabase
       .from('product')
@@ -103,11 +127,11 @@ export async function getMenu(): Promise<Menu> {
         'product_id, name, price, is_available, image_url, category_id, category(name)',
       )
       .order('name'),
-    supabase.from('inventory').select('product_id, quantity'),
+    supabase.rpc('get_today_product_quotas'),
   ]);
   if (categoriesRes.error) throw categoriesRes.error;
   if (productsRes.error) throw productsRes.error;
-  if (inventoryRes.error) throw inventoryRes.error;
+  if (quotasRes.error) throw quotasRes.error;
   const categories: MenuCategory[] = [];
   for (const row of (categoriesRes.data ?? []) as CategoryDbRow[]) {
     const category = parseCategory(row);
@@ -115,7 +139,7 @@ export async function getMenu(): Promise<Menu> {
   }
   const items = mapMenuItems(
     (productsRes.data ?? []) as ProductDbRow[],
-    (inventoryRes.data ?? []) as InventoryDbRow[],
+    (quotasRes.data ?? []) as QuotaDbRow[],
   );
   return { categories, items };
 }

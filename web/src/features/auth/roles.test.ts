@@ -8,7 +8,7 @@ import {
 } from './roles';
 
 test('landingForRole routes by role', () => {
-  expect(landingForRole('cashier')).toBe('/pos');
+  expect(landingForRole('cashier')).toBe('/dashboard');
   expect(landingForRole('admin')).toBe('/admin');
 });
 
@@ -24,6 +24,7 @@ test('parseRole accepts known roles only', () => {
 test('resolveCallbackDestination keeps allow-listed paths', () => {
   expect(resolveCallbackDestination('/pos')).toBe('/pos');
   expect(resolveCallbackDestination('/admin')).toBe('/admin');
+  expect(resolveCallbackDestination('/dashboard')).toBe('/dashboard');
   expect(resolveCallbackDestination('/')).toBe('/');
 });
 

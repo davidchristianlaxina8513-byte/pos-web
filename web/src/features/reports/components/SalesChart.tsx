@@ -8,7 +8,7 @@ const HEIGHT = 160;
 const BAR_WIDTH = 22;
 
 /**
- * Weekly revenue bars, mirroring Expo `WeeklySalesChart` (custom SVG, no
+ * Weekly revenue bars (custom SVG, no
  * chart library). Pure markup — renders on the server.
  */
 export function SalesChart({ data }: SalesChartProps) {
