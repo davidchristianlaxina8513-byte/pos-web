@@ -1,10 +1,10 @@
 # dependencies
 node_modules/
 
-# build / expo
-dist/
+# build
+web/.next/
 .expo/
-web-build/
+dist/
 
 # lockfiles (handled by npm)
 package-lock.json
@@ -20,9 +20,6 @@ IPSS_CodingGuide.jsx
 
 # generated release changelog (managed by release-please)
 CHANGELOG.md
-
-# app version rewritten by release-please expo updater (format differs from prettier)
-app.json
 
 # planning scratch docs
 .opencode/plans/

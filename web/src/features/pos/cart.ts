@@ -13,11 +13,12 @@ function toLine(item: MenuItem): CartLine {
     name: item.name,
     price: item.price,
     qty: 1,
+    image_url: item.image_url,
   };
 }
 
 /**
- * Session-only cart state. Mirrors Expo `CartContext`: add bumps qty,
+ * Session-only cart state: add bumps qty,
  * decrement drops zero-qty lines, totals derived via `cartTotal`.
  */
 export function cartReducer(lines: CartLine[], action: CartAction): CartLine[] {

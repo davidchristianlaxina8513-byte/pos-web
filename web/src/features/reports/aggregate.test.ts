@@ -3,9 +3,12 @@ import {
   activeSales,
   aggregateTopProducts,
   buildDaySales,
+  buildReceiptLedger,
   manilaDayKey,
   resolveRange,
   summarizeSales,
+  type LedgerItem,
+  type LedgerTransaction,
   type SaleRow,
 } from './aggregate';
 
@@ -93,6 +96,105 @@ test('aggregateTopProducts ranks by revenue with name fallback', () => {
       product_name: 'Product #2',
       quantity_sold: 5,
       revenue: 100,
+    },
+  ]);
+});
+
+const LEDGER_TXNS: LedgerTransaction[] = [
+  {
+    id: 'txn-new',
+    transaction_number: 'TXN-20260912-00042',
+    order_number: 42,
+    date: '2026-09-12T02:00:00Z',
+    total_amount: 310,
+    payment_mode: 'cash',
+    status: 'completed',
+    payment_status: 'paid',
+    payment_reference: null,
+    cashier_name: 'cashier',
+    has_payment_evidence: false,
+  },
+  {
+    id: 'txn-void',
+    transaction_number: 'TXN-20260912-00041',
+    order_number: 41,
+    date: '2026-09-12T01:00:00Z',
+    total_amount: 999,
+    payment_mode: 'gcash',
+    status: 'voided',
+    payment_status: 'verified',
+    payment_reference: 'REF-VOID',
+    cashier_name: 'admin',
+    has_payment_evidence: true,
+  },
+  {
+    id: 'txn-old',
+    transaction_number: 'TXN-20260911-00001',
+    order_number: null,
+    date: '2026-09-11T02:00:00Z',
+    total_amount: 150,
+    payment_mode: 'maya',
+    status: 'completed',
+    payment_status: 'verified',
+    payment_reference: 'REF-OLD',
+    cashier_name: 'cashier',
+    has_payment_evidence: true,
+  },
+];
+
+const LEDGER_ITEMS: LedgerItem[] = [
+  { transaction_id: 'txn-new', product_id: 1, quantity: 2, subtotal: 310 },
+  { transaction_id: 'txn-void', product_id: 1, quantity: 9, subtotal: 999 },
+  { transaction_id: 'txn-old', product_id: 7, quantity: 1, subtotal: 150 },
+];
+
+test('buildReceiptLedger keeps receipts, sorts newest first, caps lists', () => {
+  const names = new Map([[1, 'Latte']]);
+  const ledger = buildReceiptLedger(LEDGER_TXNS, LEDGER_ITEMS, names, 1, 10);
+  expect(ledger.receiptsTruncated).toBe(true);
+  expect(ledger.receipts.map((r) => r.transaction_id)).toEqual(['txn-new']);
+  expect(ledger.receipts[0]).toMatchObject({
+    order_number: 42,
+    total_amount: 310,
+    payment_mode: 'cash',
+  });
+  expect(ledger.receipts[0]?.items).toEqual([
+    {
+      product_id: 1,
+      product_name: 'Latte',
+      quantity: 2,
+      unit_price: 155,
+      subtotal: 310,
+    },
+  ]);
+  expect(ledger.linesTruncated).toBe(false);
+  expect(ledger.lines).toHaveLength(1);
+  expect(ledger.lines[0]).toMatchObject({
+    product_name: 'Latte',
+    order_number: 42,
+  });
+});
+
+test('buildReceiptLedger falls back to Product #id and caps lines', () => {
+  const ledger = buildReceiptLedger(
+    LEDGER_TXNS,
+    LEDGER_ITEMS,
+    new Map(),
+    10,
+    1,
+  );
+  expect(ledger.receipts).toHaveLength(3);
+  expect(ledger.receipts.find((row) => row.status === 'voided')).toBeTruthy();
+  expect(ledger.linesTruncated).toBe(true);
+  expect(ledger.lines).toEqual([
+    {
+      transaction_id: 'txn-new',
+      order_number: 42,
+      date: '2026-09-12T02:00:00Z',
+      product_name: 'Product #1',
+      quantity: 2,
+      unit_price: 155,
+      subtotal: 310,
     },
   ]);
 });

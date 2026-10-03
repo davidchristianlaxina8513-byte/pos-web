@@ -4,7 +4,13 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/common/Button';
+import { Card } from '@/components/common/Card';
+import { EmptyState } from '@/components/common/EmptyState';
 import { Field } from '@/components/common/Field';
+import { IconTile } from '@/components/common/IconTile';
+import { CupIcon, SearchIcon } from '@/components/common/icons';
+import { Select } from '@/components/ui/select/Select';
+import { cn } from '@/lib/cn';
 import { createCategory, deleteCategory } from '../actions';
 import { UNCATEGORIZED } from '../validate';
 import type { MenuCategory, MenuItem } from '@/features/pos/types';
@@ -80,16 +86,22 @@ export function MenuManager({ categories, items }: MenuManagerProps) {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-2">
-        <Link
-          href="/admin/menu/product/new"
-          className="rounded bg-primary px-3 py-1 font-medium text-surface"
-        >
-          Add product
-        </Link>
+      <Link
+        href="/admin/menu/product/new"
+        className="action-focus flex h-11 items-center justify-center rounded-full bg-pine px-4 text-sm font-semibold text-surface"
+      >
+        Add product
+      </Link>
+      <div className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1">
         <Button
           variant={activeCategory === null ? 'primary' : 'secondary'}
           size="sm"
+          className={cn(
+            'shrink-0 rounded-full px-4 py-2',
+            activeCategory === null
+              ? 'border-transparent bg-pine text-surface'
+              : 'border-border hover:bg-mist',
+          )}
           onClick={() => setActiveCategory(null)}
         >
           All
@@ -101,43 +113,62 @@ export function MenuManager({ categories, items }: MenuManagerProps) {
               activeCategory === category.category_id ? 'primary' : 'secondary'
             }
             size="sm"
+            className={cn(
+              'shrink-0 rounded-full px-4 py-2',
+              activeCategory === category.category_id
+                ? 'border-transparent bg-pine text-surface'
+                : 'border-border hover:bg-mist',
+            )}
             onClick={() => setActiveCategory(category.category_id)}
           >
             {category.name}
           </Button>
         ))}
       </div>
-      <label className="mt-3 block max-w-md">
-        <span className="text-muted">Search menu</span>
+      <label className="relative mt-3 block">
+        <span className="sr-only">Search menu</span>
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted"
+        >
+          <SearchIcon />
+        </span>
         <input
           type="search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search items"
-          className="mt-1 block w-full rounded border border-border bg-surface px-3 py-2 text-foreground"
+          className="block h-[52px] w-full rounded-full border border-border bg-surface pr-4 pl-11 text-foreground shadow-soft placeholder:text-muted"
         />
       </label>
       {visible.length === 0 ? (
-        <p className="mt-4 text-muted">No items match.</p>
+        <EmptyState
+          icon={<SearchIcon />}
+          title="No items match"
+          sub="Try a different search or category."
+        />
       ) : (
-        <ul className="mt-4 grid gap-2">
+        <ul className="mt-4 flex flex-col gap-3">
           {visible.map((item) => (
             <li
               key={item.product_id}
-              className="flex items-center justify-between gap-3 rounded border border-border bg-surface px-4 py-2"
+              className="card-hover flex items-center gap-3 rounded-card border border-border bg-surface p-3 shadow-soft"
             >
-              <div>
-                <p className="text-foreground">
+              <IconTile tone="sage">
+                <CupIcon />
+              </IconTile>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[15px] font-bold text-foreground">
                   {item.name}
                   {!item.is_available ? ' (hidden)' : null}
                 </p>
-                <p className="text-muted">
+                <p className="text-sm text-muted">
                   ₱{item.price.toFixed(2)} · {item.category_name}
                 </p>
               </div>
               <Link
                 href={`/admin/menu/product/${item.product_id}`}
-                className="rounded border border-border bg-surface px-3 py-1 font-medium text-foreground"
+                className="action-focus flex h-11 shrink-0 items-center rounded-full bg-pine px-4 text-sm font-semibold text-surface"
               >
                 Edit
               </Link>
@@ -145,43 +176,43 @@ export function MenuManager({ categories, items }: MenuManagerProps) {
           ))}
         </ul>
       )}
-      <section className="mt-6 max-w-md rounded border border-border bg-surface p-4">
-        <h2 className="text-foreground">Categories</h2>
-        <div className="mt-2 flex gap-2">
+      <Card
+        title="Categories"
+        className="mt-6 max-w-md rounded-card border-border shadow-soft"
+      >
+        <div className="mt-2 flex items-end gap-2">
           <Field
             label="New category"
             name="newCategory"
             value={newCategory}
             onChange={(event) => setNewCategory(event.target.value)}
+            inputClassName="h-[52px] rounded-2xl border-border bg-mist"
+            className="flex-1"
           />
           <Button
             size="sm"
+            className="h-11 shrink-0 rounded-full bg-pine px-4 font-semibold text-surface"
             disabled={busy || !newCategory.trim()}
             onClick={handleAddCategory}
           >
             Add
           </Button>
         </div>
-        <label className="mt-3 block">
-          <span className="text-foreground">Delete category</span>
-          <select
-            value={deleteId}
-            onChange={(event) => {
-              setDeleteId(event.target.value);
-              setConfirmDelete(false);
-            }}
-            className="mt-1 block w-full rounded border border-border bg-surface px-3 py-2 text-foreground"
-          >
-            <option value="">Select a category</option>
-            {categories
-              .filter((category) => category.name !== UNCATEGORIZED)
-              .map((category) => (
-                <option key={category.category_id} value={category.category_id}>
-                  {category.name}
-                </option>
-              ))}
-          </select>
-        </label>
+        <Select
+          label="Delete category"
+          placeholder="Select a category"
+          options={categories
+            .filter((category) => category.name !== UNCATEGORIZED)
+            .map((category) => ({
+              id: category.category_id,
+              label: category.name,
+            }))}
+          value={deleteId}
+          onChange={(next) => {
+            setDeleteId(next);
+            setConfirmDelete(false);
+          }}
+        />
         <p className="mt-1 text-muted">
           Products in a deleted category move to {UNCATEGORIZED}.
         </p>
@@ -199,7 +230,7 @@ export function MenuManager({ categories, items }: MenuManagerProps) {
           </p>
         ) : null}
         {notice ? <p className="mt-2 text-success">{notice}</p> : null}
-      </section>
+      </Card>
     </div>
   );
 }

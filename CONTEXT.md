@@ -1,88 +1,46 @@
-# CONTEXT.md
+# Product context
 
-## Project
+## Current product
 
-**Name:** IPSS — Integrated POS and Stock Monitoring System for Cafe Elvira
-**Description:** Mobile-only Point-of-Sale + inventory app for a single cafe. Cashiers take orders and complete sales (cash, GCash, Maya); admins manage menu, stock, users, and reports — offline-first via a SQLite cache that syncs to Supabase.
-**Stack:** Expo SDK 57 / React Native 0.86 / React 19 + TypeScript (strict) + Supabase
-**Styling:** React Native StyleSheet + design tokens (no Tailwind)
-**Compatibility profile:** 2026.09
-**Year:** 2026
-**Product status:** complete
+**IPSS: Integrated POS and Sales Monitoring System for Cafe Elvira** is a responsive, web-only application. Cashiers use a dashboard, POS, view-only menu, daily product quotas, daily sales, shifts, and cash turnover. Admins manage the menu, default and daily product quotas, reports, users, turnover verification, and audit records.
 
-## Product Goals
+The web app lives in `web/`. Supabase migrations, edge functions, and DEV-only seed tooling live at the repository root. The app uses online Supabase reads and writes, and browser printing for receipts. It has no offline sale queue or native thermal-printer integration.
 
-- Keep the counter selling with zero friction: menu → cart → pay → receipt in seconds.
-- Never lose a sale to bad internet: offline-first reads and queued writes.
-- Give the owner trustworthy numbers: server-computed totals, atomic stock deduction, daily/weekly/monthly reports.
-- Protect staff accounts and sales data per RA 10173 (Philippine Data Privacy Act).
+## Product goals and boundaries
 
-## Users
+- Keep the counter sale flow fast: menu, cart, payment, receipt.
+- Use daily product production quotas as the only product availability limit.
+- Keep totals and quota enforcement atomic on the server.
+- Enforce roles on server mutations and through Supabase row-level security.
+- Support cash, GCash, and Maya.
+- Protect staff and customer data under RA 10173.
+- Keep production data changes and releases under explicit owner control.
 
-- **Cashier** (counter staff): take orders, process payments, issue receipts, view own sales history, view inventory (read-only).
-- **Admin** (owner/manager): everything a cashier can, plus menu/category management, stock-in with supplier, user management, reports, dashboard, printer settings.
-- Demo accounts (seeded): `admin@elvira.cafe` / `admin123`, `cashier@elvira.cafe` / `cashier123`.
+## Current implementation
 
-## Core Workflows
+- Supabase Auth plus a `user` profile table provide Admin and Cashier roles.
+- `/pos` serves both roles and calls the `process_sale` RPC. The RPC locks product quota rows in a stable order and prevents concurrent overselling.
+- Each product has an Admin-managed nullable `daily_quota_limit`: `NULL` is unlimited, `0` is sold out, and a positive integer is the maximum units for a Manila business date.
+- Daily quota rows snapshot the product default for each Manila date. Admin and Cashier can adjust today's quota without changing the default; only Admin can change the product default.
+- Remaining quantity is derived from completed, nonvoided sales. Voiding a sale records the actor and reason and naturally restores availability.
+- Cashiers can open one shift, submit counted cash, and see expected cash based on completed cash sales. Admins verify or flag turnovers.
+- Admin reports distinguish gross sales, voided sales, and net sales.
+- Playwright covers phone layouts, role navigation, authorization, quota concurrency, inventory, voids, shifts, and turnover.
 
-- **Sale (POS):** Menu → add to cart → Checkout → Payment (cash with change calc / GCash / Maya) → transaction created, inventory deducted, cart cleared → Receipt (view / share PDF / thermal print).
-- **Void:** Orders → transaction detail → Void with non-empty reason → marked `voided`, items returned to stock, `in` movement logged.
-- **Stock-in:** Inventory Management → Stock In (quantity + optional supplier) → stock increases, movement logged; queues offline.
-- **User management:** Settings → User Management → create staff accounts via `create-user` edge function; toggle active/inactive.
-- **Receipt printing:** ESC/POS thermal via Bluetooth/WiFi (custom dev build / EAS APK only); fallback to system print dialog / share-as-PDF.
+## Approved baseline changes
 
-## Acceptance Criteria
+- **2026-10-03, project owner:** Refine the current interface without changing business architecture. Make notification, language, and Light/Dark/System preferences functional; consolidate shift and turnover presentation into one Cashier Operations destination for each role; remove the duplicate Transactions destination and use Reports as the central sales and transaction review page. Keep quota-only availability, existing authorization/calculations, and the established visual style. Postpone the broader UI redesign until functional development is complete. No database migration or production change was required.
+- **2026-10-02, project owner:** Complete and stabilize the quota-only web system before visual redesign. Add private online-payment evidence with Admin verification, database-generated searchable transaction numbers, richer operational dashboards and reports, and mandatory explanations for cash-turnover discrepancies. Preserve the quota-only architecture and all existing role, audit, shift, turnover, report, void, authentication, and security boundaries. Production must not be modified.
+- **2026-10-02, project owner:** Replace the ingredient, recipe, stock-in, evidence, raw-material alert, and reorder architecture with nullable daily product production quotas as the sole availability mechanism. Export DEV ingredient data and evidence before dropping those structures. Retain Admin and Cashier changes to today's quota, while only Admin may change product defaults or master data. Preserve sales, shifts, cash turnover, reports, audit records, authentication, and role enforcement. Recovery path: use the ignored local DEV export plus migrations `0010`/`0011`; production was not modified.
+- **2026-10-01, project owner:** Replace finished-product inventory and restock requests with ingredient inventory, recipes, and Manila-day product quotas. Add cashier dashboard and operational pages, proper void reversal, shifts, cash turnover, private stock-in evidence, audit records, and backend role enforcement. Legacy inventory and restock tables remain in migration history for old records but are no longer used by the application. Recovery path: restore application usage of the legacy schema from Git history; do not delete historical database rows.
+- **2026-09-22, project owner:** Switch from the Expo plus web repository to web-only and delete the Expo application. The owner explicitly requested removal after confirming the repository contained separate web and mobile apps. The web app remains in `web/`; Supabase schema and DEV seed tooling remain. Recovery path: retrieve the removed Expo files from Git history if mobile support is needed again.
 
-- A cashier can complete a cash sale end-to-end (including change) and print/share a receipt.
-- Sales and stock-ins made offline sync on reconnect without duplicates (UUID ids + remote existence check).
-- Sale totals and stock math are recomputed server-side in atomic RPCs (`process_sale`, `adjust_stock`, `void_sale`).
-- Cashiers cannot reach admin-only screens or tables (role-based navigation + RLS).
-- `npm run typecheck`, `npm run lint`, `npm run format:check`, and `npm run build` all pass.
+## Known web-only limits
 
-## Out of Scope
+- Transactions require a network connection.
+- Receipts use browser print, with no Bluetooth or Wi-Fi ESC/POS integration.
+- Daily quota reads and sales require the hosted database.
 
-- Multi-branch / multi-store, loyalty, coupons, taxes/VAT.
-- iOS release (Android only).
-- Cash drawer / barcode scanner hardware (printer only).
+## Previous approved dependency deviation
 
-## Generated Baseline
-
-<!-- Selected during setup. Deviations require explicit approval. -->
-
-- Architecture profile: 4-layer feature-based (Screen → Hook/Service → SQLite cache → `src/api/*` → Supabase). Screens never touch the DB.
-- Production baseline: `main` stable / `dev` integration; releases via release-please from conventional commits.
-- Authentication: Supabase Auth email + role from `user` table; offline session restore from local cache.
-- Uploads: object-storage (product images via `storageApi`).
-- Background jobs: none (sync on reconnect via `syncService`).
-- Offline behavior: full offline-first (reads from SQLite, writes queue with `synced: false`).
-
-## Product Decisions
-
-- **Web migration (planned):** pos-app will gain a web build so the Next.js + Tailwind playbooks under `playbooks/` apply. Until migration lands, Expo React Native remains the baseline; `stack/nextjs`, `styling/tailwind`, `platform/web`, and `capabilities/supabase/nextjs` playbooks are marked web-track and are advisory only. (Approved by project owner, 2026-09-09.)
-- **Web migration Phase 0 (complete 2026-09-09):** Next.js + Tailwind + Supabase scaffold lives in `web/` (landing page only, no product UI). Expo root untouched and still the baseline. `web/` has its own toolchain (`web/package.json`, strict `tsconfig`, `eslint-config-next`, Tailwind v4 tokens mapped 1:1 from `src/theme/colors.ts`); root ESLint ignores `web/**`; generated `web/next-env.d.ts` is committed, `web/.next/` is gitignored. CI runs a separate `web` job (Node 22, typecheck + lint + test + build with dummy `NEXT_PUBLIC_*` env).
-- **Web migration Phase 1 (complete 2026-09-11):** cookie-session auth on web via `@supabase/ssr` (`web/src/lib/supabase/` browser/server/proxy clients + `web/src/proxy.ts` refresh). `/login` Server Action mirrors Expo `AuthContext.login` (email+password → `user`-table role → `/pos` cashier / `/admin` admin); unknown roles fail closed. Role gates (`requireRole`) enforce server-side; proxy refresh is not authorization. Web auth is online-only (no offline session cache).
-- **Web migration Phase 2 (complete 2026-09-11):** POS core on web — `/pos` menu (server-read categories/products/inventory) → session-only cart → `checkoutSale` Server Action calling the same `process_sale` RPC (cash with change calc, GCash, Maya) → server-rendered `/pos/receipt/[id]` with browser print. `/pos` admits cashiers and admins (`requireStaff`); Expo menu disables on `is_available` only while web additionally disables zero-stock items (approved). Online-only, no thermal printing. Playwright smoke test covers the cashier cash sale end-to-end.
-- **Web migration Phase 3 (in progress 2026-09-11, `feature/web-back-office`):** back office on web — `/admin` dashboard (metrics, SVG weekly chart, low-stock, top-5), `/admin/inventory` + stock-in (`adjust_stock`), `/admin/menu` CRUD + photo upload + auto inventory row on create (fixes Expo gap where new products can't be sold), `/admin/reports` (Manila-day presets + custom range, voided excluded), `/admin/users` (edge-function create, `set_user_active` toggle, web enforces `is_active=false` at sign-in/session while Expo leaves it unenforced). Cashier access to `/admin/*` redirects to `/pos`. Playwright admin smoke (6 tests) green after `create-user` deploy.
-- **Automatic restock tracking (complete 2026-09-11):** `inventory.par_level` (nullable = inactive) + `reorder_requests` table with a single `AFTER UPDATE OF quantity` trigger as the shared source of truth for Expo + web (covers sale, void, stock-in, offline replays). One open request per product (partial unique index); recovery refreshes snapshots without auto-closing; supplier pre-fills from the latest movement. Admin-only RLS. Admin UI on both apps (`/admin/restock` on web with browser-print; `Restock` screen on mobile with PDF share); `par_level` editable in the mobile product form (edit-mode) and inline on the web restock page.
-
-## Approved Deviations
-
-<!-- Record date, approver, rationale, affected files, and recovery path. -->
-
-- (none)
-
-## Notes
-
-- Product spec and feature inventory live in `docs/` (`spec-overview.md`, `features.md`, `architecture.md`, `database.md`, `api.md`).
-- Gaps and roadmap live in `docs/future-plans.md`; active tracking lives in `PROGRESS.md`.
-- Agent operating contract: `AGENTS.md`. Task routing: `RULES.md` → `playbooks/`.
-
-## Expected Concerns (advisory)
-
-- validation
-- query
-- state
-- env
-- url-state
-- safe-action
-- dark-mode
+- 2026-09-18: `react-aria-components ^1.x` was approved for shared web Modal and Select accessibility. Appearance stays in project tokens. Recovery: uninstall it and replace those components.

@@ -1,146 +1,76 @@
-# Makefile — IPSS (Cafe Elvira POS)
-# Drives local development (Expo), DEV-only data seeding, and remote schema
-# migrations via the Supabase CLI.
-#
-# Environment targets:
-#   `make dev`      -> Expo dev server against .env.development (dev build / Fast Refresh)
-#   `make prod`     -> Expo dev server against .env.production
-#   `make devbuild` -> Build a custom development APK via EAS (requires expo-dev-client)
-#
-# Database:
-#   DEV and PROD are BOTH remote Supabase projects. The Supabase CLI is linked
-#   to whichever project you point it at via `supabase link`. `migrate-dev`
-#   targets DEV; `migrate-prod` targets PROD. There is intentionally NO
-#   local Docker database in this workflow — use the Supabase CLI against remote.
-#
-# Safety:
-#   `make seed` seeds DEV data only and refuses to run against PROD.
-#   `make reset-dev` re-applies ALL migrations (rebuilds the DEV schema from
-#   local migrations) — destructive to DEV, guarded to refuse unless the DEV
-#   project is linked, and does NOT seed. Run `make seed` separately.
-#   There is NO `seed-prod`. PROD is never seeded.
-
-EXPO := npx expo
-EAS := npx eas-cli
+# Cafe Elvira web app and DEV-only Supabase tooling.
 NODE := node
 SUPABASE := supabase
-
-# DEV project reference (default; used to guard destructive reset-dev).
-# Override / extend via env: `DEV_SUPABASE_REF_EXTRA` (space-separated) adds
-# extra allowed DEV refs without dropping the default.
-# Example: DEV_SUPABASE_REF_EXTRA=ccqoegnvzancptqhmyoc make seed
-comma := ,
-DEFAULT_DEV_SUPABASE_REF := mhlmskbuifatnlehvodf
+WEB_PORT ?= 3000
+DEFAULT_DEV_SUPABASE_REF := ccqoegnvzancptqhmyoc
 DEV_SUPABASE_REF ?= $(DEFAULT_DEV_SUPABASE_REF)
 DEV_SUPABASE_REF_EXTRA ?=
+comma := ,
 ALLOWED_DEV_REFS := $(DEFAULT_DEV_SUPABASE_REF) $(subst $(comma), ,$(DEV_SUPABASE_REF_EXTRA)) $(if $(filter-out $(DEFAULT_DEV_SUPABASE_REF),$(DEV_SUPABASE_REF)),$(DEV_SUPABASE_REF))
-# The CLI writes the linked project ref here after `supabase link`.
 LINKED_REF_FILE := supabase/.temp/project-ref
 
-.PHONY: help setup dev devbuild prod preview seed reset-dev typecheck lint format format-check \
-        build migrate-dev migrate-prod web-dev web-build
+.PHONY: help setup run dev web-dev web-lan web-build share seed reset-dev migrate-dev migrate-prod typecheck lint format-check test build
 
-help: ## Show available commands
-	@echo "===== DEVELOPMENT ====="
-	@printf "  %-12s %s\n" "make dev"      "Start Expo dev server (development env; connect via dev-build app)"
-	@printf "  %-12s %s\n" "make prod"     "Start Expo using the production env"
-	@printf "  %-12s %s\n" "make devbuild" "Build a custom development APK via EAS (install once, then Fast Refresh)"
-	@printf "  %-12s %s\n" "make preview"  "Build a test APK (EAS preview; gives a QR/URL to install & test on your phone)"
-	@printf "  %-12s %s\n" "make seed"     "Seed DEV database with demo data (data only; DEV-only)"
-	@printf "  %-12s %s\n" "make reset-dev" "REBUILD the linked DEV DB from local migrations (destructive, DEV-only, no seed)"
-	@printf "  %-12s %s\n" "make typecheck" "Type-check the project (npx tsc --noEmit)"
-	@printf "  %-12s %s\n" "make lint"      "Lint with ESLint (npx expo lint)"
-	@printf "  %-12s %s\n" "make format"   "Format codebase (prettier --write .)"
-	@printf "  %-12s %s\n" "make format-check" "Verify formatting (prettier --check .)"
-	@echo ""
-	@echo "===== DATABASE / MIGRATIONS ====="
-	@printf "  %-12s %s\n" "make migrate-dev"  "Apply migrations to DEV (supabase db push, linked project)"
-	@printf "  %-12s %s\n" "make migrate-prod" "Apply migrations to PROD (supabase db push, linked project)"
-	@echo ""
-	@echo "===== DEPLOYMENT ====="
-	@echo "  (no automated deployment targets in this repo)"
+help:
+	@printf "  %-14s %s\n" "make setup" "Install root seed tooling and web dependencies"
+	@printf "  %-14s %s\n" "make run" "Start the web app locally"
+	@printf "  %-14s %s\n" "make dev" "Start Next.js locally"
+	@printf "  %-14s %s\n" "make web-lan" "Start Next.js on LAN (port $(WEB_PORT))"
+	@printf "  %-14s %s\n" "make share" "Share a production web build with a Cloudflare tunnel"
+	@printf "  %-14s %s\n" "make seed" "Seed DEV database only"
+	@printf "  %-14s %s\n" "make reset-dev" "Reset linked DEV database (destructive, guarded)"
+	@printf "  %-14s %s\n" "make migrate-dev" "Apply migrations to linked DEV project"
+	@printf "  %-14s %s\n" "make migrate-prod" "Apply migrations to linked PROD project"
+	@printf "  %-14s %s\n" "make typecheck" "Typecheck web app"
+	@printf "  %-14s %s\n" "make lint" "Lint web app"
+	@printf "  %-14s %s\n" "make format-check" "Check web formatting"
+	@printf "  %-14s %s\n" "make test" "Run web unit tests"
+	@printf "  %-14s %s\n" "make build" "Build web app"
 
-setup: ## Install npm dependencies
+setup:
 	npm install
+	npm --prefix web install
 
-dev: ## Start Expo dev server against the development build (Fast Refresh)
-	NODE_ENV=development $(EXPO) start --dev-client
+run dev web-dev:
+	npm --prefix web run dev
 
-prod: ## Start Expo using the production environment
-	NODE_ENV=production $(EXPO) start
+web-lan:
+	npm --prefix web run dev -- --hostname 0.0.0.0 --port $(WEB_PORT)
 
-devbuild: ## Build a custom development APK via EAS (install once, then Fast Refresh)
-	@$(EAS) build --platform android --profile development --non-interactive
-	@echo ""
-	@echo "Dev APK is ready. Scan the QR / open the URL above on your phone, and"
-	@echo "install it once. Then run 'make dev' and connect from the installed app."
-	@echo "JS changes hot-reload (Fast Refresh); only native/config changes need a"
-	@echo "rebuild (rerun 'make devbuild')."
+web-build build:
+	npm --prefix web run build
 
-preview: ## Build a test APK via EAS (preview profile; QR/URL to install on your phone)
-	@bash -c 'set -a; . ./.env.production; set +a; $(EAS) build --platform android --profile preview --non-interactive'
-	@echo ""
-	@echo "APK is ready. Scan the QR or open the URL above on your phone to download"
-	@echo "and install it. The build inlines EXPO_PUBLIC_* from .env.production."
+typecheck:
+	npm --prefix web run typecheck
 
-seed: ## Seed DEV database with demo data ONLY (refuses PROD; assumes schema migrated)
+lint:
+	npm --prefix web run lint
+
+format-check:
+	npm --prefix web run format:check
+
+test:
+	npm --prefix web run test
+
+share:
+	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/demo-phone.ps1
+
+seed:
 	DEV_SUPABASE_REF_EXTRA="$(DEV_SUPABASE_REF_EXTRA)" DEV_SUPABASE_REF="$(DEV_SUPABASE_REF)" $(NODE) scripts/seed.cjs
 
-# --- Destructive DEV reset (rebuild DEV schema from local migrations) ---------
-# Resets the LINKED project, re-running ALL local migrations (0001-0004+).
-# Guarded so it only runs when the linked project is the DEV project. It does
-# NOT seed — use `make seed` afterwards if demo data is wanted.
-reset-dev: ## Rebuild the linked DEV database from local migrations (destructive; DEV-only, no seed)
+reset-dev:
 	@if [ ! -f "$(LINKED_REF_FILE)" ]; then \
-	  echo "error: not linked to any Supabase project."; \
-	  echo "       Run: supabase login && supabase link --project-ref $(DEFAULT_DEV_SUPABASE_REF)"; \
-	  exit 1; \
+	  echo "error: not linked to a Supabase project"; exit 1; \
 	fi; \
 	LINKED_REF=$$(cat "$(LINKED_REF_FILE)"); \
 	case " $(ALLOWED_DEV_REFS) " in \
 	  *" $$LINKED_REF "*) ;; \
-	  *) \
-	    echo "REFUSED: linked project is $$LINKED_REF, expected one of: $(ALLOWED_DEV_REFS)."; \
-	    echo "reset-dev only runs against the DEV project. Hint: set DEV_SUPABASE_REF_EXTRA to allow a new DEV ref."; \
-	    exit 1; \
-	    ;; \
+	  *) echo "REFUSED: linked project is $$LINKED_REF, expected DEV"; exit 1;; \
 	esac; \
-	echo "WARNING: this REBUILDS the DEV database $$LINKED_REF from local migrations (destructive)."; \
+	echo "WARNING: this rebuilds the linked DEV database $$LINKED_REF"; \
 	read -r -p "Type DEV to confirm: " CONFIRM; \
-	if [ "$$CONFIRM" != "DEV" ]; then \
-	  echo "Aborted."; \
-	  exit 1; \
-	fi; \
+	if [ "$$CONFIRM" != "DEV" ]; then echo "Aborted"; exit 1; fi; \
 	$(SUPABASE) db reset --linked
 
-typecheck: ## Type-check the project
-	npx tsc --noEmit
-
-lint: ## Lint the project (ESLint via Expo)
-	npx expo lint
-
-format: ## Format the codebase with Prettier
-	npx prettier --write .
-
-format-check: ## Verify Prettier formatting
-	npx prettier --check .
-
-build: ## Produce a static export bundle (android; mobile-only app)
-	npx expo export --platform android
-
-# --- Remote migrations (DEV / PROD via the Supabase CLI) ---------------------
-# Both operate on whatever remote project is currently linked (`supabase link`).
-# Use these intentionally; there is no generic `migrate` shortcut so that
-# DEV and PROD are never confused.
-migrate-dev: ## Apply pending migrations to the linked DEV project
+migrate-dev migrate-prod:
 	$(SUPABASE) db push
-
-migrate-prod: ## Apply pending migrations to the linked PROD project (controlled deployment)
-	$(SUPABASE) db push
-
-# --- Next.js web sub-app (Phase 0 scaffold; Expo remains the baseline) -----
-web-dev: ## Start Next.js web app (http://localhost:3000)
-	npm --prefix web run dev
-
-web-build: ## Production build of the Next.js web app
-	npm --prefix web run build

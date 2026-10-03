@@ -12,13 +12,22 @@ function menuItem(overrides: Partial<MenuItem> = {}): MenuItem {
     image_url: null,
     category_id: 'cat-1',
     category_name: 'Hot Drinks',
-    stock_quantity: 5,
+    today_quota_limit: 10,
+    sold_quantity: 5,
+    remaining_quantity: 5,
     ...overrides,
   };
 }
 
 function line(overrides: Partial<CartLine> = {}): CartLine {
-  return { product_id: 1, name: 'Latte', price: 120, qty: 1, ...overrides };
+  return {
+    product_id: 1,
+    name: 'Latte',
+    price: 120,
+    qty: 1,
+    image_url: null,
+    ...overrides,
+  };
 }
 
 test('add pushes a new line, then bumps qty', () => {

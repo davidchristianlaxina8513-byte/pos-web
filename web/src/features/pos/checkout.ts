@@ -4,11 +4,36 @@ import {
   type CheckoutItemInput,
   type PaymentMode,
 } from './types';
+import type { PaymentStatus } from './types';
 
 export function parsePaymentMode(value: unknown): PaymentMode | null {
   return value === 'cash' || value === 'gcash' || value === 'maya'
     ? value
     : null;
+}
+
+export function parsePaymentStatus(value: unknown): PaymentStatus | null {
+  return value === 'paid' ||
+    value === 'pending_verification' ||
+    value === 'verified' ||
+    value === 'rejected'
+    ? value
+    : null;
+}
+
+export const ONLINE_REFERENCE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{5,63}$/;
+
+export function validateOnlinePayment(
+  paymentMode: PaymentMode,
+  reference: string,
+  hasEvidence: boolean,
+): string | null {
+  if (paymentMode === 'cash') return null;
+  if (!ONLINE_REFERENCE_PATTERN.test(reference.trim())) {
+    return 'Enter a valid 6 to 64 character online transaction reference.';
+  }
+  if (!hasEvidence) return 'Confirm a payment evidence photo.';
+  return null;
 }
 
 export interface ValidCheckout {
@@ -27,7 +52,7 @@ function round2(value: number): number {
 }
 
 /**
- * Checkout rules, mirroring Expo `Payment.tsx`: non-empty cart, positive
+ * Checkout rules: non-empty cart, positive
  * integer quantities, cash must cover the total. Pure so both the dialog
  * (button enabling) and the Server Action (enforcement) share it.
  */

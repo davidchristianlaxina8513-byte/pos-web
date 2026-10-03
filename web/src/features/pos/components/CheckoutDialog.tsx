@@ -4,20 +4,28 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/common/Button';
 import { Field } from '@/components/common/Field';
+import { IconTile } from '@/components/common/IconTile';
+import { QtyStepper } from '@/components/common/QtyStepper';
+import { SectionLabel } from '@/components/common/SectionLabel';
+import { Modal } from '@/components/layout/modal/Modal';
+import { cn } from '@/lib/cn';
 import { checkoutSale } from '../actions';
-import { validateCheckout } from '../checkout';
+import { validateCheckout, validateOnlinePayment } from '../checkout';
 import { cartTotal, type CartLine, type PaymentMode } from '../types';
+import { PaymentEvidenceCapture } from './PaymentEvidenceCapture';
 
 export interface CheckoutDialogProps {
   lines: CartLine[];
+  onIncrement: (product_id: number) => void;
+  onDecrement: (product_id: number) => void;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-const MODES: { value: PaymentMode; label: string }[] = [
-  { value: 'cash', label: 'Cash' },
-  { value: 'gcash', label: 'GCash' },
-  { value: 'maya', label: 'Maya' },
+const MODES: { value: PaymentMode; label: string; mark: string }[] = [
+  { value: 'cash', label: 'Cash', mark: '₱' },
+  { value: 'gcash', label: 'GCash', mark: 'G' },
+  { value: 'maya', label: 'Maya', mark: 'M' },
 ];
 
 const WALLET_HINT: Record<Exclude<PaymentMode, 'cash'>, string> = {
@@ -25,9 +33,34 @@ const WALLET_HINT: Record<Exclude<PaymentMode, 'cash'>, string> = {
   maya: 'Customer scans the shop QR in their Maya app.',
 };
 
-/** Payment sheet: method pick, cash change calc, confirm posts the sale. */
+function LineThumb({ line }: { line: CartLine }) {
+  if (line.image_url) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={line.image_url}
+        alt=""
+        width={48}
+        height={48}
+        className="h-12 w-12 shrink-0 rounded-2xl object-cover"
+      />
+    );
+  }
+  return (
+    <span
+      aria-hidden="true"
+      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sage-100 text-xl"
+    >
+      ☕
+    </span>
+  );
+}
+
+/** v2 payment sheet: thumb rows with steppers, detail, method, confirm. */
 export function CheckoutDialog({
   lines,
+  onIncrement,
+  onDecrement,
   onClose,
   onSuccess,
 }: CheckoutDialogProps) {
@@ -35,6 +68,8 @@ export function CheckoutDialog({
   const total = cartTotal(lines);
   const [method, setMethod] = useState<PaymentMode>('cash');
   const [amountText, setAmountText] = useState('');
+  const [paymentReference, setPaymentReference] = useState('');
+  const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,6 +77,11 @@ export function CheckoutDialog({
   const validation = useMemo(
     () => validateCheckout(lines, method, amountReceived),
     [lines, method, amountReceived],
+  );
+  const onlineError = validateOnlinePayment(
+    method,
+    paymentReference,
+    evidenceFile !== null,
   );
   const change =
     method === 'cash' &&
@@ -53,7 +93,15 @@ export function CheckoutDialog({
   const handleConfirm = async () => {
     setIsProcessing(true);
     setError(null);
-    const result = await checkoutSale(lines, method, amountReceived);
+    const evidenceData = evidenceFile ? new FormData() : null;
+    if (evidenceFile) evidenceData?.set('evidence', evidenceFile);
+    const result = await checkoutSale(
+      lines,
+      method,
+      amountReceived,
+      paymentReference,
+      evidenceData,
+    );
     if (!result.ok) {
       setError(result.error);
       setIsProcessing(false);
@@ -64,66 +112,167 @@ export function CheckoutDialog({
   };
 
   return (
-    <div
-      className="fixed inset-0 flex items-center justify-center bg-foreground/50 p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Checkout"
+    <Modal
+      title="Check Out"
+      isOpen
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      isDismissDisabled={isProcessing}
     >
-      <div className="w-full max-w-md rounded border border-border bg-surface p-4">
-        <h2 className="text-foreground">Checkout — ₱{total.toFixed(2)}</h2>
-        <fieldset className="mt-3">
-          <legend className="text-muted">Payment method</legend>
-          <div className="mt-1 flex gap-2">
-            {MODES.map((mode) => (
-              <Button
-                key={mode.value}
-                variant={method === mode.value ? 'primary' : 'secondary'}
-                size="sm"
-                onClick={() => setMethod(mode.value)}
-                aria-pressed={method === mode.value}
-              >
-                {mode.label}
-              </Button>
-            ))}
-          </div>
-        </fieldset>
-        {method === 'cash' ? (
-          <div className="mt-3">
-            <Field
-              label="Amount received"
-              name="amountReceived"
-              type="number"
-              min={0}
-              step="any"
-              inputMode="decimal"
-              value={amountText}
-              onChange={(event) => setAmountText(event.target.value)}
-            />
-            <p className="mt-1 text-foreground">
-              Change: {change === null ? '—' : `₱${change.toFixed(2)}`}
-            </p>
-          </div>
-        ) : (
-          <p className="mt-3 text-muted">{WALLET_HINT[method]}</p>
-        )}
-        {error ? (
-          <p role="alert" className="mt-3 text-danger">
-            {error}
-          </p>
-        ) : null}
-        <div className="mt-4 flex justify-end gap-2">
-          <Button variant="secondary" onClick={onClose} disabled={isProcessing}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleConfirm}
-            disabled={!validation.ok || isProcessing}
+      <ul className="flex flex-col gap-3">
+        {lines.map((line) => (
+          <li
+            key={line.product_id}
+            className="flex items-center gap-3 rounded-card border border-border bg-surface p-3 shadow-soft"
           >
-            {isProcessing ? 'Processing…' : 'Confirm sale'}
-          </Button>
+            <LineThumb line={line} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[15px] font-bold text-foreground">
+                {line.name}
+              </p>
+              <p className="text-sm font-semibold text-leaf">
+                ₱{line.price.toFixed(2)}
+              </p>
+            </div>
+            <QtyStepper
+              value={line.qty}
+              itemName={line.name}
+              onIncrement={() => onIncrement(line.product_id)}
+              onDecrement={() => onDecrement(line.product_id)}
+            />
+          </li>
+        ))}
+      </ul>
+
+      <div className="mt-4 border-t border-border pt-4">
+        <SectionLabel>Payment detail</SectionLabel>
+        <div className="mt-2 flex items-center justify-between text-sm">
+          <span className="text-muted">Subtotal</span>
+          <span className="font-semibold">₱{total.toFixed(2)}</span>
+        </div>
+        <div className="mt-1 flex items-center justify-between">
+          <span className="text-base font-bold">Total</span>
+          <span className="text-lg font-extrabold text-leaf">
+            ₱{total.toFixed(2)}
+          </span>
         </div>
       </div>
-    </div>
+
+      <fieldset className="mt-4">
+        <SectionLabel as="legend">Payment method</SectionLabel>
+        <div className="mt-2 flex flex-col gap-2">
+          {MODES.map((mode) => {
+            const selected = method === mode.value;
+            return (
+              <button
+                key={mode.value}
+                type="button"
+                onClick={() => {
+                  setMethod(mode.value);
+                  setError(null);
+                  if (mode.value === 'cash') {
+                    setPaymentReference('');
+                    setEvidenceFile(null);
+                  }
+                }}
+                aria-pressed={selected}
+                className={cn(
+                  'flex items-center gap-3 rounded-2xl border bg-surface p-3 text-left shadow-soft',
+                  selected ? 'border-pine' : 'border-border',
+                )}
+              >
+                <IconTile tone="sage" className="h-9 w-9 text-sm font-bold">
+                  {mode.mark}
+                </IconTile>
+                <span className="flex-1 text-sm font-bold text-foreground">
+                  {mode.label}
+                </span>
+                {selected ? (
+                  <span
+                    aria-hidden="true"
+                    className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-pine text-xs text-surface"
+                  >
+                    ✓
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      </fieldset>
+      {method === 'cash' ? (
+        <div className="mt-4">
+          <Field
+            label="Amount received"
+            labelClassName="text-xs font-semibold tracking-wider text-muted uppercase"
+            name="amountReceived"
+            type="number"
+            min={0}
+            step="any"
+            inputMode="decimal"
+            inputClassName="h-[52px] rounded-2xl border-border bg-mist"
+            value={amountText}
+            onChange={(event) => setAmountText(event.target.value)}
+          />
+          <div className="mt-3 flex items-center justify-between">
+            <SectionLabel>Change</SectionLabel>
+            <p
+              className={cn(
+                'text-lg font-extrabold',
+                change !== null && change < 0 ? 'text-danger' : 'text-pine',
+              )}
+            >
+              {change !== null && change >= 0 ? `₱${change.toFixed(2)}` : '—'}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-4">
+          <p className="rounded-2xl bg-sage-100 p-3 text-sm text-pine-deep">
+            {WALLET_HINT[method]}
+          </p>
+          <div className="mt-3">
+            <Field
+              label="Online transaction reference"
+              name="paymentReference"
+              autoComplete="off"
+              minLength={6}
+              maxLength={64}
+              value={paymentReference}
+              onChange={(event) => setPaymentReference(event.target.value)}
+              placeholder="Enter reference number"
+            />
+          </div>
+          <PaymentEvidenceCapture
+            value={evidenceFile}
+            onChange={setEvidenceFile}
+            disabled={isProcessing}
+          />
+        </div>
+      )}
+      {error ? (
+        <p role="alert" className="mt-3 text-center text-sm text-danger">
+          {error}
+        </p>
+      ) : null}
+      <div className="mt-4 flex flex-col gap-2">
+        <Button
+          className="h-[52px] w-full rounded-full bg-pine text-base text-surface"
+          onClick={handleConfirm}
+          disabled={!validation.ok || onlineError !== null || isProcessing}
+        >
+          {isProcessing ? 'Processing…' : 'Process Checkout'}
+        </Button>
+        <Button
+          variant="secondary"
+          className="h-12 w-full rounded-full"
+          onClick={onClose}
+          disabled={isProcessing}
+        >
+          Cancel
+        </Button>
+      </div>
+    </Modal>
   );
 }

@@ -1,4 +1,4 @@
-import type { PaymentMode } from '@/features/pos/types';
+import type { PaymentMode, PaymentStatus } from '@/features/pos/types';
 
 export interface SaleRow {
   date: string;
@@ -88,7 +88,7 @@ function dayLabel(key: string): string {
 
 /**
  * Revenue/orders bucketed by Manila day for the last `dayCount` days
- * (ending today Manila time). Mirrors Expo `buildDaySales`.
+ * (ending today Manila time).
  */
 export function buildDaySales(
   rows: SaleRow[],
@@ -153,7 +153,140 @@ export interface SoldItem {
   subtotal: number;
 }
 
-/** Top products by revenue, mirroring Expo `aggregateTopProducts`. */
+export interface LedgerTransaction {
+  id: string;
+  transaction_number: string;
+  order_number: number | null;
+  date: string;
+  total_amount: number;
+  payment_mode: PaymentMode;
+  status: string | null;
+  payment_status: PaymentStatus;
+  payment_reference: string | null;
+  cashier_name: string;
+  has_payment_evidence: boolean;
+}
+
+export interface LedgerItem {
+  transaction_id: string;
+  product_id: number;
+  quantity: number;
+  subtotal: number;
+}
+
+export interface ReceiptRecordItem {
+  product_id: number;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  subtotal: number;
+}
+
+export interface ReceiptRecord {
+  transaction_id: string;
+  transaction_number: string;
+  order_number: number | null;
+  date: string;
+  total_amount: number;
+  payment_mode: PaymentMode;
+  payment_status: PaymentStatus;
+  payment_reference: string | null;
+  cashier_name: string;
+  status: string | null;
+  has_payment_evidence: boolean;
+  items: ReceiptRecordItem[];
+}
+
+export interface SoldLine {
+  transaction_id: string;
+  order_number: number | null;
+  date: string;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  subtotal: number;
+}
+
+export interface ReceiptLedger {
+  receipts: ReceiptRecord[];
+  lines: SoldLine[];
+  receiptsTruncated: boolean;
+  linesTruncated: boolean;
+}
+
+/**
+ * Record-level report ledger: one row per receipt plus one row per sold
+ * line, newest first. Voided transactions are dropped (same rule as
+ * `activeSales`). Both lists are capped so the Reports page stays fast;
+ * truncation flags let the UI say so.
+ */
+export function buildReceiptLedger(
+  txns: LedgerTransaction[],
+  items: LedgerItem[],
+  names: Map<number, string>,
+  receiptLimit = 50,
+  lineLimit = 100,
+): ReceiptLedger {
+  const ordered = [...txns].sort((a, b) =>
+    a.date < b.date ? 1 : a.date > b.date ? -1 : 0,
+  );
+  const receiptsTruncated = ordered.length > receiptLimit;
+  const kept = ordered.slice(0, receiptLimit);
+  const keptIds = new Set(kept.map((txn) => txn.id));
+  const byTxn = new Map<string, ReceiptRecordItem[]>();
+  for (const item of items) {
+    if (!keptIds.has(item.transaction_id)) continue;
+    const list = byTxn.get(item.transaction_id) ?? [];
+    list.push({
+      product_id: item.product_id,
+      product_name: names.get(item.product_id) ?? `Product #${item.product_id}`,
+      quantity: item.quantity,
+      unit_price:
+        item.quantity > 0 ? item.subtotal / item.quantity : item.subtotal,
+      subtotal: item.subtotal,
+    });
+    byTxn.set(item.transaction_id, list);
+  }
+  const receipts: ReceiptRecord[] = kept.map((txn) => ({
+    transaction_id: txn.id,
+    transaction_number: txn.transaction_number,
+    order_number: txn.order_number,
+    date: txn.date,
+    total_amount: txn.total_amount,
+    payment_mode: txn.payment_mode,
+    payment_status: txn.payment_status,
+    payment_reference: txn.payment_reference,
+    cashier_name: txn.cashier_name,
+    status: txn.status,
+    has_payment_evidence: txn.has_payment_evidence,
+    items: byTxn.get(txn.id) ?? [],
+  }));
+  const lines: SoldLine[] = [];
+  for (const receipt of receipts) {
+    if (receipt.status === 'voided') continue;
+    for (const item of receipt.items) {
+      if (lines.length >= lineLimit) break;
+      lines.push({
+        transaction_id: receipt.transaction_id,
+        order_number: receipt.order_number,
+        date: receipt.date,
+        product_name: item.product_name,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        subtotal: item.subtotal,
+      });
+    }
+    if (lines.length >= lineLimit) break;
+  }
+  return {
+    receipts,
+    lines,
+    receiptsTruncated,
+    linesTruncated: lines.length >= lineLimit,
+  };
+}
+
+/** Top products by revenue. */
 export function aggregateTopProducts(
   items: SoldItem[],
   names: Map<number, string>,

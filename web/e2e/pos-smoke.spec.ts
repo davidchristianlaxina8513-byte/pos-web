@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
 
 const CASHIER_EMAIL = 'cashier@elvira.cafe';
@@ -16,7 +16,7 @@ function supabaseEnv(): { url: string; anonKey: string } {
   return { url, anonKey };
 }
 
-async function stockFor(productId: number): Promise<number> {
+async function remainingQuotaFor(productId: number): Promise<number> {
   const { url, anonKey } = supabaseEnv();
   const supabase = createClient(url, anonKey);
   const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -24,13 +24,12 @@ async function stockFor(productId: number): Promise<number> {
     password: CASHIER_PASSWORD,
   });
   expect(signInError).toBeNull();
-  const { data, error } = await supabase
-    .from('inventory')
-    .select('quantity')
-    .eq('product_id', productId);
+  const { data, error } = await supabase.rpc('get_today_product_quotas');
   expect(error).toBeNull();
-  const rows = (data ?? []) as { quantity: number | string }[];
-  return rows.reduce((sum, row) => sum + Number(row.quantity), 0);
+  const row = (data ?? []).find(
+    (item: { product_id: number }) => item.product_id === productId,
+  );
+  return Number(row?.remaining_quantity ?? 0);
 }
 
 async function productIdByName(name: string): Promise<number> {
@@ -58,42 +57,63 @@ async function productIdByName(name: string): Promise<number> {
  * Cashier happy path: login → browse → add ×2 → cash checkout → receipt →
  * stock deducts → sign out.
  */
-test('pos smoke: cash sale deducts stock and renders a receipt', async ({
+test('pos smoke: cash sale decreases quota and renders a receipt', async ({
   page,
 }) => {
   await page.goto('/login');
   await page.getByLabel('Email').fill(CASHIER_EMAIL);
-  await page.getByLabel('Password').fill(CASHIER_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page).toHaveURL(/\/pos$/);
+  await page.getByLabel('Password', { exact: true }).fill(CASHIER_PASSWORD);
+  await page.getByRole('button', { name: 'Log In' }).click();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await page.goto('/pos');
 
-  const addButton = page.getByRole('button', { name: /^Add / }).first();
-  const itemName = ((await addButton.getAttribute('aria-label')) ?? '').replace(
-    /^Add | to cart$/g,
-    '',
-  );
-  expect(itemName.length).toBeGreaterThan(0);
-  const productId = await productIdByName(itemName);
-  const stockBefore = await stockFor(productId);
-  expect(stockBefore).toBeGreaterThanOrEqual(SALE_QTY);
-
-  for (let i = 0; i < SALE_QTY; i += 1) {
-    await addButton.click();
+  const candidates = page.getByRole('button', { name: /^Add / });
+  // The menu streams in after navigation commits; count() doesn't retry.
+  await expect(candidates.first()).toBeVisible();
+  const candidateCount = await candidates.count();
+  let itemName = '';
+  let addButton: Locator | null = null;
+  for (let index = 0; index < candidateCount; index += 1) {
+    const candidate = candidates.nth(index);
+    if (await candidate.isDisabled()) continue;
+    const label = (await candidate.getAttribute('aria-label')) ?? '';
+    const name = label.replace(/^Add | to cart$/g, '').trim();
+    if (!name) continue;
+    // The shared dev catalog drains as the suite buys stock, so only take
+    // an item that still has enough units for this sale.
+    if ((await remainingQuotaFor(await productIdByName(name))) < SALE_QTY)
+      continue;
+    itemName = name;
+    addButton = candidate;
+    break;
   }
+  expect(itemName.length).toBeGreaterThan(0);
+  expect(addButton).not.toBeNull();
+  const productId = await productIdByName(itemName);
+  const quotaBefore = await remainingQuotaFor(productId);
+  expect(quotaBefore).toBeGreaterThanOrEqual(SALE_QTY);
+
+  // v2 cards swap the add tile for a stepper after the first unit, so the
+  // second unit goes through the stepper (same cart reducer path).
+  await addButton?.click();
+  await page
+    .getByRole('button', { name: `Increase ${itemName}` })
+    .first()
+    .click();
   const totalText = (await page.getByText(/^Total: ₱/).textContent()) ?? '';
   const total = Number(totalText.replace(/^Total: ₱/, ''));
   expect(Number.isFinite(total) && total > 0).toBe(true);
 
   await page.getByRole('button', { name: 'Checkout' }).click();
-  await expect(page.getByRole('dialog', { name: 'Checkout' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Check Out' })).toBeVisible();
   await page.getByLabel('Amount received').fill(String(total + 100));
-  await page.getByRole('button', { name: 'Confirm sale' }).click();
+  await page.getByRole('button', { name: 'Process Checkout' }).click();
 
   await expect(page).toHaveURL(/\/pos\/receipt\//);
   await expect(page.getByText(/Order #\d+/)).toBeVisible();
   await expect(page.getByText('Change: ₱100.00')).toBeVisible();
 
-  expect(await stockFor(productId)).toBe(stockBefore - SALE_QTY);
+  expect(await remainingQuotaFor(productId)).toBe(quotaBefore - SALE_QTY);
 
   await page.goto('/pos');
   await page.getByRole('button', { name: 'Sign out' }).click();

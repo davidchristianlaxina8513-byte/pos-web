@@ -1,10 +1,15 @@
 import { expect, test } from 'vitest';
-import { parsePaymentMode, validateCheckout } from './checkout';
+import {
+  parsePaymentMode,
+  parsePaymentStatus,
+  validateCheckout,
+  validateOnlinePayment,
+} from './checkout';
 import type { CartLine } from './types';
 
 const LINES: CartLine[] = [
-  { product_id: 1, name: 'Latte', price: 120, qty: 2 },
-  { product_id: 2, name: 'Muffin', price: 65.5, qty: 1 },
+  { product_id: 1, name: 'Latte', price: 120, qty: 2, image_url: null },
+  { product_id: 2, name: 'Muffin', price: 65.5, qty: 1, image_url: null },
 ];
 
 test('parsePaymentMode accepts the three modes only', () => {
@@ -59,6 +64,26 @@ test('wallet checkout posts the total with no change', () => {
   }
 });
 
+test('online payment requires a safe reference and confirmed evidence', () => {
+  expect(validateOnlinePayment('gcash', '', false)).toContain('reference');
+  expect(validateOnlinePayment('maya', 'bad ref', true)).toContain('reference');
+  expect(validateOnlinePayment('gcash', 'REF-123456', false)).toContain(
+    'evidence',
+  );
+  expect(validateOnlinePayment('maya', 'REF_123456', true)).toBeNull();
+  expect(validateOnlinePayment('cash', '', false)).toBeNull();
+});
+
+test('payment status parser accepts the supported workflow states', () => {
+  expect(parsePaymentStatus('paid')).toBe('paid');
+  expect(parsePaymentStatus('pending_verification')).toBe(
+    'pending_verification',
+  );
+  expect(parsePaymentStatus('verified')).toBe('verified');
+  expect(parsePaymentStatus('rejected')).toBe('rejected');
+  expect(parsePaymentStatus('uploaded')).toBeNull();
+});
+
 test('empty cart and bad quantities fail', () => {
   expect(validateCheckout([], 'cash', 100)).toEqual({
     ok: false,
@@ -66,7 +91,7 @@ test('empty cart and bad quantities fail', () => {
   });
   expect(
     validateCheckout(
-      [{ product_id: 1, name: 'Latte', price: 120, qty: 0 }],
+      [{ product_id: 1, name: 'Latte', price: 120, qty: 0, image_url: null }],
       'gcash',
       null,
     ),

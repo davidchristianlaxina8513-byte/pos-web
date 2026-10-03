@@ -1,15 +1,14 @@
 /*
  * scripts/seed.cjs
  * Seeds the Supabase DEV database with demo data (users, categories,
- * products, inventory, demo transactions) so the UI can be previewed.
+ * products, quotas, and transactions) for local previews.
  *
  * Responsibilities (DATA ONLY — this does NOT apply or modify any schema):
  *   - upsert demo auth users + app "user" profile rows
- *   - upsert categories / products / inventory
- *   - upsert stock-movement history and demo transactions
+ *   - upsert categories and products with nullable production quotas
+ *   - upsert demo transactions
  *   - realign identity sequences so seeded explicit ids don't collide with
- *     the next runtime insert (the runtime inserts go through the process_sale
- *     RPC / adjust_stock RPC, not this script)
+ *     the next runtime insert
  *
  * Safety:
  *   - Refuses to run against any non-DEV database (guard below). Seeding is
@@ -36,12 +35,12 @@ const { createClient } = require('@supabase/supabase-js');
 
 const ROOT = path.resolve(__dirname, '..');
 
-// Default DEV project ref (legacy). Additional refs can be allowed via env:
-//   DEV_SUPABASE_REF_EXTRA="ccqoegnvzancptqhmyoc"
+// Default DEV project ref. Additional refs can be allowed via env:
+//   DEV_SUPABASE_REF_EXTRA="another-dev-project-ref"
 //   (comma- or space-separated; also read from .env.development / .env.local).
 //   DEV_SUPABASE_REF, when set to a non-default value, is also treated as an
 //   extra allowed ref (additive — the default is never dropped).
-const DEFAULT_DEV_SUPABASE_HOST = 'mhlmskbuifatnlehvodf'; // DEV project ref (must never appear for PROD)
+const DEFAULT_DEV_SUPABASE_HOST = 'ccqoegnvzancptqhmyoc'; // DEV project ref (must never appear for PROD)
 
 function loadEnvFile(file) {
   const target = path.join(ROOT, file);
@@ -186,8 +185,8 @@ const CATEGORY_ID_BY_NAME = Object.fromEntries(
   CATEGORIES.map((category) => [category.name, category.category_id]),
 );
 
-// Full Elvira menu, grouped in menu order. product ids are deterministic so
-// transactions / inventory links stay stable across re-seeds.
+// Full Elvira menu, grouped in menu order. Product ids are deterministic so
+// transaction links stay stable across re-seeds.
 const MENU = [
   ['All Day Breakfast', '1000000001', 'Corned Beef with Egg', 130],
   ['All Day Breakfast', '1000000002', 'Tocino with Egg', 120],
@@ -239,68 +238,11 @@ const products = MENU.map(([category, _productId, name, price], index) => ({
   category,
   price,
   is_available: true,
+  daily_quota_limit: index === MENU.length - 1 ? null : 30,
 })).map((product) => ({
   ...product,
   category_id: CATEGORY_ID_BY_NAME[product.category],
 }));
-
-// Stock for each product (stock_id mirrors product_id). A few items are
-// intentionally low/out-of-stock so the StockBadge states are visible.
-// par_level seeds the reorder-tracking feature (null = inactive).
-const stockOverrides = {
-  4: [8, 10, 24], // Bacon w/ Egg — low
-  6: [0, 10, 20], // Chicken Tonkatsu - critical
-  19: [45, 8, 60], // Latte - healthy
-  30: [40, 10, 50], // Dark Chocolate - healthy
-};
-
-const inventory = products.map((product) => {
-  const [quantity, reorder_level, par_level] = stockOverrides[
-    product.product_id
-  ] ?? [30, 10, null];
-  return {
-    stock_id: product.product_id,
-    product_id: product.product_id,
-    quantity,
-    reorder_level,
-    par_level,
-  };
-});
-
-const stockMovements = [
-  {
-    movement_id: 1,
-    stock_id: 1,
-    type: 'in',
-    quantity: 30,
-    date: '2026-08-01T09:00:00Z',
-    supplier: 'Fresh Provisions',
-  },
-  {
-    movement_id: 2,
-    stock_id: 6,
-    type: 'out',
-    quantity: 6,
-    date: '2026-08-02T10:00:00Z',
-    supplier: null,
-  },
-  {
-    movement_id: 3,
-    stock_id: 19,
-    type: 'in',
-    quantity: 25,
-    date: '2026-08-01T09:00:00Z',
-    supplier: 'Bean Roasters',
-  },
-  {
-    movement_id: 4,
-    stock_id: 31,
-    type: 'out',
-    quantity: 10,
-    date: '2026-08-04T12:00:00Z',
-    supplier: null,
-  },
-];
 
 // Deterministic UUIDs for transactions (so links are stable between re-seeds).
 const TX = {
@@ -344,12 +286,12 @@ const transactions = [
   },
   {
     id: TX.capp,
-    payment_mode: 'gcash',
+    payment_mode: 'cash',
     user_id: adminId,
     date: '2026-07-31T13:40:00Z',
     status: 'completed',
     void_reason: null,
-    amount_received: null,
+    amount_received: 400,
   },
   {
     id: TX.aff,
@@ -362,12 +304,12 @@ const transactions = [
   },
   {
     id: TX.iced,
-    payment_mode: 'maya',
+    payment_mode: 'cash',
     user_id: adminId,
     date: '2026-08-02T18:10:00Z',
     status: 'voided',
     void_reason: 'Customer refund',
-    amount_received: null,
+    amount_received: 200,
   },
 ];
 
@@ -399,22 +341,14 @@ on conflict (name) do update
   set category_id = excluded.category_id;`;
 
 const UPSERT_PRODUCTS = `
-insert into product (product_id, name, category_id, price, is_available)
+insert into product (product_id, name, category_id, price, is_available, daily_quota_limit)
 values $1
 on conflict (product_id) do update
   set name = excluded.name,
       category_id = excluded.category_id,
       price = excluded.price,
-      is_available = excluded.is_available;`;
-
-const UPSERT_INVENTORY = `
-insert into inventory (stock_id, product_id, quantity, reorder_level, par_level)
-values $1
-on conflict (stock_id) do update
-  set product_id = excluded.product_id,
-      quantity = excluded.quantity,
-      reorder_level = excluded.reorder_level,
-      par_level = excluded.par_level;`;
+      is_available = excluded.is_available,
+      daily_quota_limit = excluded.daily_quota_limit;`;
 
 const UPSERT_USER = `
 insert into "user" (user_id, username, password, role, is_active)
@@ -423,16 +357,6 @@ on conflict (username) do update
   set user_id = excluded.user_id,
       role = excluded.role,
       is_active = excluded.is_active;`;
-
-const UPSERT_MOVEMENTS = `
-insert into stock_movements (movement_id, stock_id, type, quantity, date, supplier)
-values $1
-on conflict (movement_id) do update
-  set stock_id = excluded.stock_id,
-      type = excluded.type,
-      quantity = excluded.quantity,
-      date = excluded.date,
-      supplier = excluded.supplier;`;
 
 function valuesClause(rows, columns) {
   const clauses = rows
@@ -458,13 +382,10 @@ async function upsertRows(client, sql, rows, columns) {
 
 // `generated by default as identity` sequences are not advanced when rows are
 // inserted with an explicit id. After seeding identity-backed tables, push each
-// sequence past the max seeded id so runtime inserts (new products / stock-in
-// movements via adjust_stock / process_sale) don't collide with a seeded id and
-// surface as a unique-violation (HTTP 409).
+// sequence past the max seeded id so runtime inserts do not collide with a
+// seeded id and surface as a unique-violation (HTTP 409).
 const IDENTITY_TABLES = [
   { table: 'product', column: 'product_id' },
-  { table: 'inventory', column: 'stock_id' },
-  { table: 'stock_movements', column: 'movement_id' },
 ];
 
 async function syncIdentitySequences(client) {
@@ -495,12 +416,14 @@ async function upsertTransactions(client) {
   // these numbers continue cleanly after the seeded set.
   const dayCounters = {};
   const txRows = transactions.map((t) => {
-    const day = new Date(t.date).toLocaleString('en-PH', {
+    const parts = new Intl.DateTimeFormat('en-PH', {
       timeZone: 'Asia/Manila',
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
-    });
+    }).formatToParts(new Date(t.date));
+    const part = Object.fromEntries(parts.map((item) => [item.type, item.value]));
+    const day = `${part.year}${part.month}${part.day}`;
     const n = (dayCounters[day] ?? 0) + 1;
     dayCounters[day] = n;
     return {
@@ -514,11 +437,13 @@ async function upsertTransactions(client) {
       amount_received: t.amount_received,
       change_given: t.change_given,
       order_number: n,
+      transaction_number: `TXN-${day}-${String(n).padStart(5, '0')}`,
+      payment_status: 'paid',
     };
   });
   await upsertRows(
     client,
-    'insert into transactions (id, total_amount, payment_mode, user_id, date, status, void_reason, amount_received, change_given, order_number) values',
+    'insert into transactions (id, total_amount, payment_mode, user_id, date, status, void_reason, amount_received, change_given, order_number, transaction_number, payment_status) values',
     txRows,
     [
       'id',
@@ -531,6 +456,8 @@ async function upsertTransactions(client) {
       'amount_received',
       'change_given',
       'order_number',
+      'transaction_number',
+      'payment_status',
     ],
   );
 
@@ -553,14 +480,20 @@ async function upsertAuthUsers() {
   });
 
   const resolvedIds = {};
-  const page = await admin.auth.admin.listUsers();
-  const existingUsers = (page.data?.users ?? []).reduce((acc, u) => {
-    acc[u.email] = u;
-    return acc;
-  }, {});
+  const existingUsers = {};
+  const perPage = 1000;
+  for (let page = 1; ; page += 1) {
+    const result = await admin.auth.admin.listUsers({ page, perPage });
+    if (result.error) throw result.error;
+    const users = result.data?.users ?? [];
+    for (const user of users) {
+      if (user.email) existingUsers[user.email.toLowerCase()] = user;
+    }
+    if (users.length < perPage) break;
+  }
 
   for (const u of authUsers) {
-    const existing = existingUsers[u.email];
+    const existing = existingUsers[u.email.toLowerCase()];
     if (existing) {
       resolvedIds[u.username] = existing.id;
       await admin.auth.admin.updateUserById(existing.id, {
@@ -604,23 +537,8 @@ async function runSeed() {
       'category_id',
       'price',
       'is_available',
+      'daily_quota_limit',
     ]);
-    await upsertRows(client, UPSERT_INVENTORY, inventory, [
-      'stock_id',
-      'product_id',
-      'quantity',
-      'reorder_level',
-      'par_level',
-    ]);
-    await upsertRows(client, UPSERT_MOVEMENTS, stockMovements, [
-      'movement_id',
-      'stock_id',
-      'type',
-      'quantity',
-      'date',
-      'supplier',
-    ]);
-
     // Realign identity sequences so seeded ids don't collide with runtime inserts.
     await syncIdentitySequences(client);
 

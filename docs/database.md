@@ -1,223 +1,77 @@
-# Database Reference
+# Database reference
 
-Hand-written from `supabase/migrations/` (0001–0007) and the local SQLite
-schema in `src/services/sqlite.ts`. Two stores:
+Supabase Postgres is the web application's data store. Authentication lives in `auth.users`; the public `user` table holds each active Admin or Cashier profile. Migrations under `supabase/migrations/` are authoritative.
 
-- **Supabase (Postgres)** — online source of truth. Auth lives in Supabase
-  Auth (`auth.users`); the app's `user` table holds the role profile row.
-- **SQLite** — offline mirror of reference data + queue of unsynced writes.
+## Active model
 
----
+### Catalog and production quotas
 
-## 1. Supabase tables
+| Table | Purpose |
+| --- | --- |
+| `category` | Product categories. |
+| `product` | Sellable products, price, image, active state, and Admin-managed nullable `daily_quota_limit`. |
+| `daily_product_quotas` | One snapshot per product and Manila business date, including the nullable limit and actors. |
+| `quota_changes` | Today-quota history with nullable old/new values, actor role, reason, and time. |
+| `order_number_counter` | Transaction-safe Manila-day order and `TXN-YYYYMMDD-#####` numbering. |
 
-### `product`
+`NULL` means unlimited, `0` means sold out, and a positive limit is the maximum quantity that completed sales may contain for that Manila date. Remaining quantity is derived from the daily limit minus completed transaction items. Voided sales are excluded, so a void restores availability without a stored counter or reversal job.
 
-| Column         | Type                          | Notes                                                                               |
-| -------------- | ----------------------------- | ----------------------------------------------------------------------------------- |
-| `product_id`   | bigint identity PK            |                                                                                     |
-| `name`         | text NOT NULL                 |                                                                                     |
-| `category_id`  | uuid NOT NULL                 | FK → `category.category_id` (from 0002; legacy free-text `category` column dropped) |
-| `price`        | numeric NOT NULL DEFAULT 0    |                                                                                     |
-| `is_available` | boolean NOT NULL DEFAULT true |                                                                                     |
-| `image_url`    | text                          | nullable; added 0005                                                                |
+### Sales, shifts, and turnover
 
-### `category`
+| Table | Purpose |
+| --- | --- |
+| `transactions` | Sale header with unique transaction number, total, payment mode/status, online reference, cashier, and void/review details. |
+| `transaction_items` | Product, quantity, and server-computed subtotal for each sale line. |
+| `payment_evidence` | Private object metadata linked one-to-one with an online transaction, its reference, uploader, MIME type, size, and review status. |
+| `cashier_shifts` | Cashier opening cash and open/closed state for a Manila business date. |
+| `cash_turnovers` | Starting cash, completed cash sales, expected cash, count, variance, and Admin verification. |
+| `audit_log` | Security and operational events with actor, entity, structured details, and timestamp. |
 
-| Column        | Type                               | Notes                                             |
-| ------------- | ---------------------------------- | ------------------------------------------------- |
-| `category_id` | uuid PK DEFAULT gen_random_uuid()  |                                                   |
-| `name`        | text NOT NULL UNIQUE               | `Uncategorized` is reserved and cannot be deleted |
-| `created_at`  | timestamptz NOT NULL DEFAULT now() |                                                   |
+## Server RPCs
 
-### `user`
+Write RPCs use `SECURITY DEFINER`, set their search path, validate the authenticated role, and are granted only to authenticated callers.
 
-| Column      | Type                            | Notes                                                                   |
-| ----------- | ------------------------------- | ----------------------------------------------------------------------- |
-| `user_id`   | uuid PK                         | references `auth.users`                                                 |
-| `username`  | text UNIQUE NOT NULL            | used as the login email/identifier                                      |
-| `password`  | text                            | legacy/seed only — auth lives in `auth.users`; never written by the app |
-| `role`      | text NOT NULL DEFAULT 'cashier' | CHECK `in ('admin','cashier')`                                          |
-| `is_active` | boolean NOT NULL DEFAULT true   |                                                                         |
+- `business_date()` converts a timestamp to an `Asia/Manila` date.
+- `ensure_daily_product_quotas()` creates missing daily snapshots from product defaults.
+- `get_today_product_quotas()` returns default, today, sold, and derived remaining values.
+- `set_today_product_quota()` lets Admin or Cashier change today's nullable limit, rejects finite values below completed sales, and records history.
+- `set_default_product_quota()` is Admin-only and changes the product default without changing an existing daily snapshot.
+- `process_sale()` aggregates cart lines, locks product and daily quota rows in product-id order, rejects concurrent overselling, computes server prices, generates the transaction number, and requires a validated private evidence object for online sales.
+- `review_online_payment()` is Admin-only and changes a pending online payment to Verified or Rejected while recording the review in the audit log.
+- `void_sale()` lets an Admin or the owning Cashier void a completed sale with a reason. The status change restores derived quota availability.
+- `open_cashier_shift()`, `submit_cash_turnover()`, and `verify_cash_turnover()` retain the shift and verification workflow. Submission derives cash sales from completed cash transactions and requires a reason for any variance.
+- `set_user_active()` remains Admin-only.
 
-### `inventory`
+## Authorization summary
 
-| Column          | Type                       | Notes                                        |
-| --------------- | -------------------------- | -------------------------------------------- |
-| `stock_id`      | bigint identity PK         |                                              |
-| `product_id`    | bigint NOT NULL            | FK → `product(product_id)` ON DELETE CASCADE |
-| `quantity`      | integer NOT NULL DEFAULT 0 | CHECK `>= 0`                                 |
-| `reorder_level` | integer NOT NULL DEFAULT 0 |                                              |
+| Resource | Admin | Cashier |
+| --- | --- | --- |
+| Products and categories | Read and manage | Read only |
+| Today's quotas | Read and adjust | Read and adjust |
+| Product default quotas | Manage | Mutation denied |
+| Transactions | Read all; void completed sales | Read own; void own completed sales |
+| Online evidence | Read all; verify or reject | Submit and read evidence for own transactions |
+| Shifts and turnovers | Read all; verify or flag | Read and submit own records |
+| Quota history and audit log | Read | No access |
+| Users | Read and manage | Read own profile |
 
-### `transactions`
+Direct writes to protected operational tables remain blocked. Product availability is determined only by the active product state and the daily production quota.
 
-| Column            | Type                              | Notes                                                |
-| ----------------- | --------------------------------- | ---------------------------------------------------- |
-| `id`              | uuid PK                           | client-generated UUID (dedup)                        |
-| `order_number`    | int                               | per-day sequence, allocated by `process_sale` (0004) |
-| `total_amount`    | numeric NOT NULL DEFAULT 0        | recomputed server-side; CHECK `>= 0`                 |
-| `payment_mode`    | text NOT NULL                     | CHECK `in ('cash','gcash','maya')`                   |
-| `user_id`         | uuid NOT NULL                     | FK → `user(user_id)`                                 |
-| `date`            | timestamptz NOT NULL              |                                                      |
-| `status`          | text NOT NULL DEFAULT 'completed' | `completed` / `voided`                               |
-| `void_reason`     | text                              | nullable                                             |
-| `amount_received` | numeric                           | nullable; CHECK `>= 0`                               |
-| `change_given`    | numeric                           | nullable                                             |
+## Storage and removed structures
 
-Index: `idx_transactions_user (user_id)` (cashier "own transactions" filter).
+`product-images` remains the public menu-image bucket with authenticated owner/Admin mutation controls. `payment-evidence` is private, accepts only JPEG/PNG/WebP images up to 5 MB, and uses authenticated owner/Admin policies; the app issues short-lived signed URLs only after an authorized transaction lookup. The DEV `stock-in-evidence` bucket and all ingredient, recipe, stock-in, ingredient movement, reorder request, trigger, policy, and evidence audit structures were removed by migration `0012` after a guarded local export. The export is under the ignored `.dev-exports/` directory and contains no application secrets.
 
-### `transaction_items`
+The original `inventory` and `stock_movements` tables remain only for migration-history compatibility. No current route, query, RPC, seed, or test uses them, and `adjust_stock()` was dropped. `inventory.par_level`, `reorder_requests`, and their triggers were dropped.
 
-| Column           | Type             | Notes                                     |
-| ---------------- | ---------------- | ----------------------------------------- |
-| `id`             | uuid PK          | generated by RPC (`gen_random_uuid()`)    |
-| `transaction_id` | uuid NOT NULL    | FK → `transactions(id)` ON DELETE CASCADE |
-| `product_id`     | bigint NOT NULL  | FK → `product(product_id)`                |
-| `quantity`       | integer NOT NULL | CHECK `> 0`                               |
-| `subtotal`       | numeric NOT NULL | CHECK `>= 0`; recomputed server-side      |
+## Migration map
 
-### `stock_movements`
+| Migration | Main change |
+| --- | --- |
+| `0001`–`0009` | Original catalog, sales, roles, receipt numbering, images, and retired stock/reorder history. |
+| `0010_daily_quota_ingredient_inventory.sql` | Introduced quotas, shifts, turnover, audit records, and the later-retired ingredient model. |
+| `0011_stock_evidence_audit.sql` | Introduced the later-retired private evidence audit trigger. |
+| `0012_daily_production_quota_simplification.sql` | Export-guarded removal of restock and raw-ingredient structures; nullable production quotas; transactional quota-only sales and voids. |
+| `0013_final_feature_completion.sql` | Unique transaction numbers, private online evidence, payment review, and turnover discrepancy enforcement. |
+| `0014_fix_payment_evidence_path_validation.sql` | Corrected evidence object-key validation in the new sale RPC. |
 
-| Column        | Type                 | Notes                                        |
-| ------------- | -------------------- | -------------------------------------------- |
-| `movement_id` | bigint identity PK   |                                              |
-| `stock_id`    | bigint NOT NULL      | FK → `inventory(stock_id)` ON DELETE CASCADE |
-| `type`        | text NOT NULL        | CHECK `in ('in','out')`                      |
-| `quantity`    | integer NOT NULL     | CHECK `> 0`                                  |
-| `date`        | timestamptz NOT NULL |                                              |
-| `supplier`    | text                 | nullable; set on stock-in                    |
-
-### `order_number_counter`
-
-| Column | Type                   | Notes                         |
-| ------ | ---------------------- | ----------------------------- |
-| `day`  | date PK                | business day in `Asia/Manila` |
-| `last` | int NOT NULL DEFAULT 0 |                               |
-
-Allocated by `process_sale` under a row lock; RLS enabled with no client
-policies (only the SECURITY DEFINER RPC touches it — 0006).
-
----
-
-## 2. RPCs (SECURITY DEFINER)
-
-All are `security definer` with `set search_path = public`, revoked from
-`public` and granted to `authenticated`.
-
-### `get_app_role() → text`
-
-Reads the caller's `role` from `user` bypassing RLS. Used by every policy and
-RPC for authorization.
-
-### `process_sale(p_transaction_id uuid, p_payment_mode text, p_amount_received numeric, p_change_given numeric, p_items jsonb, p_date timestamptz) → uuid`
-
-- **Idempotent:** if the transaction id already exists, returns it unchanged
-  (0004) — safe for offline-sync retries.
-- Rejects unauthenticated calls (`get_app_role()` null).
-- Allocates a daily `order_number` (fixed `Asia/Manila` business day, row-lock
-  on `order_number_counter`).
-- Inserts the transaction with `total_amount = 0`, then loops `p_items`
-  (array of `{ product_id, quantity }`):
-  - looks up `product.price` (client amounts ignored), validates `qty > 0`,
-  - inserts `transaction_items` with `subtotal = price × qty`,
-  - locks the `inventory` row (`FOR UPDATE`), rejects insufficient stock,
-  - decrements stock and logs a `stock_movements` `out` row,
-  - accumulates the real total.
-- Updates `total_amount` and returns the id. One transaction — any failure
-  rolls back everything.
-
-### `adjust_stock(p_stock_id bigint, p_quantity integer, p_supplier text) → void`
-
-- Admin only.
-- Validates `quantity > 0`, increments inventory, logs `stock_movements`
-  `in` with supplier. Errors if the stock row doesn't exist.
-
-### `void_sale(p_transaction_id uuid, p_reason text) → void`
-
-- Admin or the transaction's owning cashier.
-- Rejects already-voided transactions; requires a non-empty path (app enforces
-  reason).
-- Restores each line item's quantity to `inventory`, logs `stock_movements`
-  `in` rows, then sets `status = 'voided'` + `void_reason`.
-
-### `set_user_active(p_user_id uuid, p_active boolean) → void`
-
-- Admin only. Toggles `is_active`. Role is never client-writable (no privilege
-  escalation path).
-
----
-
-## 3. RLS matrix
-
-Policies use `get_app_role()`. Direct client writes to `transactions`,
-`transaction_items`, and `user` are **not allowed for either role** — mutation
-goes through the RPCs above.
-
-| Table                                       | Admin                       | Cashier                                |
-| ------------------------------------------- | --------------------------- | -------------------------------------- |
-| `product`                                   | read + write                | read                                   |
-| `category`                                  | read + write                | read                                   |
-| `inventory`                                 | read + write                | read                                   |
-| `stock_movements`                           | read                        | no access                              |
-| `transactions`                              | read (all)                  | read (own `user_id`)                   |
-| `transaction_items`                         | read (all)                  | read (via own transaction)             |
-| `user`                                      | read (all)                  | read (own row only)                    |
-| `order_number_counter`                      | no client access (RPC only) | no client access                       |
-| `storage.objects` (bucket `product-images`) | read + upload/update/delete | read + upload; update/delete own files |
-
-> Bucket policies: public read; `insert` for any authenticated user; `update`/
-> `delete` for the file owner or admin (0007 hardening — a cashier can only
-> mutate their own uploads).
-
----
-
-## 4. Storage
-
-- Bucket **`product-images`** (public, id = name = `product-images`).
-- Uploads store `image_url` on `product`. Cleanup on product delete is
-  best-effort (`storageApi.deleteProductImage`).
-
----
-
-## 5. Local SQLite mirror (`ipss.db`)
-
-Modern async `expo-sqlite` (`openDatabaseAsync` / `execAsync`). Seven tables:
-
-| Table               | Purpose                                              | Sync flag |
-| ------------------- | ---------------------------------------------------- | --------- |
-| `products`          | catalog cache (denormalized with `category_name`)    | —         |
-| `categories`        | category cache                                       | —         |
-| `users`             | user/profile cache (offline session restore)         | —         |
-| `inventory`         | stock cache (one row per `product_id`, unique index) | —         |
-| `transactions`      | completed + unsynced sales                           | `synced`  |
-| `transaction_items` | line items for local transactions                    | —         |
-| `stock_movements`   | offline stock-ins                                    | `synced`  |
-
-Key behaviors:
-
-- **Cache replace** (`replaceLocalProducts/Categories/Inventory`,
-  `upsertLocalUsers`): DELETE + INSERT in one SQLite transaction
-  (`withTransactionAsync`), run sequentially from `catalogSync`.
-- **Offline sale** (`saveOfflineSale`): inserts the transaction + all items +
-  decrements local inventory in a **single transaction** — a partial write can
-  never commit.
-- **Offline stock-in** (`saveOfflineStockIn`): inserts the movement (`synced 0`)
-  - increments local inventory atomically.
-- **Dedup guard**: `idx_inventory_product` unique index on `product_id`
-  (inventory dedup cleanup runs on init).
-
----
-
-## 6. Migration map
-
-| File                                    | Content                                                                                                                               |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `0001_init.sql`                         | Core tables + permissive dev-preview RLS                                                                                              |
-| `0002_categories.sql`                   | `category` table + FK; legacy `product.category` backfilled and dropped                                                               |
-| `0003_rbac.sql`                         | Role-gated RLS, CHECK constraints, atomic write RPCs (`get_app_role`, `process_sale`, `adjust_stock`, `void_sale`, `set_user_active`) |
-| `0004_add_order_number.sql`             | `order_number` + `order_number_counter`; idempotent/concurrency-safe `process_sale`                                                   |
-| `0005_add_product_image.sql`            | `product.image_url` + public `product-images` bucket + policies                                                                       |
-| `0006_secure_order_counter_rls.sql`     | RLS on `order_number_counter`, revoke client access                                                                                   |
-| `0007_secure_product_image_storage.sql` | Storage hardening: update/delete restricted to owner/admin                                                                            |
-
-All migrations are idempotent and re-runnable via `make seed` / `make reset`.
+Migrations are forward-only. Production reset is forbidden, and production migration requires explicit owner authorization.

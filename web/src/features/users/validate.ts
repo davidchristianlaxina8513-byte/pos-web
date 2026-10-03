@@ -16,7 +16,7 @@ export interface ValidStaff {
 const EMAIL_LIKE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 /**
- * Staff creation rules, mirroring Expo `useUsers.validatePayload`:
+ * Staff creation rules:
  * email-shaped username, password present (Supabase Auth minimum), known role.
  */
 export function validateNewStaff(

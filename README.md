@@ -1,68 +1,49 @@
-# IPSS — POS & Stock Management for Cafe Elvira
+# Cafe Elvira POS
 
-A mobile point-of-sale app with built-in stock monitoring for Cafe Elvira.
-Sell from the counter with cash, GCash, or Maya — and keep track of inventory
-from the same device.
+A responsive, web-only cafe POS with daily product production quotas, cashier shifts, cash turnover, and back-office reporting. It uses Next.js, TypeScript, Tailwind CSS, and Supabase. The application is in [`web/`](web/); Supabase migrations and DEV-only seed tooling are at the repository root.
 
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=fff)
-![React Native](https://img.shields.io/badge/React%20Native-0.86-61DAFB?logo=react&logoColor=fff)
-![Expo](https://img.shields.io/badge/Expo-SDK%2057-000020?logo=expo&logoColor=fff)
-![Supabase](https://img.shields.io/badge/Supabase-3FCF8E?logo=supabase&logoColor=fff)
+## Run locally
 
-## What it does
-
-- **Take orders** from the menu and check out with cash or e-wallets.
-- **Track stock** in real time — sales deduct inventory automatically.
-- **Monitor low stock** so you restock before you run out.
-- **Print receipts** with an optional barcode.
-- **Keep working offline** — sales are saved locally and synced when
-  you're back online.
-
-## Roles
-
-| Role    | What they can do                                                             |
-| ------- | ---------------------------------------------------------------------------- |
-| Cashier | Take orders, process payments, issue receipts, view own sales history        |
-| Admin   | Everything a cashier can, plus menu management, stock-in, reports, dashboard |
-
-## Capabilities
-
-| Area                | Cashier | Admin |
-| ------------------- | :-----: | :---: |
-| Sales & checkout    |    ✓    |   ✓   |
-| Receive payments    |    ✓    |   ✓   |
-| Transaction history |   own   |  all  |
-| View inventory      |    ✓    |   ✓   |
-| Manage menu         |    —    |   ✓   |
-| Stock-in & reorder  |    —    |   ✓   |
-| Reports & dashboard |    —    |   ✓   |
-| User management     |    —    |   ✓   |
-
-## Payments accepted
-
-Cash (with change calculator), GCash, and Maya.
-
-## Try it
-
-Demo accounts, seeded with the sample data:
-
-| Role    | Username              | Password     |
-| ------- | --------------------- | ------------ |
-| Admin   | `admin@elvira.cafe`   | `admin123`   |
-| Cashier | `cashier@elvira.cafe` | `cashier123` |
-
-## Run it locally
-
-For developers. Requires Node.js and the `EXPO_PUBLIC_` environment variables
-from `.env.development`.
+Use Node.js 22 or newer. Copy `web/.env.example` to `web/.env.local` and provide the public URL and anon key for the DEV Supabase project.
 
 ```bash
-make setup      # install dependencies
-make seed       # apply the schema + demo data (DEV-only)
-make dev        # start the Expo dev server (development env)
+npm --prefix web ci
+npm run dev
 ```
 
-For a full list of available commands, run `make help`.
+Open <http://localhost:3000>. Root scripts forward to the web app. Install root dependencies only when using the guarded DEV seed tooling.
 
-> This README is for end users and stakeholders. Developers, see
-> [`AGENTS.md`](AGENTS.md) for setup, architecture, and quality gates.
+## Features
+
+- Cash checkout plus GCash/Maya checkout with a required reference and private payment-evidence image. Online payments remain pending until an Admin verifies or rejects them.
+- Nullable Manila-day production quotas with transactional sold-out enforcement: blank is unlimited, zero is sold out, and a positive integer is the daily limit.
+- Admin-managed product defaults plus Admin/Cashier adjustments for today's quota.
+- Derived availability from completed sales, with voided sales restoring availability naturally.
+- Database-generated searchable transaction numbers on receipts and reports.
+- Cashier daily summary, recent transactions, view-only menu, daily sales, and a single Cashier Operations page for shift and cash-turnover work.
+- Admin daily summary, needs-attention list, and a single Cashier Operations page for shift history and turnover verification.
+- Reports is the central Admin destination for sales summaries, transaction search, sold items, top products, payment references, and private evidence review.
+- Account-scoped browser preferences for POS confirmations, quota-alert emphasis, saved language choice, and Light/Dark/System appearance.
+- Server role checks, row-level security, and responsive phone and desktop layouts.
+- Browser-printable receipts with payment state and authorized evidence access.
+
+The current interface remains intentionally consistent with the established design. A broader visual redesign is postponed until functional development and verification are complete.
+
+Sales require connectivity. The web app does not include offline sale storage or native thermal-printer support.
+
+## DEV data
+
+The documented Admin and Cashier accounts are managed by `scripts/seed.cjs`. It reads seed-only credentials from root environment files, verifies the target against the DEV project allowlist, and must never be pointed at production.
+
+## Checks
+
+```bash
+npm run typecheck
+npm run lint
+npm run format:check
+npm test
+npm run build
+npm run test:e2e
+```
+
+See [`AGENTS.md`](AGENTS.md) for development rules, [`CONTEXT.md`](CONTEXT.md) for product decisions, and [`docs/database.md`](docs/database.md) for the current data model.
