@@ -1,7 +1,7 @@
-import Link from 'next/link';
 import { requireRole } from '@/features/auth/queries';
 import { getCategories } from '@/features/menu/queries';
 import { ProductForm } from '@/features/menu/components/ProductForm';
+import { BackLink } from '@/components/common/BackLink';
 import { Card } from '@/components/common/Card';
 import { StaffShell } from '@/components/layout/staff-shell';
 
@@ -15,12 +15,12 @@ export default async function NewProductPage() {
       role={profile.role}
       title="Add product"
       actions={
-        <Link
+        <BackLink
           href="/admin/menu"
-          className="rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold shadow-soft"
+          className="rounded-full border border-border bg-surface px-4 py-2 shadow-soft"
         >
           Back to Menu
-        </Link>
+        </BackLink>
       }
     >
       <Card className="rounded-card border-border shadow-soft">

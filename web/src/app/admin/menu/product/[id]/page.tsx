@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireRole } from '@/features/auth/queries';
+import { BackLink } from '@/components/common/BackLink';
 import { getCategories, getEditableProduct } from '@/features/menu/queries';
 import { ProductForm } from '@/features/menu/components/ProductForm';
 import { Card } from '@/components/common/Card';
@@ -26,12 +26,12 @@ export default async function EditProductPage({
       role={profile.role}
       title={`Edit product — ${product.name}`}
       actions={
-        <Link
+        <BackLink
           href="/admin/menu"
-          className="action-focus rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold shadow-soft"
+          className="rounded-full border border-border bg-surface px-4 py-2 shadow-soft"
         >
           Back to Menu
-        </Link>
+        </BackLink>
       }
     >
       <Card className="rounded-card border-border shadow-soft">

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { getReceipt } from '@/features/pos/actions';
 import { requireStaff } from '@/features/auth/queries';
 import { PaymentEvidenceActions } from '@/features/pos/components/PaymentEvidenceActions';
+import { BackLink } from '@/components/common/BackLink';
 import { Card } from '@/components/common/Card';
 import { CheckIcon } from '@/components/common/icons';
 import { PrintButton } from './print-button';
@@ -36,12 +37,7 @@ export default async function ReceiptPage({
     <main className="min-h-screen bg-mist text-foreground">
       <div className="mx-auto w-full max-w-md px-4 py-6">
         <div className="print:hidden">
-          <Link
-            href="/pos"
-            className="action-focus rounded text-sm font-semibold text-pine-deep"
-          >
-            Back to POS
-          </Link>
+          <BackLink href="/pos">Back to POS</BackLink>
         </div>
 
         <div className="mt-4 flex flex-col items-center text-center print:hidden">
@@ -166,10 +162,25 @@ export default async function ReceiptPage({
                     Review note: {receipt.payment_review_note}
                   </p>
                 ) : null}
+                {receipt.status === 'voided' ? (
+                  <p
+                    role="status"
+                    className="mt-2 text-sm font-semibold text-danger"
+                  >
+                    This sale was voided
+                    {receipt.void_reason
+                      ? ` (${receipt.void_reason})`
+                      : null}{' '}
+                    and can no longer be reviewed.
+                  </p>
+                ) : null}
                 <PaymentEvidenceActions
                   transactionId={receipt.transaction_id}
                   canReview={profile.role === 'admin'}
-                  pending={receipt.payment_status === 'pending_verification'}
+                  pending={
+                    receipt.status === 'completed' &&
+                    receipt.payment_status === 'pending_verification'
+                  }
                   hasEvidence={receipt.has_payment_evidence}
                 />
               </>

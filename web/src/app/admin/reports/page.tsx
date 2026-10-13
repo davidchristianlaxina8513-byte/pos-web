@@ -83,6 +83,11 @@ export default async function ReportsPage({
     );
   return (
     <StaffShell email={profile.email} role={profile.role} title="Reports">
+      <p className="mb-3 text-sm">
+        <Link href="/shift-report" className="font-bold text-pine">
+          Open the end-of-shift sales &amp; inventory report
+        </Link>
+      </p>
       <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
         {PRESETS.map((entry) => (
           <Link

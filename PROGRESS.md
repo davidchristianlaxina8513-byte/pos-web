@@ -1,5 +1,37 @@
 # Progress
 
+## System-wide back navigation (2026-10-13)
+
+- Audited all 24 `web/src/app` routes: 4 are redirect-only; dashboards/lists rely on the StaffShell sidebar (per its documented design); receipt, product new/edit already had parent links. The only genuine gap was `/shift-report` (bottom “Back to POS” for both roles).
+- Added shared `web/src/components/common/BackLink.tsx` (explicit href, never browser history; arrow icon; existing tokens/focus states) and converted the 3 existing back links to it with unchanged visuals. `/shift-report` now shows a top role-aware link (admin → Reports, cashier → Daily Sales) and the misleading bottom link was removed.
+- Verified: typecheck, ESLint, Prettier, 63/63 unit, production build, new `web/e2e/back-nav.spec.ts` (BN-01…05: receipt→POS with no side effects, product forms→Menu, role parents, no dashboard redundancy, no cashier→admin hrefs) — all passing, plus pos-smoke and menu round-trip regressions and desktop/mobile screenshots.
+
+## Payment review save failure (2026-10-13)
+
+- Root cause: TXN-20261013-00006 is `voided` with `pending_verification` payment status. The receipt stack never read the sale `status`, so Verify/Reject rendered on a non-reviewable sale while `review_online_payment` correctly fail-closed (`Voided transactions cannot be reviewed`); the action then hid the reason behind a generic message. No RLS, auth, constraint, or trigger defect — verified by direct inspection.
+- Fix: `getReceipt` now returns sale `status`/`void_reason`; review buttons render only for completed + pending sales; voided receipts show “This sale was voided (…) and can no longer be reviewed.” `reviewOnlinePayment` maps known RPC failures to user-safe messages and logs unexpected ones server-side (id + status + DB message, no PII).
+- Verified: unit mapper tests, new `web/e2e/payment-review.spec.ts` (PR-01…04: voided-pending offers no review and stays unchanged, UI verify persists verified, UI reject persists rejected, unknown receipt 404s, repeat/nonexistent RPC errors) — all passing with DB-confirmed statuses; regressions online-payment.spec, AA-02, SR-E2E-02, 63/63 unit, production build.
+
+## Actionable admin alerts (2026-10-13)
+
+- Made the Admin Dashboard “Needs Attention” alerts full-card links: sold-out/almost-sold-out → `/today-products` (quota status and adjust controls); pending online payments → `/admin/reports?paymentStatus=pending_verification` (pre-filtered verification workflow); pending/discrepancy turnovers → `/admin/cashier-operations#turnover` (verify/flag workflow).
+- Added `web/src/features/dashboard/alerts.ts` (pure alert→destination mapping, unit-tested) so future alerts follow the same pattern; alert counts and messages still come from the existing dashboard queries.
+- Verified: typecheck, ESLint, Prettier, 62/62 unit tests, production build, and new `web/e2e/admin-attention.spec.ts` (AA-01…04: sold-out navigate/resolve/refresh, payment filter/verify/refresh with click-write check, turnover navigate/verify/refresh, keyboard Enter + 390px layout) — all passing, plus dashboard-hub and cashier-authorization regressions.
+
+## End-of-shift report (2026-10-12)
+
+- Added a shared read-only `/shift-report` route (`requireStaff()`): Manila business-date or shift filter, admin cashier filter, cashier self-only scope enforced server-side (manipulated params ignored) and backstopped by RLS.
+- Completed sales include pending-verification online payments; `Online collected` counts verified GCash/Maya only; pending is separate; rejected is counted but excluded from collected; `completed = cash + collected + pending + rejected` is asserted in tests. Only cash/GCash/Maya exist — no QR Ph, card, Grab, or split payments invented.
+- Products split into finished-drink cups, physical units, and unclassified via an explicit tested category map; sizes stay separate rows; quota limit/sold/remaining shown only where daily quota rows exist (`Not recorded` otherwise, never current numbers as history). No ingredient section; report performs zero writes.
+- Evidence: `docs/shift-report-tests.md` (new `SR-U-…`/`SR-E2E-…` IDs; original evidence untouched). Verified: typecheck, ESLint, Prettier, unit tests, 24-route production build, and the full new Playwright spec (anonymous redirect, cash/void/quota, pending→verified, rejected, cashier isolation + manipulated filter, midnight boundary, repeat-read, not-recorded) — all passing. Existing reports/daily-sales pages gained only an entry link each.
+
+## Signed-in landing restoration (2026-10-12)
+
+- The signed-in root landing (`web/src/app/page.tsx`, `/`) was rendering the original scaffold stub: unstyled `IPSS Web` heading, plain session text, browser-default link/button. Git history shows it was never styled; `/login` itself was unaffected.
+- Reconstructed the landing with the existing login conventions only: same `bg-login-background` shell, decorative circles, LeafMark brand block, white card (`border-sage-200`, `shadow-soft`), pine primary Continue action (now `next/link`), and the shared secondary `Button` for sign-out. No new design, no auth/routing changes.
+- Preserved behavior: anonymous `/` still redirects to `/login`; the role landing (`/admin` or `/dashboard`) and sign-out form are unchanged.
+- Verified: typecheck, ESLint, Prettier, 51/51 unit tests, 24-route production build, plus temporary Playwright checks (since removed) covering anonymous redirect, admin continue/sign-out/protection, and cashier 390px layout with screenshots inspected at desktop and mobile.
+
 ## Current status
 
 On 2026-10-03, the final quota-only feature completion and stabilization phase was completed against the verified `cafe-elvira-dev` Supabase project. Production was not contacted or modified.

@@ -6,6 +6,7 @@ import { requireStaff } from '@/features/auth/queries';
 import {
   parsePaymentMode,
   parsePaymentStatus,
+  reviewErrorMessage,
   validateCheckout,
   validateOnlinePayment,
 } from './checkout';
@@ -149,7 +150,7 @@ export async function getReceipt(
   const { data: txn, error: txnError } = await supabase
     .from('transactions')
     .select(
-      'id, transaction_number, order_number, date, payment_mode, payment_status, payment_reference, payment_review_note, total_amount, amount_received, change_given, user_id, user:user!transactions_user_id_fkey(username)',
+      'id, transaction_number, order_number, date, payment_mode, payment_status, payment_reference, payment_review_note, total_amount, amount_received, change_given, user_id, status, void_reason, user:user!transactions_user_id_fkey(username)',
     )
     .eq('id', transactionId)
     .maybeSingle();
@@ -186,6 +187,11 @@ export async function getReceipt(
     transaction_number: txn.transaction_number,
     order_number:
       typeof txn.order_number === 'number' ? txn.order_number : null,
+    status: txn.status === 'voided' ? 'voided' : 'completed',
+    void_reason:
+      typeof txn.void_reason === 'string' && txn.void_reason
+        ? txn.void_reason
+        : null,
     date: txn.date as string,
     cashier_name: (() => {
       const user = txn.user as ReceiptUserRow | ReceiptUserRow[] | null;
@@ -251,7 +257,17 @@ export async function reviewOnlinePayment(
     p_status: status,
     p_note: note.trim() || null,
   });
-  if (error) return { ok: false, error: 'Payment review could not be saved.' };
+  if (error) {
+    const message = reviewErrorMessage(error.message);
+    if (message === 'Payment review could not be saved.') {
+      console.error('review_online_payment failed', {
+        transactionId,
+        status,
+        dbMessage: error.message,
+      });
+    }
+    return { ok: false, error: message };
+  }
   revalidatePath(`/pos/receipt/${transactionId}`);
   revalidatePath('/admin/reports');
   revalidatePath('/admin');

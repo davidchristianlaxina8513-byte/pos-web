@@ -71,6 +71,8 @@ export interface Receipt {
   order_number: number | null;
   date: string;
   cashier_name: string | null;
+  status: 'completed' | 'voided';
+  void_reason: string | null;
   payment_mode: PaymentMode;
   payment_status: PaymentStatus;
   payment_reference: string | null;

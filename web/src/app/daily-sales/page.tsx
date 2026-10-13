@@ -20,6 +20,11 @@ export default async function DailySalesPage() {
       title="Daily Sales"
       subtitle="Your sales for the current Manila business day"
     >
+      <p className="mb-3 text-sm">
+        <Link href="/shift-report" className="font-bold text-pine">
+          Open the end-of-shift report
+        </Link>
+      </p>
       <div className="grid grid-cols-3 gap-3">
         <Card title="Gross">
           <strong>₱{gross.toFixed(2)}</strong>

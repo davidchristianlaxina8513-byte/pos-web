@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { requireRole } from '@/features/auth/queries';
+import { attentionAlerts } from '@/features/dashboard/alerts';
 import { getAdminTodaySummary } from '@/features/dashboard/queries';
 import { getDashboard } from '@/features/reports/queries';
 import { getTodayProductQuotas } from '@/features/quotas/queries';
@@ -48,23 +49,13 @@ export default async function AdminPage() {
   const almostSoldOut = quotas.filter(
     (item) => item.status === 'almost_sold_out',
   );
-  const attention = [
-    soldOut.length
-      ? `${soldOut.length} product${soldOut.length === 1 ? '' : 's'} sold out today`
-      : null,
-    almostSoldOut.length
-      ? `${almostSoldOut.length} product${almostSoldOut.length === 1 ? '' : 's'} almost sold out`
-      : null,
-    today.pendingPayments
-      ? `${today.pendingPayments} online payment${today.pendingPayments === 1 ? '' : 's'} pending verification`
-      : null,
-    today.pendingTurnovers
-      ? `${today.pendingTurnovers} cash turnover${today.pendingTurnovers === 1 ? '' : 's'} pending verification`
-      : null,
-    today.discrepancyTurnovers
-      ? `${today.discrepancyTurnovers} cash turnover${today.discrepancyTurnovers === 1 ? '' : 's'} with a discrepancy`
-      : null,
-  ].filter((item): item is string => Boolean(item));
+  const attention = attentionAlerts({
+    soldOut: soldOut.length,
+    almostSoldOut: almostSoldOut.length,
+    pendingPayments: today.pendingPayments,
+    pendingTurnovers: today.pendingTurnovers,
+    discrepancyTurnovers: today.discrepancyTurnovers,
+  });
 
   return (
     <StaffShell
@@ -171,18 +162,24 @@ export default async function AdminPage() {
             className="rounded-card border-border shadow-soft"
           >
             <ul className="space-y-2 text-sm">
-              {attention.map((item) => (
-                <li
-                  key={item}
-                  className="flex gap-2 rounded-2xl bg-warning/10 p-3"
-                >
-                  <span
-                    aria-hidden="true"
-                    className="font-extrabold text-warning"
+              {attention.map((alert) => (
+                <li key={alert.key}>
+                  <Link
+                    href={alert.href}
+                    aria-label={`${alert.message} — review and resolve`}
+                    className="card-hover action-focus flex items-center gap-2 rounded-2xl bg-warning/10 p-3"
                   >
-                    !
-                  </span>
-                  <span className="font-semibold">{item}</span>
+                    <span
+                      aria-hidden="true"
+                      className="font-extrabold text-warning"
+                    >
+                      !
+                    </span>
+                    <span className="flex-1 font-semibold">
+                      {alert.message}
+                    </span>
+                    <ArrowRightIcon className="h-5 w-5 shrink-0 text-warning" />
+                  </Link>
                 </li>
               ))}
             </ul>

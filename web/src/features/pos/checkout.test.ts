@@ -2,6 +2,7 @@ import { expect, test } from 'vitest';
 import {
   parsePaymentMode,
   parsePaymentStatus,
+  reviewErrorMessage,
   validateCheckout,
   validateOnlinePayment,
 } from './checkout';
@@ -82,6 +83,27 @@ test('payment status parser accepts the supported workflow states', () => {
   expect(parsePaymentStatus('verified')).toBe('verified');
   expect(parsePaymentStatus('rejected')).toBe('rejected');
   expect(parsePaymentStatus('uploaded')).toBeNull();
+});
+
+test('review errors map known database failures to safe messages', () => {
+  expect(reviewErrorMessage('Voided transactions cannot be reviewed')).toBe(
+    'This sale was voided and can no longer be reviewed.',
+  );
+  expect(reviewErrorMessage('Online payment has already been reviewed')).toBe(
+    'This payment was already reviewed.',
+  );
+  expect(reviewErrorMessage('Transaction not found')).toBe(
+    'Transaction not found.',
+  );
+  expect(reviewErrorMessage('Cash payments do not require review')).toBe(
+    'Cash payments do not require review.',
+  );
+  expect(reviewErrorMessage('Admin only')).toBe(
+    'Only admins can review payments.',
+  );
+  expect(reviewErrorMessage('something unexpected')).toBe(
+    'Payment review could not be saved.',
+  );
 });
 
 test('empty cart and bad quantities fail', () => {

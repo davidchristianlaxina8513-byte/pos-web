@@ -25,6 +25,7 @@ The web app lives in `web/`. Supabase migrations, edge functions, and DEV-only s
 - Remaining quantity is derived from completed, nonvoided sales. Voiding a sale records the actor and reason and naturally restores availability.
 - Cashiers can open one shift, submit counted cash, and see expected cash based on completed cash sales. Admins verify or flag turnovers.
 - Admin reports distinguish gross sales, voided sales, and net sales.
+- A shared read-only End-of-Shift report (`/shift-report`, admin and cashier) shows completed/voided totals, cash vs verified-online vs pending payment splits with a reconciliation line, product-level cups/physical/unclassified quantities, and daily-quota remaining (or `Not recorded`) for a Manila business date or shift. No ingredient data, no writes.
 - Playwright covers phone layouts, role navigation, authorization, quota concurrency, inventory, voids, shifts, and turnover.
 
 ## Approved baseline changes

@@ -36,6 +36,32 @@ export function validateOnlinePayment(
   return null;
 }
 
+/**
+ * Maps `review_online_payment` database failures to user-safe messages.
+ * Unknown failures keep the generic message; callers log the original.
+ */
+export function reviewErrorMessage(message: string): string {
+  if (message.includes('Voided transactions cannot be reviewed')) {
+    return 'This sale was voided and can no longer be reviewed.';
+  }
+  if (message.includes('Online payment has already been reviewed')) {
+    return 'This payment was already reviewed.';
+  }
+  if (message.includes('Transaction not found')) {
+    return 'Transaction not found.';
+  }
+  if (message.includes('Cash payments do not require review')) {
+    return 'Cash payments do not require review.';
+  }
+  if (message.includes('Admin only')) {
+    return 'Only admins can review payments.';
+  }
+  if (message.includes('A rejection reason is required')) {
+    return 'Enter a rejection reason.';
+  }
+  return 'Payment review could not be saved.';
+}
+
 export interface ValidCheckout {
   items: CheckoutItemInput[];
   total: number;
