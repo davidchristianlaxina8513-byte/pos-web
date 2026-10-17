@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { requireRole } from '@/features/auth/queries';
 import { getCategories } from '@/features/menu/queries';
 import { ProductForm } from '@/components/modules/menu/ProductForm';
-import { Card } from '@/components/common/Card';
 import { StaffShell } from '@/components/layout/staff-shell';
 
 /** v2 admin product create (shares the restyled ProductForm). */
@@ -14,6 +13,7 @@ export default async function NewProductPage() {
       email={profile.email}
       role={profile.role}
       title="Add Product"
+      subtitle="Configure a new beverage, food, or retail item for POS sales and daily stock monitoring"
       breadcrumbs={[
         { name: 'Menu Management', href: '/admin/menu' },
         { name: 'Add Product', current: true },
@@ -27,9 +27,7 @@ export default async function NewProductPage() {
         </Link>
       }
     >
-      <Card className="rounded-card border-border shadow-soft">
-        <ProductForm categories={categories} initial={null} />
-      </Card>
+      <ProductForm categories={categories} initial={null} />
     </StaffShell>
   );
 }

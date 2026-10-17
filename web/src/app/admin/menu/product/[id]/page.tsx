@@ -25,6 +25,7 @@ export default async function EditProductPage({
       email={profile.email}
       role={profile.role}
       title={`Edit Product — ${product.name}`}
+      subtitle="Update product details, pricing, daily production quota, and POS visibility"
       breadcrumbs={[
         { name: 'Menu Management', href: '/admin/menu' },
         { name: `Edit Product: ${product.name}`, current: true },
@@ -38,9 +39,7 @@ export default async function EditProductPage({
         </Link>
       }
     >
-      <Card className="rounded-card border-border shadow-soft">
-        <ProductForm categories={categories} initial={product} />
-      </Card>
+      <ProductForm categories={categories} initial={product} />
     </StaffShell>
   );
 }
