@@ -1,6 +1,6 @@
-import { ListSkeleton } from '@/components/common/LoadingSkeleton';
+import { MenuCatalogSkeleton } from '@/components/loader/LoadingSkeleton';
 
-/** Menu management loading skeleton. */
+/** Menu catalog management loading skeleton. */
 export default function MenuLoading() {
-  return <ListSkeleton />;
+  return <MenuCatalogSkeleton />;
 }

@@ -3,10 +3,10 @@ import { requireStaff } from '@/features/auth/queries';
 import { signOut } from '@/features/auth/actions';
 import { Avatar } from '@/components/common/Avatar';
 import { Card } from '@/components/common/Card';
-import { Field } from '@/components/common/Field';
+import { Field } from '@/components/form/Field';
 import { StaffShell } from '@/components/layout/staff-shell';
 import { SignOutIcon } from '@/components/common/icons';
-import { PreferencesPanel } from '@/features/settings/components/PreferencesPanel';
+import { PreferencesPanel } from '@/components/modules/settings/PreferencesPanel';
 
 /**
  * Lightweight staff profile (cashier-facing). Admins own the full
@@ -28,7 +28,7 @@ export default async function ProfilePage() {
           <div className="flex items-center gap-3">
             <Avatar name={profile.email} />
             <div className="min-w-0">
-              <p className="truncate text-[15px] font-extrabold tracking-tight">
+              <p className="truncate text-base font-extrabold tracking-tight">
                 {profile.email}
               </p>
               <p className="text-sm text-muted capitalize">{profile.role}</p>
@@ -46,7 +46,7 @@ export default async function ProfilePage() {
               name="email"
               value={profile.email}
               disabled
-              inputClassName="h-[52px] rounded-2xl border-border bg-mist"
+              inputClassName="h-10 rounded-md border-border bg-white text-sm"
               hint="Login email — managed by your administrator record."
             />
             <Field
@@ -54,7 +54,7 @@ export default async function ProfilePage() {
               name="role"
               value="Cashier"
               disabled
-              inputClassName="h-[52px] rounded-2xl border-border bg-mist"
+              inputClassName="h-10 rounded-md border-border bg-white text-sm"
             />
           </div>
         </Card>
@@ -69,7 +69,7 @@ export default async function ProfilePage() {
         <form action={signOut}>
           <button
             type="submit"
-            className="action-focus flex h-[52px] w-full items-center justify-center gap-2 rounded-full border border-border bg-surface text-base font-semibold shadow-soft"
+            className="action-focus flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border bg-surface text-sm font-semibold shadow-xs hover:bg-mist"
           >
             <SignOutIcon className="h-4 w-4" />
             Sign out

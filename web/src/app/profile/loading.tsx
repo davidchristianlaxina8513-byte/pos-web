@@ -1,6 +1,6 @@
-import { CardsSkeleton } from '@/components/common/LoadingSkeleton';
+import { SettingsSkeleton } from '@/components/loader/LoadingSkeleton';
 
-/** Cashier profile loading skeleton: stacked cards. */
+/** User profile loading skeleton. */
 export default function ProfileLoading() {
-  return <CardsSkeleton />;
+  return <SettingsSkeleton />;
 }

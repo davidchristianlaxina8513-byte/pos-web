@@ -1,6 +1,6 @@
-import { CardsSkeleton } from '@/components/common/LoadingSkeleton';
+import { ReceiptSkeleton } from '@/components/loader/LoadingSkeleton';
 
-/** Receipt loading skeleton: success block + detail card. */
+/** Transaction receipt loading skeleton. */
 export default function ReceiptLoading() {
-  return <CardsSkeleton />;
+  return <ReceiptSkeleton />;
 }

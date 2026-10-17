@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireRole } from '@/features/auth/queries';
 import { getCategories, getEditableProduct } from '@/features/menu/queries';
-import { ProductForm } from '@/features/menu/components/ProductForm';
+import { ProductForm } from '@/components/modules/menu/ProductForm';
 import { Card } from '@/components/common/Card';
 import { StaffShell } from '@/components/layout/staff-shell';
 
@@ -24,11 +24,15 @@ export default async function EditProductPage({
     <StaffShell
       email={profile.email}
       role={profile.role}
-      title={`Edit product — ${product.name}`}
+      title={`Edit Product — ${product.name}`}
+      breadcrumbs={[
+        { name: 'Menu Management', href: '/admin/menu' },
+        { name: `Edit Product: ${product.name}`, current: true },
+      ]}
       actions={
         <Link
           href="/admin/menu"
-          className="action-focus rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold shadow-soft"
+          className="action-focus inline-flex h-10 items-center justify-center gap-2 rounded-md border border-border bg-surface px-4 text-sm font-semibold text-foreground shadow-xs transition hover:bg-mist"
         >
           Back to Menu
         </Link>

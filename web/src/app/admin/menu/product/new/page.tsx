@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { requireRole } from '@/features/auth/queries';
 import { getCategories } from '@/features/menu/queries';
-import { ProductForm } from '@/features/menu/components/ProductForm';
+import { ProductForm } from '@/components/modules/menu/ProductForm';
 import { Card } from '@/components/common/Card';
 import { StaffShell } from '@/components/layout/staff-shell';
 
@@ -13,11 +13,15 @@ export default async function NewProductPage() {
     <StaffShell
       email={profile.email}
       role={profile.role}
-      title="Add product"
+      title="Add Product"
+      breadcrumbs={[
+        { name: 'Menu Management', href: '/admin/menu' },
+        { name: 'Add Product', current: true },
+      ]}
       actions={
         <Link
           href="/admin/menu"
-          className="rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold shadow-soft"
+          className="action-focus inline-flex h-10 items-center justify-center gap-2 rounded-md border border-border bg-surface px-4 text-sm font-semibold text-foreground shadow-xs transition hover:bg-mist"
         >
           Back to Menu
         </Link>

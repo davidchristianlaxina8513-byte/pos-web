@@ -11,6 +11,7 @@
     "seed": "node scripts/seed.cjs seed",
     "typecheck": "npm --prefix web run typecheck",
     "lint": "npm --prefix web run lint",
+    "format": "npm --prefix web run format",
     "format:check": "npm --prefix web run format:check",
     "build": "npm --prefix web run build",
     "test": "npm --prefix web run test",

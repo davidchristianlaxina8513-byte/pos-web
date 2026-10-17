@@ -4,7 +4,7 @@ This repository is a **web-only** POS and stock monitoring system. The applicati
 
 ## Workflow
 
-1. Read `CONTEXT.md`, the relevant implementation and tests, and the concern in `RULES.md`.
+1. Read `CONTEXT.md`, the relevant implementation, and tests.
 2. Keep application changes inside `web/`. Keep Supabase schema changes in `supabase/`.
 3. Use the existing Tailwind tokens and components; build narrow screens first.
 4. Run `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm test`, and `npm run build` from `web/` before completion. Root npm scripts proxy to these commands.

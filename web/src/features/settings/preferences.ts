@@ -14,7 +14,7 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
   orderNotifications: true,
   quotaAlerts: true,
   language: 'en',
-  appearance: 'system',
+  appearance: 'light',
 };
 
 export const LANGUAGE_OPTIONS: ReadonlyArray<{

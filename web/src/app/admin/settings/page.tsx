@@ -1,9 +1,9 @@
 import Link from 'next/link';
 import { requireRole } from '@/features/auth/queries';
-import { PasswordSection } from '@/features/settings/components/PasswordSection';
-import { PreferencesPanel } from '@/features/settings/components/PreferencesPanel';
+import { PasswordSection } from '@/components/modules/settings/PasswordSection';
+import { PreferencesPanel } from '@/components/modules/settings/PreferencesPanel';
 import { Card } from '@/components/common/Card';
-import { Field } from '@/components/common/Field';
+import { Field } from '@/components/form/Field';
 import { IconTile } from '@/components/common/IconTile';
 import {
   ArrowRightIcon,
@@ -33,7 +33,7 @@ export default async function SettingsPage() {
               name="email"
               value={profile.email}
               disabled
-              inputClassName="h-[52px] rounded-2xl border-border bg-mist"
+              inputClassName="h-10 rounded-md border-border bg-white text-sm"
               hint="Login email — managed by your administrator record."
             />
             <Field
@@ -41,7 +41,7 @@ export default async function SettingsPage() {
               name="role"
               value={profile.role === 'admin' ? 'Administrator' : 'Cashier'}
               disabled
-              inputClassName="h-[52px] rounded-2xl border-border bg-mist"
+              inputClassName="h-10 rounded-md border-border bg-white text-sm"
             />
           </div>
         </Card>
@@ -54,7 +54,7 @@ export default async function SettingsPage() {
             <PersonIcon />
           </IconTile>
           <span className="flex-1">
-            <span className="block text-[15px] font-extrabold tracking-tight">
+            <span className="block text-base font-extrabold tracking-tight">
               User management
             </span>
             <span className="block text-sm text-muted">

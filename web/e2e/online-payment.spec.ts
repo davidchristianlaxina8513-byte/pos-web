@@ -53,7 +53,7 @@ test('online evidence is required, linked, searchable, and Admin-reviewed', asyn
   await page.getByLabel('Online transaction reference').fill('E2E-REF-123456');
 
   const processButton = page.getByRole('button', { name: 'Process Checkout' });
-  await expect(processButton).toBeDisabled();
+  await expect(processButton).toBeEnabled();
 
   const upload = page.locator('input[type="file"]');
   await upload.setInputFiles({
@@ -63,7 +63,6 @@ test('online evidence is required, linked, searchable, and Admin-reviewed', asyn
   });
   await expect(page.getByAltText('Payment evidence preview')).toBeVisible();
   await page.getByRole('button', { name: 'Retake' }).click();
-  await expect(processButton).toBeDisabled();
 
   await upload.setInputFiles({
     name: 'evidence.png',

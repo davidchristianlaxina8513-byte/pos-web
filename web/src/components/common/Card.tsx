@@ -14,15 +14,22 @@ export interface CardProps {
 export function Card({ title, actions, className, children }: CardProps) {
   return (
     <section
-      className={cn('rounded border border-border bg-surface', className)}
+      className={cn(
+        'rounded-xl border border-border bg-surface shadow-sm',
+        className,
+      )}
     >
       {title || actions ? (
-        <header className="flex items-center justify-between border-b border-border px-4 py-2">
-          {title ? <h2 className="text-foreground">{title}</h2> : <span />}
+        <header className="flex items-center justify-between border-b border-border/80 px-5 py-3.5">
+          {title ? (
+            <h2 className="text-base font-bold text-foreground">{title}</h2>
+          ) : (
+            <span />
+          )}
           {actions}
         </header>
       ) : null}
-      <div className="px-4 py-3">{children}</div>
+      <div className="p-5 sm:p-6">{children}</div>
     </section>
   );
 }

@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest';
 import {
+  formatOnlineReference,
   parsePaymentMode,
   parsePaymentStatus,
   validateCheckout,
@@ -64,14 +65,21 @@ test('wallet checkout posts the total with no change', () => {
   }
 });
 
-test('online payment requires a safe reference and confirmed evidence', () => {
-  expect(validateOnlinePayment('gcash', '', false)).toContain('reference');
-  expect(validateOnlinePayment('maya', 'bad ref', true)).toContain('reference');
-  expect(validateOnlinePayment('gcash', 'REF-123456', false)).toContain(
-    'evidence',
-  );
-  expect(validateOnlinePayment('maya', 'REF_123456', true)).toBeNull();
-  expect(validateOnlinePayment('cash', '', false)).toBeNull();
+test('online payment requires a safe reference and evidence is optional', () => {
+  expect(validateOnlinePayment('gcash', '')).toContain('reference');
+  expect(validateOnlinePayment('maya', 'bad ref')).toContain('reference');
+  expect(validateOnlinePayment('gcash', '12')).toContain('reference');
+  expect(validateOnlinePayment('gcash', '7182')).toBeNull();
+  expect(validateOnlinePayment('gcash', 'REF-123456')).toBeNull();
+  expect(validateOnlinePayment('maya', 'REF_123456')).toBeNull();
+  expect(validateOnlinePayment('cash', '')).toBeNull();
+});
+
+test('formatOnlineReference pads short 4-5 digit references for database compatibility', () => {
+  expect(formatOnlineReference('7182')).toBe('REF-7182');
+  expect(formatOnlineReference('12345')).toBe('REF-12345');
+  expect(formatOnlineReference('REF-7182')).toBe('REF-7182');
+  expect(formatOnlineReference('100293847182')).toBe('100293847182');
 });
 
 test('payment status parser accepts the supported workflow states', () => {

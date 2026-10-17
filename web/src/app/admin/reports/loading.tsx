@@ -1,6 +1,6 @@
-import { CardsSkeleton } from '@/components/common/LoadingSkeleton';
+import { ReportsSkeleton } from '@/components/loader/LoadingSkeleton';
 
-/** Reports loading skeleton: metric cards + chart block. */
+/** Reports & Analytics loading skeleton. */
 export default function ReportsLoading() {
-  return <CardsSkeleton />;
+  return <ReportsSkeleton />;
 }

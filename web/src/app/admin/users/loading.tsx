@@ -1,6 +1,6 @@
-import { ListSkeleton } from '@/components/common/LoadingSkeleton';
+import { UsersSkeleton } from '@/components/loader/LoadingSkeleton';
 
-/** User management loading skeleton. */
+/** User & staff management loading skeleton. */
 export default function UsersLoading() {
-  return <ListSkeleton />;
+  return <UsersSkeleton />;
 }

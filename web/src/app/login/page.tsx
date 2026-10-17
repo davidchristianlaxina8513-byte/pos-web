@@ -1,7 +1,7 @@
 import { signIn } from '@/features/auth/actions';
-import { Button } from '@/components/common/Button';
-import { Field } from '@/components/common/Field';
-import { PasswordField } from '@/components/common/PasswordField';
+import { Button } from '@/components/form/Button';
+import { Field } from '@/components/form/Field';
+import { PasswordField } from '@/components/form/PasswordField';
 import {
   ArrowRightIcon,
   LeafMark,
@@ -17,7 +17,7 @@ const ERRORS: Record<string, string> = {
 };
 
 const LOGIN_INPUT =
-  'h-[52px] rounded-xl border-sage-200 bg-white text-[15px] shadow-none hover:border-sage-300 focus:border-pine focus:outline-2 focus:outline-offset-2 focus:outline-pine/20';
+  'h-10 rounded-md border-sage-200 bg-white text-sm shadow-none hover:border-sage-300 focus:border-pine focus:outline-2 focus:outline-offset-2 focus:outline-pine/20';
 
 export default async function LoginPage({
   searchParams,
@@ -43,10 +43,10 @@ export default async function LoginPage({
           <span className="flex h-11 w-11 items-center justify-center rounded-full bg-sage-100 text-pine-deep">
             <LeafMark className="h-6 w-6" />
           </span>
-          <span className="mt-2 font-serif text-[30px] leading-none tracking-tight text-pine-deep">
+          <span className="mt-2 font-serif text-3xl leading-none tracking-tight text-pine-deep">
             ElviraCafe
           </span>
-          <p className="mt-3 text-[10px] font-semibold tracking-[0.28em] text-secondary uppercase">
+          <p className="mt-3 text-xs font-semibold tracking-[0.28em] text-secondary uppercase">
             Simplify. Manage. Grow.
           </p>
         </div>
@@ -57,7 +57,7 @@ export default async function LoginPage({
         >
           <h1
             id="login-title"
-            className="text-[27px] font-bold tracking-tight text-pine-deep sm:text-[30px]"
+            className="text-2xl font-bold tracking-tight text-pine-deep sm:text-3xl"
           >
             Welcome back
           </h1>
@@ -97,10 +97,10 @@ export default async function LoginPage({
             />
             <Button
               type="submit"
-              size="lg"
-              className="mt-2 flex h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-pine-deep text-[15px] font-semibold text-white transition-colors hover:bg-pine focus-visible:outline-pine"
+              size="md"
+              className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-md bg-pine-deep text-sm font-semibold text-white transition-colors hover:bg-pine focus-visible:outline-pine"
             >
-              Log In <ArrowRightIcon className="h-5 w-5" />
+              Log In <ArrowRightIcon className="h-4 w-4" />
             </Button>
           </form>
 

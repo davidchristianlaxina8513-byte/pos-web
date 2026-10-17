@@ -1,6 +1,6 @@
-import { CardsSkeleton } from '@/components/common/LoadingSkeleton';
+import { SettingsSkeleton } from '@/components/loader/LoadingSkeleton';
 
-/** Settings loading skeleton: stacked cards. */
+/** Settings loading skeleton. */
 export default function SettingsLoading() {
-  return <CardsSkeleton />;
+  return <SettingsSkeleton />;
 }

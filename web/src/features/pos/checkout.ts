@@ -21,18 +21,33 @@ export function parsePaymentStatus(value: unknown): PaymentStatus | null {
     : null;
 }
 
-export const ONLINE_REFERENCE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{5,63}$/;
+export const ONLINE_REFERENCE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{3,63}$/;
+
+/**
+ * Normalizes online references. If the cashier enters 4-5 digits (e.g. '7182'),
+ * formats as 'REF-7182' so it satisfies the database schema minimum length while
+ * keeping counter checkouts under 2 seconds.
+ */
+export function formatOnlineReference(reference: string): string {
+  const trimmed = reference.trim();
+  if (trimmed.length >= 4 && trimmed.length < 6) {
+    return `REF-${trimmed.toUpperCase()}`;
+  }
+  return trimmed;
+}
 
 export function validateOnlinePayment(
   paymentMode: PaymentMode,
   reference: string,
-  hasEvidence: boolean,
 ): string | null {
   if (paymentMode === 'cash') return null;
-  if (!ONLINE_REFERENCE_PATTERN.test(reference.trim())) {
-    return 'Enter a valid 6 to 64 character online transaction reference.';
+  const trimmed = reference.trim();
+  if (trimmed.length < 4 || trimmed.length > 64) {
+    return 'Enter at least the last 4 digits of the transaction reference.';
   }
-  if (!hasEvidence) return 'Confirm a payment evidence photo.';
+  if (!ONLINE_REFERENCE_PATTERN.test(trimmed)) {
+    return 'Enter a valid reference (letters, numbers, and dashes with no spaces).';
+  }
   return null;
 }
 

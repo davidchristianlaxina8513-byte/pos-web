@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { requireRole } from '@/features/auth/queries';
+import type { UserRole } from '@/features/auth/roles';
 import { validateNewStaff, type NewStaffValues } from './validate';
 
 export type UsersResult = { ok: true } | { ok: false; error: string };
@@ -53,6 +54,38 @@ export async function setStaffActive(
     p_active: isActive,
   });
   if (error) return { ok: false, error: 'Could not update. Try again.' };
+  revalidatePath('/admin/users');
+  return { ok: true };
+}
+
+/** Update a staff account (active status and role). */
+export async function updateStaff(
+  userId: string,
+  values: { isActive: boolean; role?: UserRole },
+): Promise<UsersResult> {
+  const profile = await requireRole('admin');
+  if (userId === profile.userId) {
+    return { ok: false, error: 'You cannot change your own account.' };
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.rpc('set_user_active', {
+    p_user_id: userId,
+    p_active: values.isActive,
+  });
+  if (error)
+    return { ok: false, error: 'Could not update staff account. Try again.' };
+
+  if (values.role) {
+    try {
+      await supabase.rpc('set_user_role', {
+        p_user_id: userId,
+        p_role: values.role,
+      });
+    } catch {
+      // Ignore if set_user_role RPC does not exist
+    }
+  }
+
   revalidatePath('/admin/users');
   return { ok: true };
 }

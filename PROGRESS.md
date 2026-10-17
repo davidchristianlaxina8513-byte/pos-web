@@ -6,6 +6,186 @@ On 2026-10-03, the final quota-only feature completion and stabilization phase w
 
 The web application now uses daily product quotas as its only availability mechanism. Cash and online checkout, transaction receipts/search, Admin payment review, cashier shifts, cash turnover, daily dashboards, reports, voids, users, audit records, authentication, and role enforcement are active.
 
+## Modern Dashboard and POS Redesign (2026-10-17)
+
+- **Simplified Dashboard with Styled Welcome Card**:
+  - Streamlined both Admin and Cashier Dashboards to eliminate information overload while delivering a clean, elevated layout.
+  - Upgraded the welcome section from bare text into a styled surface card with rounded corners (`rounded-2xl`), subtle borders, a `border-l-4 border-l-pine` accent bar, soft shadow, icon badge, live role/session indicator, and direct "Open Register" CTA.
+  - Focused the dashboard on 4 essential KPI cards (Today's Sales, Completed Orders, Products Sold, Low/Sold Out stock count) and 2 clean panels (7-Day Sales Trend and Product Availability).
+  - Restructured the sidebar brand header to stack vertically with the enlarged logo badge on top (`h-14 w-14`) and the system name ("Integrated POS and stock monitoring system") on the bottom, removing the redundant brand label and role badge from the header for a clean, focused look.
+  - Added `SidebarSkeleton` and `StaffShellSkeleton` mirroring the desktop `w-64` dashboard sidebar and mobile header bar, wrapping all route loading skeletons (`CardsSkeleton`, `PosSkeleton`, `ListSkeleton`, `FormSkeleton`) for 100% layout alignment with zero jump/shift on navigation.
+  - Aligned typography with the sports system by integrating Google Font **Montserrat** (weights 100..900) across Tailwind tokens (`--font-sans`) and the base `body` element.
+  - Replaced subtle close cross icons in POS cart lines with clear `TrashIcon` delete buttons, added a delete icon to the cart "Clear" action, and dynamically rendered `TrashIcon` on steppers when reducing 1-item quantities.
+  - Redesigned **Today's Products & Stock Monitoring** (`/today-products`) with full-width container (`fullWidth={true}`), DCAPC-style header banner with pine accent border (`border-l-4 border-l-pine`), 4 real-time KPI stock cards, responsive search and status filter chips, visual progress bars, interactive modal dialog replacing ugly browser `prompt()`s, and direct quick-step adjustment buttons.
+  - Added a dedicated, easy-to-read **Stock Management Table** (with View Switcher: Table View & Card View) and completely redesigned the **Recent Quota Adjustments History** table with clear columns (Product, Previous Limit, New Limit, Net Adjustment badge, Reason, Changed By, and Manila timestamps).
+  - Added **DCASIS Tabbed Navigation** on `/today-products`:
+    - Integrated tab switcher directly below the 4 Summary Stock KPI cards:
+      - **View All** (`Squares2X2Icon`): Displays both Today's Products stock monitoring and Recent Quota Adjustments History stacked (default view).
+      - **Today's Products** (`TableCellsIcon` with count badge): Displays only the stock monitoring table/grid view with search and filters.
+      - **Recent Quota Adjustments History** (`ClockIcon` with count badge): Displays only the recent quota changes history table with real-time text filter.
+    - Componentized [`QuotaHistoryTable`](web/src/components/modules/quotas/QuotaHistoryTable.tsx) with real-time adjustment filtering (by product name, reason, or cashier).
+- **Audit Log Clarification & Actor Email Resolution (`/admin/audit`)**:
+  - Clarified the "System" option in the actor dropdown by explicitly labeling it `System (Automated)`, helping administrators understand it filters for background/database-triggered events where no staff member was logged in.
+  - Fixed duplicate "Email / Actor" values where the column previously printed identical labels (`admin` / `Admin`) instead of actual email credentials.
+  - Enhanced [`getAuditLog`](web/src/features/audit/queries.ts) to resolve full staff email addresses (`admin@elvira.cafe`, `cashier@elvira.cafe`, or custom staff accounts) by cross-referencing audit payloads, `user` table records, and auth roles.
+  - Updated [`AuditLogManager.tsx`](web/src/components/modules/audit/AuditLogManager.tsx) to render distinct, non-redundant rows: displaying the full email (e.g. `admin@elvira.cafe`) on line 1, and a clean human-readable role badge (`Administrator`, `Cashier`, or `Automated Task`) on line 2, as well as updating the event inspection modal.
+  - Removed the redundant "Actions" column and per-row "View" buttons in the System Audit Log table per user request to simplify the view matching DCASIS; made rows directly clickable to inspect details.
+  - Replaced the intimidating raw JSON dark code block in the audit event inspection modal with a clean, user-friendly key-value table matching DCASIS styling with friendly labels, dates, and currency formatting.
+  - Standardized typography and spacing across the audit log table and inspection modal to standard `text-sm` base sizes and consistent padding, eliminating tiny, cramped fonts and mismatched colons.
+- **Pixel-Accurate Loading Skeletons Per Module**:
+  - Overhauled [`LoadingSkeleton.tsx`](web/src/components/loader/LoadingSkeleton.tsx) with custom, tailored loading skeletons matching the exact geometry of each module to eliminate layout shift:
+    - **`StaffShellSkeleton`**: Added placeholder for breadcrumbs and DCASIS page title banner so page content does not jump vertically on load.
+    - **`DashboardSkeleton`**: Styled welcome card with pine accent border + 4 metric tiles + sales trend & availability panels (`/admin`, `/dashboard`).
+    - **`TodayProductsSkeleton`**: 4 stock cards + tab switcher bar + search/filter chips + stock monitoring table rows (`/today-products`).
+    - **`AuditLogSkeleton`**: 4 overview cards + search and actor select bar + 5-column audit ledger table (`/admin/audit`).
+    - **`ReportsSkeleton`**: Date presets & filter toolbar + 4 financial cards + tab bar + chart blocks (`/admin/reports`, `/daily-sales`).
+    - **`MenuCatalogSkeleton`**: 4 catalog cards + search & availability filter bar + product table with thumbnails (`/admin/menu`).
+    - **`UsersSkeleton`**: 4 staff KPI cards + 2-column split (Add Staff form card on left, Staff Roster table on right) (`/admin/users`).
+    - **`CashierOperationsSkeleton`**: 4 operations KPI cards + tab bar + shifts and turnover ledger (`/admin/cashier-operations`, `/cashier-operations`, `/my-shift`, `/admin/shifts`, `/admin/cash-turnovers`, `/cash-turnover`).
+    - **`SettingsSkeleton`**: Account profile info card + password card + display preferences card (`/admin/settings`, `/profile`).
+    - **`ReceiptSkeleton`**: Centered thermal receipt card with header, dashed lines, and print button (`/pos/receipt/[id]`).
+  - Created and wired dedicated `loading.tsx` routes across all admin and cashier sub-paths.
+- **POS Checkout Modal Streamlining & Expansion (`/pos`)**:
+  - Upgraded shared [`Modal.tsx`](web/src/components/modal/Modal.tsx) with a responsive `size` variant prop (`'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl'`, defaulting to `'md'` = `sm:max-w-md`), ensuring 100% backward compatibility with all dialogs across the system while allowing wide modals when required.
+  - Expanded the checkout dialog ([`CheckoutDialog.tsx`](web/src/components/modules/pos/CheckoutDialog.tsx)) to `size="4xl"` (`sm:max-w-4xl`), resolving the cramped layout when processing orders with many items.
+  - Implemented a clean, responsive 2-column layout on `md:` screens:
+    - **Left Column** (`md:col-span-7`): Spacious, scrollable Order Items ledger (`max-h-[300px] md:max-h-[480px] overflow-y-auto pr-1.5`) with total item and unique line counters, product photo thumbnail, item title, unit price (`₱X.XX each`), line subtotal (`₱X.XX`), and interactive quantity stepper.
+    - **Right Column** (`md:col-span-5`): Visual separator (`md:border-l md:border-border/70 md:pl-6`), payment breakdown card (Subtotal, Total Due), streamlined 3-column payment method selector (`Cash`, `GCash`, `Maya`), 1-tap quick cash denomination chips (`Exact`, `₱500`, `₱1,000`, etc.), change calculation, and checkout confirmation buttons.
+  - **PayMongo QR Ph Online Payment Integration (`/pos`)**:
+    - Implemented authentic **PayMongo QR Ph dynamic payment flow** in [`PaymongoQRModal.tsx`](web/src/components/modules/pos/PaymongoQRModal.tsx) and [`CheckoutDialog.tsx`](web/src/components/modules/pos/CheckoutDialog.tsx), enabling customer self-scanning via GCash, Maya, or any Philippine banking app without requiring manual reference entry.
+    - Added dedicated Route Handlers:
+      - `POST /api/pos/paymongo/create-qr`: Recomputes cart total on the server from database menu prices, creates PayMongo Payment Intent (`qrph`), attaches payment method, and returns dynamic QR Ph image URL.
+      - `GET /api/pos/paymongo/status`: Polled every 2.5s by the frontend. When paid, atomically invokes `process_sale` RPC to record the sale, update stock quotas, and return transaction receipt ID idempotently.
+      - `POST /api/pos/paymongo/cancel`: Cancels pending payment intent and unlocks the register.
+      - `POST /api/pos/paymongo/simulate-pay`: Sandbox testing endpoint to simulate instant customer payment.
+      - `POST /api/webhooks/paymongo`: Secure webhook endpoint with `paymongo-signature` HMAC verification, handling `payment.paid`, `qrph.expired`, and `payment.failed`.
+    - Integrated **High-Fidelity Sandbox Simulator**: When `PAYMONGO_SECRET_KEY` is not yet configured, the system automatically runs in demo mode with a crisp QR Ph badge, live 15-minute countdown timer (`⏱ MM:SS`), and a 1-click "Simulate Customer Scan & Pay (Test)" button for immediate POS testing.
+    - Provided **Manager Manual Override**: Cashiers can click "Switch to Manual Reference (Manager Override)" anytime if a customer prefers manual GCash/Maya transfer.
+    - **Automated PayMongo Receipt & Status Polish (`/pos/receipt/[id]`)**:
+      - Automatically sets PayMongo QR Ph transactions to `verified` and `Paid` upon order completion (via server-side verification and `getReceipt` auto-reconciliation).
+      - Replaced misleading "Payment Evidence Submitted" header and "Pending Verification" status with "Payment Successful" and "Paid".
+      - Replaced photo evidence prompts and review actions ("View Payment Evidence", "Verify Payment", "Reject Payment") with a clean "✓ Verified via PayMongo QR Ph" badge and monospace PayMongo reference (`pay_...`).
+      - Preserved the manual manager verification workflow strictly for manual override transactions.
+      - **POS Thermal Receipt Print Optimization**:
+        - Formatted receipt printing specifically for POS thermal rolls (80mm/58mm) and standard slip printers with `.pos-receipt-print`.
+        - Removed full-screen grey background, oversized margins, navigation links, and screen buttons during printing.
+        - Injected print-only store header ("CAFE ELVIRA · Official Sales Receipt") and footer ("Thank you for your visit! · Please come again").
+        - Forced monochrome black text and dashed dividers for sharp, legible thermal printing.
+- **Unified DCASIS Header & Breadcrumb Banner (System-Wide)**:
+  - Replaced the boxed card banners across `/admin/menu`, `/today-products`, and module views with the authentic DCASIS page header design directly modeled after `sports-client`.
+  - Built a shared `Breadcrumbs` component (`web/src/components/common/Breadcrumbs.tsx`) matching `sports-client/components/breadcrumbs/index.vue` with `HomeIcon` (`/dashboard` or `/admin`), `ChevronRightIcon`, and bold current route state.
+  - Upgraded `StaffShell` (`web/src/components/layout/staff-shell.tsx`) to natively render the DCASIS header banner (breadcrumbs, `text-3xl font-bold text-pine` page title, optional subtitle, and right-aligned action buttons), automatically standardizing headers across all POS modules (`/admin/menu`, `/today-products`, `/pos`, `/daily-sales`, `/admin/reports`, `/cashier-operations`, `/admin/cashier-operations`, `/admin/users`, `/admin/audit`, `/admin/settings`, `/profile`, `/admin/menu/product/new`, and `/admin/menu/product/[id]`).
+  - Removed duplicate page headings between `StaffShell` and feature components for a clean, non-AI layout.
+- **Top-Right User Profile & DCASIS Dropdown Menu**:
+  - Moved the user account block from the bottom of the sidebar to the top-right header bar across all desktop and mobile views in [`staff-shell.tsx`](web/src/components/layout/staff-shell.tsx).
+  - Redesigned the account control to match the DCASIS sports client (`sports-client/layouts/main.vue`): the top-right header displays an interactive user pill with avatar initials, email, role badge, and `ChevronDownIcon`.
+  - Replaced the standalone sign-out button with an animated profile dropdown menu containing **Settings** (`Cog6ToothIcon`) linking to `/profile` and **Sign out** (`ArrowRightOnRectangleIcon`) with click-outside and Escape key dismissal.
+  - Removed the redundant "Dashboard" button from the top right of the Point of Sale screen ([`pos/page.tsx`](web/src/app/pos/page.tsx)), keeping navigation unified via the primary sidebar.
+  - Updated [`SidebarSkeleton`](web/src/components/loader/LoadingSkeleton.tsx) and [`StaffShellSkeleton`](web/src/components/loader/LoadingSkeleton.tsx) to align with the top-right user profile header layout for seamless loading feedback.
+- **Menu & Catalog Management Redesign (`/admin/menu`)**:
+  - Expanded layout to full width (`fullWidth={true}` in `StaffShell`) to eliminate the narrow mobile column on desktop and provide a unified dashboard feel.
+  - Implemented authentic DCASIS breadcrumbs and header banner with quick action buttons ("+ Add Product" and "Manage Categories").
+  - Added 4 real-time KPI overview cards: Total Catalog count, Active on POS, Hidden Products, and Category groupings.
+  - Built an interactive search and filter bar with real-time text query, category pills with count badges, availability filter chips (All / Available / Hidden), and a View Switcher (Table View vs Card Grid View).
+  - Designed an intuitive, clean **Table View** showing actual product image thumbnails, category tags, price tags, POS availability status badges, daily quota limits, and a full action trio: **View** (`EyeIcon`), **Edit** (`PencilSquareIcon`), and **Delete** (`TrashIcon`).
+  - Added **Interactive Column Sorting** to the table header (`Product`, `Category`, `Price`, `Status`, `Today's Quota`) with directional chevrons (`ChevronUpIcon`, `ChevronDownIcon`, `ChevronUpDownIcon`), allowing one-click ascending and descending sort toggles across all fields.
+  - Added an alternative **Card Grid View** with matching quick actions: View details, Edit product, and Delete.
+  - Implemented a dedicated **View Product Details Modal** displaying full-resolution photo preview, pricing, category tag, POS availability status, and inventory metrics (Today's quota, units sold today, and units remaining).
+  - Implemented a safe **Delete Product Confirmation Modal** verifying product removal, warning about sales record preservation, and dispatching DCASIS toast alerts on success/failure.
+  - Replaced murky green backdrop overlay (`bg-pine-deep/50`) across modals and drawers with a clean, neutral frosted blur (`bg-black/40 backdrop-blur-sm`).
+  - Created a dedicated **Manage Categories Modal** (`Modal`) replacing the cramped bottom dropdown, supporting category creation, listing item counts per category, and safe deletion with confirmation (moving orphaned products to `Uncategorized`).
+- **Reports & Sales Analytics Redesign (`/admin/reports`)**:
+  - Expanded layout to full width (`fullWidth={true}` in `StaffShell`) with DCASIS breadcrumbs (`Home` > `Reports & Analytics`) and header title banner.
+  - Added a dedicated "Print Summary" header action with `PrinterIcon` triggering the browser print engine for clean sales reporting.
+  - Built an intuitive date preset selector (Today, Last 7 Days, Last 30 Days, All Time) and collapsible advanced filter toolbar (From Date, To Date, Search Transaction/Ref, Cashier, Payment Method, Payment Status) with one-click reset and apply buttons.
+  - Upgraded KPI summary cards into 4 distinct, modern metric tiles: **Net Sales Revenue** (with highlighted pine accent), **Gross Sales** (with Cash and Online revenue breakdown), **Completed Orders** (with average order value), and **Voided Transactions** (with alert indicator).
+  - Modernized the analytics section:
+    - Built an interactive **Daily Sales Trend** bar chart with hover tooltips displaying revenue and order count for each day, high/low limits, and Manila date labels.
+    - Added a **Payment Methods Distribution** card displaying Cash, GCash, and Maya channels with visual percentage progress bars, order counts, and total revenue.
+    - Designed a ranked **Top Selling Products Leaderboard** showing top items (#1, #2, #3 badges), quantities sold with proportional progress bars, and total revenue.
+  - Completely overhauled the transaction review table into a feature-rich **TransactionReviewTable**:
+    - Dual View Switcher: **Receipts Ledger** (transaction records) vs **Items Sold** (individual line items).
+    - Real-time client-side search query across transaction numbers, cashier names, references, and item descriptions.
+    - Active status filter chips (All / Active / Voided).
+    - Interactive column sorting on Transaction #, Date & Time, Cashier, and Total Amount with directional chevron indicators (`ChevronUpIcon`, `ChevronDownIcon`, `ChevronUpDownIcon`).
+    - Clear table columns with Manila timestamps, cashier avatar initials, item summaries, payment mode and status badges, formatted amounts, and completion status.
+    - Replaced ugly browser `window.prompt()` for voiding sales with a modern, high-quality **Void Confirmation Modal** (`Modal` with frosted blur `backdrop-blur-sm bg-black/40`, irreversible action warning, transaction summary, required reason input, and DCASIS toast alerts `warningAlert`/`errorAlert`).
+  - Added **Tabbed Reports Navigation (`ReportsViewManager`)**:
+    - Created a clean DCASIS-styled navigation tab bar below the overview KPI metrics for effortless switching between sections:
+      - **Daily Sales Trend** (`ChartBarSquareIcon`): Renders the interactive daily sales bar chart and payment channel distribution side-by-side.
+      - **Top Selling Products** (`ShoppingBagIcon` with ranked items count badge): Renders the ranked leaderboard of top-selling items full-width.
+      - **Receipts Ledger** (`DocumentTextIcon` with transaction count badge): Renders the transaction review table and sold items breakdown.
+      - **View All** (`Squares2X2Icon`): Allows viewing all sections stacked in one view when needed.
+    - Added smart default tab selection: automatically activates **Receipts Ledger** if transaction search or filter parameters (`search`, `cashier`, `paymentMode`, `paymentStatus`) are in the URL; defaults to **Daily Sales Trend** otherwise.
+    - Refactored `ReportsCharts.tsx` with a flexible `view` prop (`'all' | 'trends' | 'top_products'`) for dedicated single-section display and seamless responsive layouts.
+- **Cashier Operations Redesign (`/admin/cashier-operations`)**:
+  - Expanded layout to full width (`fullWidth={true}` in `StaffShell`) with DCASIS breadcrumbs (`Home` > `Cashier Operations`) and header title banner.
+  - Added 4 real-time KPI overview cards: **Active Registers** (with live active pulse), **Pending Turnovers** (with amber attention pill for required manager action), **Turnover Cash Handed** (total physical cash submitted), and **Discrepant Turnovers** (count of short/over cash differences).
+  - Built a unified **AdminCashierOperationsManager** component featuring a seamless Dual Tab Switcher:
+    - **Cash Turnover Review**: Dedicated verification view with status filters (All / Pending / Verified / Flagged), search query input, and interactive sorting on Cashier, Submitted Time, Counted Cash, Variance, and Status.
+    - **Cashier Shifts History**: Register shift records with status filters (All / Active Shifts / Closed), search query input, and interactive sorting on Cashier, Duration, Starting Cash, and Status.
+  - Enhanced Variance calculation with intuitive visual indicators: "Balanced" (emerald badge), "-₱XX.XX Short" (red badge), and "+₱XX.XX Over" (amber badge).
+  - Completely removed ugly browser `window.prompt()` for flagging turnovers across `AdminCashierOperationsManager` and `TurnoverList`. Replaced with a modern, high-quality **Flag Turnover Discrepancy Modal** (`Modal` with frosted blur `backdrop-blur-sm bg-black/40`, audit alert banner, cashier & variance breakdown, required note input, and DCASIS toast alerts `warningAlert`/`errorAlert`).
+- **Global Toast Alert System (Aligned with Sports System)**:
+  - Designed and created a reactive, global toast notification system in `web/src/components/toast/` (`ToastContainer.tsx`, `ToastContext.tsx`, and `index.ts`).
+  - Implemented the `useAlert()` hook matching the reference sport client interface (`successAlert(title, message)`, `errorAlert(title, message)`, `warningAlert(title, message)`, and `infoAlert(title, message)`).
+  - Copied the exact DCASIS toast design from `sports-client` (`@kyvg/vue3-notification`): solid color background (`#68cd86` success, `#e54d42` error, `#ffb648` warn, `#44a4fc` info), solid 5px darker left border stripe, white typography, compact 10px padding, no artificial AI card styles/icons, and tap/click-to-dismiss.
+  - Mounted `<ToastProvider>` in root layout (`web/src/app/layout.tsx`) with auto-dismiss timers (default 3.5s) and max-queue handling.
+  - Integrated alerts across all major application processes:
+    - **Stock Quotas (`/today-products`)**: Toast alerts for modal quota updates (Today's quota / Default quota) and quick stepper adjustments (`±1`, `+5`).
+    - **POS Register (`/pos`)**: Toast alerts on cart clear and transaction completion.
+    - **Checkout Modal**: Toast alerts on transaction submission failure.
+    - **Product Catalog (`/admin/menu/product/*`)**: Toast alerts on product creation, updates, deletions, and photo upload.
+    - **Category Management (`/admin/menu`)**: Toast alerts on category addition and removal.
+    - **Cashier Shifts & Turnovers (`/cashier-operations`, `/admin/cashier-operations`)**: Toast alerts on shift opening, turnover submissions, and admin verification/flagging.
+    - **Security & Profile (`/admin/settings`, `/profile`)**: Toast alerts on password change, validation mismatch, and updates.
+    - **Staff Management (`/admin/users`)**: Toast alerts on staff user creation and status toggling (activate/deactivate).
+- **DCASIS Component Sizing & Box Alignment (System-Wide)**:
+  - Completely aligned all containers, cards, boxes, input fields, selects, buttons, and page paddings with the reference DCASIS application (`sports-client`).
+  - Standardized all form inputs and textareas to `h-10 rounded-md border border-border bg-white px-3 py-2 text-sm` with crisp pine focus outline and `text-xs font-semibold text-foreground mb-1` labels, completely eliminating oversized legacy "v2 mobile pill" inputs (`h-[52px] rounded-2xl bg-mist`).
+  - Standardized standard action buttons to `rounded-md font-semibold text-sm` (`h-8` sm, `h-10` md, `h-11` lg), eliminating bubbly `rounded-full` form action buttons.
+  - Standardized Select triggers to `h-10 rounded-md border border-border bg-white px-3 text-sm focus:border-pine focus:outline-pine` with `rounded-md border border-border bg-surface p-1 shadow-md` popover menus.
+  - Standardized cards and content boxes to `rounded-xl border border-border bg-surface p-5 sm:p-6 shadow-sm` across all modules.
+  - Standardized primary shell page padding in `StaffShell` (`web/src/components/layout/staff-shell.tsx`) and `StaffShellSkeleton` (`web/src/components/loader/LoadingSkeleton.tsx`) to `py-8 sm:py-10 px-4 sm:px-6 lg:px-8` matching DCASIS `layouts/main.vue`.
+  - Updated all feature forms, dialogs, and controls across the application:
+    - **Menu Management**: `ProductForm.tsx` (name, category, price, quota, image upload inputs and buttons).
+    - **Account & Security**: `PasswordSection.tsx`, `PreferencesPanel.tsx`, `ProfilePage` (`/profile`), and `AdminSettingsPage` (`/admin/settings`).
+    - **Staff & User Management (`/admin/users`)**:
+      - Upgraded `StaffShell` with `fullWidth={true}`, DCASIS breadcrumbs (`Home` > `User Management`), title banner, and subtitle.
+      - Added 4 real-time KPI overview cards: Total Staff, Active Cashiers, Administrators, and Disabled Accounts (`rounded-xl border border-border bg-surface p-5 shadow-sm`).
+      - Restructured into a clean 2-column DCASIS layout: Left column contains the "Add New Staff" form card (`rounded-xl border border-border bg-surface p-5 sm:p-6 shadow-sm`) with standardized `h-10 rounded-md` inputs, select, and submit button; Right column contains the "Staff Directory" (`rounded-xl border border-border bg-surface p-5 sm:p-6 shadow-sm`) with real-time email search input (`h-10 rounded-md`), clean filter chips (`All`, `Cashiers`, `Admins`, `Active`, `Disabled`), user avatar initials, role and status badges, standardized `h-8 rounded-md` action buttons, and an interactive **Edit Staff Account Modal** (`Modal`) with status and role management.
+    - **POS Checkout & Receipts**: `CheckoutDialog.tsx` (cash received input, discard and submit buttons), `ReceiptPage` & `PrintButton` (`/pos/receipt/[id]`).
+    - **Authentication**: `LoginPage` (`/login`) (email, password inputs, submit button).
+    - **Cashier Operations**: `AdminCashierOperationsManager.tsx` (KPI metric cards, container, search inputs, status filters, and flag discrepancy modal), `ShiftPanel.tsx`, and `TurnoverList.tsx`.
+    - **Reports & Analytics**: `PrintReportButton.tsx` (standardized to `h-10 rounded-md border border-border bg-surface px-3.5 text-sm font-semibold`), `ReportsFilterBar.tsx` (Date presets pills standardized to `rounded-md p-1` container with `rounded px-3 py-1.5 text-sm font-semibold` items, More Filters button standardized to `h-10 rounded-md px-3.5 text-sm font-semibold`), advanced filter inputs, selects, and `TransactionReviewTable.tsx` (search inputs, status filters, void confirmation modal).
+    - **Menu Management**: `MenuManager.tsx` (Manage Categories and Add Product buttons standardized to `h-10 rounded-md font-semibold text-sm`, category filter pills standardized to `rounded-md px-3.5 py-2 text-sm font-semibold`, card/table view action buttons standardized to `h-8 rounded-md font-semibold text-xs`).
+    - **Header Actions Across Pages**: `today-products/page.tsx`, `admin/menu/product/new/page.tsx`, `admin/menu/product/[id]/page.tsx`, `admin/page.tsx`, and `dashboard/page.tsx` (Open Register, Menu Items, Back to Menu buttons standardized to `h-10 rounded-md font-semibold text-sm`).
+    - **Stock Quotas & Quick Filters (`/today-products`)**:
+      - Streamlined quick filter chips (`All Products`, `In Stock`, `Low Stock`, `Sold Out`, `Unlimited`) to clean neutral and brand-aligned styling without excessive colors or dots:
+        `action-focus inline-flex items-center gap-2 rounded-md border px-3.5 py-1.5 text-xs sm:text-sm font-semibold transition-colors cursor-pointer`
+        with standard active state (`border-pine bg-pine text-surface shadow-xs`) and neutral inactive state (`border-border/80 bg-white text-foreground hover:bg-mist`).
+      - Standardized table quick-step adjustment buttons (`-1`, `+1`, `+5`) and "Set Quota" buttons to `h-8 rounded-md font-semibold text-xs`.
+      - Standardized card view steppers and custom quota buttons to `h-8 rounded-md`.
+    - **POS Grid & Cart**: `MenuGrid.tsx` (search bar, view toggle, reset filter, category buttons standardized to `h-10 rounded-md`), `CartPanel.tsx` (Charge Order CTA button standardized to `rounded-xl shadow-sm`).
+- **System Audit Log Redesign (`/admin/audit`)**:
+  - Expanded layout to full width (`fullWidth={true}` in `StaffShell`) with DCASIS breadcrumbs (`Home` > `Audit Log`), title banner, and subtitle.
+  - Added dedicated route loading skeleton (`web/src/app/admin/audit/loading.tsx`).
+  - Added 4 real-time KPI overview cards: **Total Events**, **Stock Adjustments**, **Cashier Operations**, and **Sales & Voids** (`rounded-xl border border-border bg-surface p-5 sm:p-6 shadow-sm`).
+  - Updated [`getAuditLog()`](web/src/features/audit/queries.ts) to resolve `actor_id` directly against the `user` table to surface actor emails (`actor_email`).
+  - Built simplified, clean DCASIS **AuditLogManager** (`web/src/components/modules/audit/AuditLogManager.tsx`):
+    - Removed excessive colorful rainbow badges, dots, and busy multi-tier buttons in favor of clean neutral DCASIS styling.
+    - Added dedicated **Email / Actor** column displaying the email of the person who executed the action (`admin@elvira.cafe`, `cashier@elvira.cafe`, or `System`) alongside their role.
+    - Simple and clean filter bar with search input (searching email, event, entity, or details) and category/actor select dropdowns.
+    - Clean table with sortable columns (`Date & Time`, `Email / Actor`, `Event`, `Target`), concise details preview, and standardized "View" action button (`h-8 rounded-md`).
+    - Pagination controls with customizable page slices.
+    - Interactive **Audit Event Details Modal** (`Modal`) displaying metadata and payload JSON inspector.
+- **Verification**:
+  - `npm run typecheck`: Passed with 0 errors.
+  - `npm run lint`: Passed with 0 warnings and 0 errors.
+  - `npm run format:check`: Passed cleanly with Prettier code style.
+  - `npm test`: 51/51 tests passing across 11 test suites.
+  - `npm run build`: Production build succeeded across all 24 Next.js routes.
+
 ## Preferences and workflow consolidation (2026-10-03)
 
 - Replaced the disabled Preferences placeholders with account-scoped browser settings for order confirmations, low-quota emphasis, language choice, and Light/Dark/System appearance.
@@ -97,6 +277,90 @@ Browser coverage includes Admin/Cashier/invalid login behavior, protected routes
 - Receipts use browser print; there is no native thermal-printer driver.
 - Camera capture depends on browser/device support and HTTPS permission rules. Automated coverage verifies denial and upload fallback; capture with real phone camera hardware still needs device acceptance testing.
 - A fresh local Supabase reset was not run because Docker Desktop is unavailable. The forward migrations were dry-run, applied, and linted on the verified DEV project.
+
+## Setup and structural alignment with `sports-client` (2026-10-17)
+
+- Installed root and web dependencies (`npm install` and `npm --prefix web install`).
+- Set up local environment config (`web/.env.local`).
+- Aligned shared UI component directory structure with `sports-client` conventions:
+  - Created dedicated category modules under `web/src/components/`:
+    - `components/form/`: `Button`, `Field`, `PasswordField`, `QtyStepper`, `Select`
+    - `components/modal/`: `Modal`
+    - `components/loader/`: `LoadingSkeleton` (CardsSkeleton, ListSkeleton, FormSkeleton)
+    - `components/error/`: `EmptyState`
+    - `components/layout/`: `staff-shell`
+    - `components/common/`: `Avatar`, `Card`, `IconTile`, `SectionLabel`, `icons`
+  - Created barrel index exports (`components/index.ts`, `components/form/index.ts`, `components/modal/index.ts`, etc.).
+  - Preserved backward-compatible forwarder re-exports at original paths (`components/common/`, `components/ui/select/`, `components/layout/modal/`).
+  - Updated all internal import paths across `web/src/` to categorized component locations.
+- Code cleanup & verification:
+  - Ensured zero unused locals and parameters.
+  - Prettier formatted all changed files; `npm run format:check` clean.
+  - `npm run typecheck` passed without errors.
+  - `npm run lint` passed with zero warnings or errors.
+  - `npm test` 51/51 unit tests passed across 11 test suites.
+  - `npm run build` completed successfully across all 24 Next.js routes.
+
+## Component consolidation to `components/modules/` and cleanup of unused markdown/folders (2026-10-17)
+
+- Removed unused markdown documentation and configuration:
+  - Removed `playbooks/` (35 generic playbook files) and `RULES.md`.
+  - Removed `docs/` (`docs/README.md`, `docs/database.md`).
+  - Removed legacy `.claude/` folder and `CLAUDE.md` / `web/CLAUDE.md`.
+  - Removed deprecated `web/src/components/ui` and `web/src/components/layout/modal`.
+- Consolidated all feature components into `web/src/components/modules/` matching `sports-client` pattern:
+  - `components/modules/auth/` (`LoginHero`)
+  - `components/modules/menu/` (`MenuManager`, `ProductForm`)
+  - `components/modules/pos/` (`CartPanel`, `CartToast`, `CheckoutDialog`, `MenuGrid`, `PaymentEvidenceActions`, `PaymentEvidenceCapture`, `PosScreen`)
+  - `components/modules/quotas/` (`ProductQuotaList`)
+  - `components/modules/reports/` (`SalesChart`, `VoidButton`)
+  - `components/modules/settings/` (`PasswordSection`, `PreferencesPanel`, `PreferencesProvider`)
+  - `components/modules/shifts/` (`ShiftHistoryList`, `ShiftPanel`, `TurnoverList`)
+  - `components/modules/users/` (`UsersManager`)
+  - Added module index barrel exports and updated `components/index.ts`.
+- Removed old `features/*/components/` directories.
+- Updated all import paths across `web/src/app` and components to `@/components/modules/*`.
+- Full quality verification passed:
+  - `npm run typecheck`: passed.
+  - `npm run lint`: passed (0 warnings, 0 errors).
+  - `npm run format:check`: passed (all files match Prettier style).
+  - `npm test`: 51/51 tests passed.
+  - `npm run build`: passed (24 routes).
+
+## Modern Tailwind CSS Redesign for POS (2026-10-17)
+
+- Redesigned POS MenuGrid ([`MenuGrid.tsx`](file:///home/john/Projects/pos-web/web/src/components/modules/pos/MenuGrid.tsx)):
+  - Converted stretched single-column list to a modern, responsive, touch-friendly product card grid (`grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4`).
+  - Added an instant Grid vs List view toggle with icons in [`icons.tsx`](file:///home/john/Projects/pos-web/web/src/components/common/icons.tsx).
+  - Added category item count pills (`All (14)`, `Category (X)`) and eliminated ugly browser scrollbars with clean horizontal pill scrolling.
+  - Redesigned menu cards with elevated visual headers, hover lift (`group-hover:scale-105`), floating stock badges (`Sold out`, `Only X left`, `X remaining`), active in-cart quantity badges (`✓ X`), bold price typography, and an interactive stepper/add button.
+  - Refined the search bar with inline clear action and reset filters badge.
+- Redesigned POS Order Sidebar ([`CartPanel.tsx`](file:///home/john/Projects/pos-web/web/src/components/modules/pos/CartPanel.tsx)):
+  - Structured as a dedicated, sticky POS checkout sidebar (`lg:sticky lg:top-4`).
+  - Added order header with total item count badge and a quick "Clear" order action.
+  - Added scrollable order item list with item calculations, compact stepper controls, and clean remove action.
+  - Added order summary breakdown (Subtotal, Total).
+  - Replaced bulky bottom pill with a high-contrast, tactile "Charge Order" CTA button with clear total amount.
+- Layout & Appearance Updates:
+  - Enabled full-width mode for POS screens by adding `fullWidth` prop to `StaffShell` and expanding grid columns up to `2xl:grid-cols-5`.
+  - Replaced category scroll clipping with responsive `flex-wrap` layout beneath the search bar.
+  - Changed default appearance preference from `'system'` to `'light'` (white theme) across [`preferences.ts`](file:///home/john/Projects/pos-web/web/src/features/settings/preferences.ts) and [`layout.tsx`](file:///home/john/Projects/pos-web/web/src/app/layout.tsx).
+  - Modernized skeleton loading across the app ([`LoadingSkeleton.tsx`](file:///home/john/Projects/pos-web/web/src/components/loader/LoadingSkeleton.tsx)):
+    - Added dedicated `PosSkeleton` mirroring 1:1 the POS layout (search bar, wrapped category pills, responsive product card grid, and sticky order summary).
+    - Updated `CardsSkeleton`, `ListSkeleton`, and `FormSkeleton` to use modern `rounded-2xl`, subtle `bg-mist`, and clean card borders with zero layout shift.
+    - Updated `pos/loading.tsx` and `admin/loading.tsx` to use the unified modern skeletons.
+  - Redesigned staff navigation as a modern Tailwind CSS Dashboard Sidebar ([`staff-shell.tsx`](file:///home/john/Projects/pos-web/web/src/components/layout/staff-shell.tsx)):
+    - Created pure SVG Heroicons v2 outline suite in [`hero-icons.tsx`](file:///home/john/Projects/pos-web/web/src/components/common/hero-icons.tsx) (`Squares2X2Icon`, `ShoppingCartIcon`, `BookOpenIcon`, `CalendarDaysIcon`, `ChartBarSquareIcon`, `BanknotesIcon`, `UsersIcon`, `ClipboardDocumentCheckIcon`, `Cog6ToothIcon`, `ArrowRightOnRectangleIcon`, `Bars3Icon`, `XMarkIcon`).
+    - Fixed sidebar width to `w-64` with clean brand header, role badges, section titles, rounded-xl active/hover states, user account card, and tactile sign-out action.
+  - Standardized typography across the entire codebase:
+    - Replaced all non-standard arbitrary font sizes (`text-[15px]`, `text-[11px]`, `text-[10px]`, `text-[30px]`, `text-[27px]`) with standard Tailwind utilities (`text-xs`, `text-sm`, `text-base`, `text-lg`, `text-xl`, `text-2xl`, `text-3xl`).
+    - Aligned font weights with standard semantic tokens (`font-medium`, `font-semibold`, `font-bold`, `font-extrabold`).
+- Verification passed:
+  - `npm run typecheck`: passed (0 errors).
+  - `npm run lint`: passed (0 warnings, 0 errors).
+  - `npm run format:check`: passed (clean).
+  - `npm test`: passed (51/51 tests).
+  - `npm run build`: passed (24/24 routes).
 
 ## Prior milestones
 

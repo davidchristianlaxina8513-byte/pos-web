@@ -3,7 +3,7 @@ import { requireRole } from '@/features/auth/queries';
 import { getCashierTodaySales } from '@/features/dashboard/queries';
 import { Card } from '@/components/common/Card';
 import { StaffShell } from '@/components/layout/staff-shell';
-import { VoidButton } from '@/features/reports/components/VoidButton';
+import { VoidButton } from '@/components/modules/reports/VoidButton';
 
 export default async function DailySalesPage() {
   const profile = await requireRole('cashier');

@@ -5,9 +5,9 @@ import {
   getMyShifts,
   getMyTurnovers,
 } from '@/features/shifts/queries';
-import { ShiftPanel } from '@/features/shifts/components/ShiftPanel';
-import { ShiftHistoryList } from '@/features/shifts/components/ShiftHistoryList';
-import { TurnoverList } from '@/features/shifts/components/TurnoverList';
+import { ShiftPanel } from '@/components/modules/shifts/ShiftPanel';
+import { ShiftHistoryList } from '@/components/modules/shifts/ShiftHistoryList';
+import { TurnoverList } from '@/components/modules/shifts/TurnoverList';
 import { Card } from '@/components/common/Card';
 import { StaffShell } from '@/components/layout/staff-shell';
 
