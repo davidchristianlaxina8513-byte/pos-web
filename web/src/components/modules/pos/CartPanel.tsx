@@ -13,6 +13,7 @@ export interface CartPanelProps {
   onRemove: (product_id: number) => void;
   onClear?: () => void;
   onCheckout: () => void;
+  saveStatus?: 'saved' | 'saving' | 'failed' | null;
 }
 
 /** Modern POS sidebar: sticky order summary, scrollable item list, and checkout CTA. */
@@ -23,6 +24,7 @@ export function CartPanel({
   onRemove,
   onClear,
   onCheckout,
+  saveStatus,
 }: CartPanelProps) {
   const total = cartTotal(lines);
   const count = lines.reduce((sum, line) => sum + line.qty, 0);
@@ -40,6 +42,25 @@ export function CartPanel({
             <span className="rounded-full bg-mist px-2.5 py-0.5 text-xs font-bold text-muted">
               {count} {count === 1 ? 'item' : 'items'}
             </span>
+            {saveStatus === 'saving' ? (
+              <span className="flex items-center gap-1 text-[11px] font-medium text-muted">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" />
+                Saving...
+              </span>
+            ) : saveStatus === 'saved' ? (
+              <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                Saved
+              </span>
+            ) : saveStatus === 'failed' ? (
+              <span
+                className="flex items-center gap-1 text-[11px] font-medium text-amber-600 dark:text-amber-400"
+                title="Saved to browser offline storage"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                Saved locally
+              </span>
+            ) : null}
           </div>
           {lines.length > 0 && onClear ? (
             <button

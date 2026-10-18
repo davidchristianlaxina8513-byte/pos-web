@@ -4,8 +4,10 @@ import { StaffShell } from '@/components/layout/staff-shell';
 import { AuditLogManager } from '@/components/modules/audit';
 
 export default async function AuditLogPage() {
-  const profile = await requireRole('admin');
-  const entries = await getAuditLog();
+  const [profile, entries] = await Promise.all([
+    requireRole('admin'),
+    getAuditLog(),
+  ]);
 
   return (
     <StaffShell

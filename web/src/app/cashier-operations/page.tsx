@@ -12,8 +12,8 @@ import { Card } from '@/components/common/Card';
 import { StaffShell } from '@/components/layout/staff-shell';
 
 export default async function CashierOperationsPage() {
-  const profile = await requireRole('cashier');
-  const [shift, shifts, turnovers] = await Promise.all([
+  const [profile, shift, shifts, turnovers] = await Promise.all([
+    requireRole('cashier'),
     getCurrentShift(),
     getMyShifts(),
     getMyTurnovers(),

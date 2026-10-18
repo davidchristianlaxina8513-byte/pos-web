@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import { requireRole } from '@/features/auth/queries';
+import { requireRole, requireStaff } from '@/features/auth/queries';
 
 export interface CashierShift {
   shift_id: string;
@@ -29,17 +29,34 @@ export interface CashTurnover {
 }
 
 export async function getCurrentShift(): Promise<CashierShift | null> {
-  const profile = await requireRole('cashier');
+  const profile = await requireStaff();
   const supabase = await createClient();
-  const { data, error } = await supabase
+
+  // Shift recovery: check for an existing open shift first
+  let { data, error } = await supabase
     .from('cashier_shifts')
     .select(
       'shift_id, business_date, started_at, ended_at, starting_cash, status, notes',
     )
     .eq('user_id', profile.userId)
-    .order('started_at', { ascending: false })
-    .limit(1)
+    .eq('status', 'open')
     .maybeSingle();
+
+  // If no open shift exists, retrieve the most recent shift (which may be closed)
+  if (!data && !error) {
+    const fallback = await supabase
+      .from('cashier_shifts')
+      .select(
+        'shift_id, business_date, started_at, ended_at, starting_cash, status, notes',
+      )
+      .eq('user_id', profile.userId)
+      .order('started_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    data = fallback.data;
+    error = fallback.error;
+  }
+
   if (error) throw error;
   if (!data) return null;
   let cashSales = 0;
@@ -49,7 +66,7 @@ export async function getCurrentShift(): Promise<CashierShift | null> {
       .select('total_amount')
       .eq('user_id', profile.userId)
       .eq('payment_mode', 'cash')
-      .eq('status', 'completed')
+      .not('status', 'in', '("voided","cancelled")')
       .gte('date', data.started_at);
     if (salesError) throw salesError;
     cashSales = (sales ?? []).reduce(

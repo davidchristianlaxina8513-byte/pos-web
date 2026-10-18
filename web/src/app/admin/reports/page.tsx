@@ -34,7 +34,6 @@ export default async function ReportsPage({
     tab?: string;
   }>;
 }) {
-  const profile = await requireRole('admin');
   const params = await searchParams;
   const preset = parsePreset(params.preset);
   const range = resolveRange(preset, params.from ?? null, params.to ?? null);
@@ -52,7 +51,8 @@ export default async function ReportsPage({
         ? 'ledger'
         : 'all';
 
-  const [report, top, ledger] = await Promise.all([
+  const [profile, report, top, ledger] = await Promise.all([
+    requireRole('admin'),
     getSalesReport(range),
     getTopProducts(range),
     getReceiptRecords(range, {

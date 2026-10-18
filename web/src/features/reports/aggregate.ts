@@ -76,9 +76,11 @@ export function resolveRange(
   return { preset, from: start, to: end };
 }
 
-/** Completed sales only — voided rows never count. */
+/** Completed or active sales — voided and cancelled rows never count. */
 export function activeSales(rows: SaleRow[]): SaleRow[] {
-  return rows.filter((row) => row.status !== 'voided');
+  return rows.filter(
+    (row) => row.status !== 'voided' && row.status !== 'cancelled',
+  );
 }
 
 function dayLabel(key: string): string {
@@ -263,7 +265,7 @@ export function buildReceiptLedger(
   }));
   const lines: SoldLine[] = [];
   for (const receipt of receipts) {
-    if (receipt.status === 'voided') continue;
+    if (receipt.status === 'voided' || receipt.status === 'cancelled') continue;
     for (const item of receipt.items) {
       if (lines.length >= lineLimit) break;
       lines.push({

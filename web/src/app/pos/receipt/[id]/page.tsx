@@ -5,7 +5,9 @@ import { requireStaff } from '@/features/auth/queries';
 import { PaymentEvidenceActions } from '@/components/modules/pos/PaymentEvidenceActions';
 import { Card } from '@/components/common/Card';
 import { CheckIcon } from '@/components/common/icons';
+import { cn } from '@/lib/cn';
 import { PrintButton } from './print-button';
+import { ReceiptOrderActions } from '@/components/modules/pos/ReceiptOrderActions';
 
 const PAYMENT_LABELS = {
   cash: 'Cash',
@@ -87,7 +89,7 @@ export default async function ReceiptPage({
                   Order #{receipt.order_number}
                 </p>
               ) : null}
-              <p className="mt-1 text-sm text-muted">
+              <p suppressHydrationWarning className="mt-1 text-sm text-muted">
                 {new Date(receipt.date).toLocaleString()}
               </p>
             </div>
@@ -156,6 +158,41 @@ export default async function ReceiptPage({
                   : PAYMENT_STATUS_LABELS[receipt.payment_status]}
               </span>
             </div>
+            <div className="mt-1 flex items-center justify-between">
+              <span className="text-xs font-semibold tracking-wider text-muted uppercase">
+                Order status
+              </span>
+              <span
+                className={cn(
+                  'rounded-full border px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wide',
+                  receipt.status === 'completed'
+                    ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                    : receipt.status === 'ready'
+                      ? 'border-purple-300 bg-purple-50 text-purple-800 dark:border-purple-800 dark:bg-purple-950/60 dark:text-purple-300'
+                      : receipt.status === 'preparing'
+                        ? 'border-blue-300 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/60 dark:text-blue-300'
+                        : receipt.status === 'voided'
+                          ? 'border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
+                          : receipt.status === 'cancelled'
+                            ? 'border-neutral-300 bg-neutral-100 text-neutral-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300'
+                            : 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-300',
+                )}
+              >
+                {receipt.status}
+              </span>
+            </div>
+
+            {receipt.status === 'voided' && receipt.void_reason ? (
+              <div className="mt-3 rounded-lg border border-rose-300/80 bg-rose-50 p-2.5 text-xs text-foreground dark:border-rose-900/60 dark:bg-rose-950/40">
+                <span className="font-bold text-rose-700 dark:text-rose-400">
+                  Void Reason:{' '}
+                </span>
+                <span className="text-foreground font-medium">
+                  {receipt.void_reason}
+                </span>
+              </div>
+            ) : null}
+
             {receipt.payment_mode === 'cash' ? (
               <>
                 <p className="mt-1">
@@ -215,18 +252,25 @@ export default async function ReceiptPage({
           </div>
         </Card>
 
-        <div className="mt-6 flex flex-col gap-2 print:hidden">
-          <Link
-            href="/pos"
-            className="action-focus flex h-10 w-full items-center justify-center gap-2 rounded-md bg-pine text-sm font-semibold text-surface shadow-xs hover:bg-pine-deep"
-          >
-            <span aria-hidden="true" className="text-lg leading-none">
-              +
-            </span>{' '}
-            New Transaction
-          </Link>
-          <PrintButton />
-        </div>
+        <ReceiptOrderActions
+          transactionId={receipt.transaction_id}
+          status={receipt.status}
+          voidReason={receipt.void_reason}
+          isAdmin={profile.role === 'admin'}
+        >
+          <div className="flex flex-col gap-2">
+            <Link
+              href="/pos"
+              className="action-focus flex h-10 w-full items-center justify-center gap-2 rounded-md bg-pine text-sm font-semibold text-surface shadow-xs hover:bg-pine-deep"
+            >
+              <span aria-hidden="true" className="text-lg leading-none">
+                +
+              </span>{' '}
+              New Transaction
+            </Link>
+            <PrintButton />
+          </div>
+        </ReceiptOrderActions>
       </div>
     </main>
   );

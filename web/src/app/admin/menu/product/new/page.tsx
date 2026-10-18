@@ -6,10 +6,13 @@ import { StaffShell } from '@/components/layout/staff-shell';
 
 /** v2 admin product create (shares the restyled ProductForm). */
 export default async function NewProductPage() {
-  const profile = await requireRole('admin');
-  const categories = await getCategories();
+  const [profile, categories] = await Promise.all([
+    requireRole('admin'),
+    getCategories(),
+  ]);
   return (
     <StaffShell
+      fullWidth={true}
       email={profile.email}
       role={profile.role}
       title="Add Product"

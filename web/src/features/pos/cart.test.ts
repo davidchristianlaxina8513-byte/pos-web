@@ -62,3 +62,13 @@ test('unknown product ids leave other lines untouched', () => {
     start,
   );
 });
+
+test('restore hydrates cart lines from autosave draft', () => {
+  const restored = [
+    line({ product_id: 1, qty: 2 }),
+    line({ product_id: 2, name: 'Espresso', price: 90, qty: 1 }),
+  ];
+  expect(cartReducer([], { type: 'restore', lines: restored })).toEqual(
+    restored,
+  );
+});

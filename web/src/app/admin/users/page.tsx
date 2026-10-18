@@ -5,8 +5,10 @@ import { StaffShell } from '@/components/layout/staff-shell';
 
 /** Admin staff accounts: create via edge function, enable/disable via RPC. */
 export default async function UsersPage() {
-  const profile = await requireRole('admin');
-  const users = await getUsers();
+  const [profile, users] = await Promise.all([
+    requireRole('admin'),
+    getUsers(),
+  ]);
   return (
     <StaffShell
       email={profile.email}

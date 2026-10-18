@@ -5,8 +5,8 @@ import { StaffShell } from '@/components/layout/staff-shell';
 
 /** Admin menu + category management. */
 export default async function MenuPage() {
-  const profile = await requireRole('admin');
-  const [{ items }, categories] = await Promise.all([
+  const [profile, { items }, categories] = await Promise.all([
+    requireRole('admin'),
     getManagedMenu(),
     getCategories(),
   ]);

@@ -195,6 +195,43 @@ function UserMenu({
 }
 
 /**
+ * Resolves whether a sidebar navigation entry is active for a given pathname.
+ * Handles exact root matches, sub-routes, and mapped cashier/admin sections.
+ */
+function isRouteActive(entryHref: string, currentPath: string): boolean {
+  if (entryHref === '/admin' || entryHref === '/dashboard') {
+    return currentPath === entryHref;
+  }
+  if (currentPath === entryHref) {
+    return true;
+  }
+  if (currentPath.startsWith(`${entryHref}/`)) {
+    return true;
+  }
+  if (entryHref === '/admin/cashier-operations') {
+    return (
+      currentPath.startsWith('/admin/cashier-operations') ||
+      currentPath.startsWith('/admin/shifts') ||
+      currentPath.startsWith('/admin/cash-turnovers')
+    );
+  }
+  if (entryHref === '/cashier-operations') {
+    return (
+      currentPath.startsWith('/cashier-operations') ||
+      currentPath.startsWith('/my-shift') ||
+      currentPath.startsWith('/cash-turnover')
+    );
+  }
+  if (entryHref === '/pos') {
+    return currentPath.startsWith('/pos');
+  }
+  if (entryHref === '/menu') {
+    return currentPath.startsWith('/menu');
+  }
+  return false;
+}
+
+/**
  * Modern Tailwind CSS Dashboard Shell with Heroicons.
  * Features a fixed-width dashboard sidebar on desktop, responsive slide-out drawer on mobile.
  */
@@ -209,9 +246,17 @@ function StaffShellContent({
   children,
 }: StaffShellProps) {
   const [open, setOpen] = useState(false);
+  const [navigatingHref, setNavigatingHref] = useState<string | null>(null);
   const pathname = usePathname();
   const items = role === 'admin' ? ADMIN_NAV : CASHIER_NAV;
   const profileHref = role === 'admin' ? '/admin/settings' : '/profile';
+  const currentPath = navigatingHref ?? pathname;
+
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname);
+    setNavigatingHref(null);
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -224,6 +269,17 @@ function StaffShellContent({
 
   return (
     <div className="min-h-screen bg-mist text-foreground lg:flex">
+      {/* Top Navigation Progress Bar */}
+      {navigatingHref ? (
+        <div
+          role="status"
+          aria-label="Loading page..."
+          className="fixed top-0 left-0 right-0 z-50 h-0.5 overflow-hidden bg-pine/20 pointer-events-none print:hidden"
+        >
+          <div className="h-full w-full bg-pine animate-pulse" />
+        </div>
+      ) : null}
+
       {/* Mobile Backdrop */}
       {open ? (
         <button
@@ -278,30 +334,46 @@ function StaffShellContent({
           </div>
           <ul className="flex flex-col gap-1">
             {items.map((entry) => {
-              const active = pathname === entry.href;
+              const active = isRouteActive(entry.href, currentPath);
+              const isNavigatingToThis = navigatingHref === entry.href;
               return (
                 <li key={entry.href}>
                   <Link
                     href={entry.href}
+                    prefetch={true}
+                    onClick={() => {
+                      if (!isRouteActive(entry.href, pathname)) {
+                        setNavigatingHref(entry.href);
+                      }
+                      setOpen(false);
+                    }}
                     aria-current={active ? 'page' : undefined}
                     className={cn(
-                      'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-150',
+                      'group flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-150',
                       active
                         ? 'bg-pine text-surface shadow-xs'
                         : 'text-foreground/80 hover:bg-mist hover:text-foreground',
                     )}
                   >
-                    <span
-                      className={cn(
-                        'transition-colors',
-                        active
-                          ? 'text-surface'
-                          : 'text-muted group-hover:text-foreground',
-                      )}
-                    >
-                      {entry.icon}
-                    </span>
-                    <span className="truncate">{entry.label}</span>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span
+                        className={cn(
+                          'transition-colors',
+                          active
+                            ? 'text-surface'
+                            : 'text-muted group-hover:text-foreground',
+                        )}
+                      >
+                        {entry.icon}
+                      </span>
+                      <span className="truncate">{entry.label}</span>
+                    </div>
+                    {isNavigatingToThis ? (
+                      <span className="relative flex h-2 w-2 shrink-0">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-surface opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-surface" />
+                      </span>
+                    ) : null}
                   </Link>
                 </li>
               );

@@ -17,8 +17,8 @@ import {
 import { StaffShell } from '@/components/layout/staff-shell';
 
 export default async function CashierDashboardPage() {
-  const profile = await requireRole('cashier');
-  const [sales, products, shift] = await Promise.all([
+  const [profile, sales, products, shift] = await Promise.all([
+    requireRole('cashier'),
     getCashierTodaySales(),
     getTodayProductQuotas(),
     getCurrentShift(),

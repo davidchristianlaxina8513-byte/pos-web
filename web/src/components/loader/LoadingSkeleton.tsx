@@ -57,12 +57,14 @@ export function StaffShellSkeleton({
   hasHeader = true,
   hasBreadcrumbs = true,
   hasHeaderActions = false,
+  headerActionCount = 1,
 }: {
   children: React.ReactNode;
   fullWidth?: boolean;
   hasHeader?: boolean;
   hasBreadcrumbs?: boolean;
   hasHeaderActions?: boolean;
+  headerActionCount?: number;
 }) {
   return (
     <div className="min-h-screen bg-mist text-foreground lg:flex animate-pulse">
@@ -109,8 +111,12 @@ export function StaffShellSkeleton({
                 </div>
                 {hasHeaderActions && (
                   <div className="flex items-center gap-2.5">
-                    <div className="h-10 w-28 rounded-md bg-mist/70" />
-                    <div className="h-10 w-32 rounded-md bg-mist/80" />
+                    {Array.from({ length: headerActionCount }).map((_, idx) => (
+                      <div
+                        key={idx}
+                        className="h-10 w-32 rounded-md bg-mist/80"
+                      />
+                    ))}
                   </div>
                 )}
               </div>
@@ -612,36 +618,103 @@ export function SettingsSkeleton({
   withShell = true,
 }: { withShell?: boolean } = {}) {
   const content = (
-    <div aria-hidden="true" className="space-y-4 max-w-4xl">
-      {/* Account Info Card */}
-      <div className="rounded-xl border border-border bg-surface p-5 shadow-xs space-y-4">
-        <div className="h-5 w-40 rounded bg-mist/80" />
-        <div className="space-y-3 pt-1">
-          <div className="h-10 w-full sm:w-80 rounded-md bg-mist/50" />
-          <div className="h-10 w-full sm:w-80 rounded-md bg-mist/50" />
+    <div aria-hidden="true" className="divide-y divide-gray-900/10">
+      {/* Section 1: Personal Information */}
+      <div className="grid grid-cols-1 gap-x-8 gap-y-8 py-10 md:grid-cols-3">
+        <div className="px-4 sm:px-0">
+          <div className="h-5 w-44 rounded bg-mist/80" />
+          <div className="mt-2 space-y-1.5">
+            <div className="h-3.5 w-64 max-w-full rounded bg-mist/50" />
+            <div className="h-3.5 w-52 max-w-full rounded bg-mist/50" />
+          </div>
+        </div>
+
+        <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2">
+          <div className="px-4 py-6 sm:p-8 space-y-6">
+            <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2">
+              <div className="space-y-2">
+                <div className="h-4 w-28 rounded bg-mist/70" />
+                <div className="h-11 w-full rounded-md border border-gray-300 bg-mist/30" />
+                <div className="h-3 w-48 rounded bg-mist/40" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-4 w-28 rounded bg-mist/70" />
+                <div className="h-11 w-48 rounded-full bg-mist/30" />
+                <div className="h-3 w-56 rounded bg-mist/40" />
+              </div>
+            </div>
+            <div className="pt-2 border-t border-gray-100">
+              <div className="h-16 w-full rounded-xl border border-gray-200 bg-mist/20" />
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Security Card */}
-      <div className="rounded-xl border border-border bg-surface p-5 shadow-xs space-y-4">
-        <div className="h-5 w-44 rounded bg-mist/80" />
-        <div className="space-y-3 pt-1">
-          <div className="h-10 w-full sm:w-80 rounded-md bg-mist/50" />
-          <div className="h-10 w-full sm:w-80 rounded-md bg-mist/50" />
-          <div className="h-10 w-32 rounded-md bg-mist/80" />
+      {/* Section 2: Security & Password */}
+      <div className="grid grid-cols-1 gap-x-8 gap-y-8 py-10 md:grid-cols-3">
+        <div className="px-4 sm:px-0">
+          <div className="h-5 w-44 rounded bg-mist/80" />
+          <div className="mt-2 space-y-1.5">
+            <div className="h-3.5 w-64 max-w-full rounded bg-mist/50" />
+            <div className="h-3.5 w-48 max-w-full rounded bg-mist/50" />
+          </div>
+        </div>
+
+        <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2">
+          <div className="px-4 py-6 sm:p-8 space-y-4">
+            <div className="h-12 w-full rounded-xl border border-gray-200 bg-mist/20 mb-6" />
+            <div className="space-y-2 max-w-lg">
+              <div className="h-4 w-28 rounded bg-mist/70" />
+              <div className="h-11 w-full rounded-md border border-gray-300 bg-mist/30" />
+            </div>
+            <div className="space-y-2 max-w-lg">
+              <div className="h-4 w-36 rounded bg-mist/70" />
+              <div className="h-11 w-full rounded-md border border-gray-300 bg-mist/30" />
+            </div>
+            <div className="pt-2">
+              <div className="h-10 w-36 rounded-md bg-pine/70" />
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Preferences Card */}
-      <div className="rounded-xl border border-border bg-surface p-5 shadow-xs space-y-4">
-        <div className="h-5 w-32 rounded bg-mist/80" />
-        <div className="h-16 w-full rounded-md bg-mist/40" />
+      {/* Section 3: Preferences */}
+      <div className="grid grid-cols-1 gap-x-8 gap-y-8 py-10 md:grid-cols-3">
+        <div className="px-4 sm:px-0">
+          <div className="h-5 w-32 rounded bg-mist/80" />
+          <div className="mt-2 space-y-1.5">
+            <div className="h-3.5 w-64 max-w-full rounded bg-mist/50" />
+            <div className="h-3.5 w-48 max-w-full rounded bg-mist/50" />
+          </div>
+        </div>
+
+        <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2">
+          <div className="px-4 py-6 sm:p-8 space-y-6">
+            <div className="space-y-2.5">
+              <div className="h-14 w-full rounded-xl border border-gray-200 bg-mist/20" />
+              <div className="h-14 w-full rounded-xl border border-gray-200 bg-mist/20" />
+            </div>
+            <div className="space-y-2 max-w-md pt-2 border-t border-gray-100">
+              <div className="h-4 w-32 rounded bg-mist/70" />
+              <div className="grid grid-cols-3 gap-3">
+                <div className="h-11 rounded-md bg-mist/50" />
+                <div className="h-11 rounded-md bg-mist/50" />
+                <div className="h-11 rounded-md bg-mist/50" />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
 
   return withShell ? (
-    <StaffShellSkeleton fullWidth={false} hasHeader={true}>
+    <StaffShellSkeleton
+      fullWidth={true}
+      hasHeader={true}
+      hasBreadcrumbs={true}
+      hasHeaderActions={false}
+    >
       {content}
     </StaffShellSkeleton>
   ) : (
@@ -729,29 +802,138 @@ export function PosSkeleton({
   );
 }
 
-/** 10. Form skeleton: product create/edit */
+/** 10. Form skeleton: product create/edit matching DCASIS 4-section layout */
 export function FormSkeleton({
   withShell = true,
 }: { withShell?: boolean } = {}) {
   const content = (
-    <div aria-hidden="true" className="space-y-4 max-w-2xl">
-      <div className="space-y-4 rounded-xl border border-border/70 bg-surface p-6 shadow-xs">
-        {[0, 1, 2, 3].map((key) => (
-          <div key={key} className="space-y-2">
-            <div className="h-3.5 w-24 rounded bg-mist/70" />
-            <div className="h-10 w-full rounded-md border border-border/50 bg-mist/40" />
+    <div aria-hidden="true" className="divide-y divide-gray-900/10">
+      {/* Section 1: General Information */}
+      <div className="grid grid-cols-1 gap-x-8 gap-y-8 py-10 md:grid-cols-3">
+        <div className="px-4 sm:px-0">
+          <div className="h-5 w-44 rounded bg-mist/80" />
+          <div className="mt-2 space-y-1.5">
+            <div className="h-3.5 w-64 max-w-full rounded bg-mist/50" />
+            <div className="h-3.5 w-52 max-w-full rounded bg-mist/50" />
           </div>
-        ))}
-        <div className="pt-2 flex gap-3">
-          <div className="h-10 w-32 rounded-md bg-mist/80" />
-          <div className="h-10 w-24 rounded-md bg-mist/50" />
         </div>
+
+        <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2">
+          <div className="px-4 py-6 sm:p-8">
+            <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2">
+              {/* Product Name (Full Width) */}
+              <div className="sm:col-span-2 space-y-2">
+                <div className="h-4 w-28 rounded bg-mist/70" />
+                <div className="h-11 w-full rounded-md border border-gray-300 bg-mist/30" />
+              </div>
+
+              {/* Menu Category */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="h-4 w-32 rounded bg-mist/70" />
+                  <div className="h-3.5 w-28 rounded bg-mist/50" />
+                </div>
+                <div className="h-11 w-full rounded-md border border-gray-300 bg-mist/30" />
+                <div className="h-3 w-56 rounded bg-mist/40 mt-1" />
+              </div>
+
+              {/* Selling Price */}
+              <div className="space-y-2">
+                <div className="h-4 w-36 rounded bg-mist/70" />
+                <div className="h-11 w-full rounded-md border border-gray-300 bg-mist/30" />
+                <div className="h-3 w-52 rounded bg-mist/40 mt-1" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Section 2: Product Photo */}
+      <div className="grid grid-cols-1 gap-x-8 gap-y-8 py-10 md:grid-cols-3">
+        <div className="px-4 sm:px-0">
+          <div className="h-5 w-36 rounded bg-mist/80" />
+          <div className="mt-2 space-y-1.5">
+            <div className="h-3.5 w-64 max-w-full rounded bg-mist/50" />
+            <div className="h-3.5 w-48 max-w-full rounded bg-mist/50" />
+          </div>
+        </div>
+
+        <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2">
+          <div className="px-4 py-6 sm:p-8">
+            <div className="flex flex-col sm:flex-row items-center gap-6">
+              <div className="h-40 w-40 shrink-0 rounded-2xl border-2 border-dashed border-gray-300 bg-mist/40" />
+              <div className="space-y-3 text-center sm:text-left">
+                <div className="h-10 w-36 rounded-md bg-mist/70" />
+                <div className="h-3 w-48 rounded bg-mist/40" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Section 3: Register Availability */}
+      <div className="grid grid-cols-1 gap-x-8 gap-y-8 py-10 md:grid-cols-3">
+        <div className="px-4 sm:px-0">
+          <div className="h-5 w-44 rounded bg-mist/80" />
+          <div className="mt-2 space-y-1.5">
+            <div className="h-3.5 w-64 max-w-full rounded bg-mist/50" />
+          </div>
+        </div>
+
+        <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2">
+          <div className="px-4 py-6 sm:p-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="h-16 rounded-xl border-2 border-gray-200 bg-mist/30" />
+              <div className="h-16 rounded-xl border border-gray-200 bg-mist/20" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Section 4: Daily Stock Quota */}
+      <div className="grid grid-cols-1 gap-x-8 gap-y-8 py-10 md:grid-cols-3">
+        <div className="px-4 sm:px-0">
+          <div className="h-5 w-40 rounded bg-mist/80" />
+          <div className="mt-2 space-y-1.5">
+            <div className="h-3.5 w-64 max-w-full rounded bg-mist/50" />
+            <div className="h-3.5 w-56 max-w-full rounded bg-mist/50" />
+          </div>
+        </div>
+
+        <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2">
+          <div className="px-4 py-6 sm:p-8 space-y-6">
+            <div className="space-y-2">
+              <div className="h-3 w-36 rounded bg-mist/60 uppercase tracking-wider" />
+              <div className="flex flex-wrap gap-2">
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <div key={i} className="h-8 w-20 rounded-md bg-mist/50" />
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="h-4 w-48 rounded bg-mist/70" />
+              <div className="h-11 w-full sm:w-64 rounded-md border border-gray-300 bg-mist/30" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Action Buttons Footer */}
+      <div className="flex items-center justify-end gap-x-3 pt-8">
+        <div className="h-10 w-24 rounded-md border border-gray-300 bg-white" />
+        <div className="h-10 w-36 rounded-md bg-pine/70" />
       </div>
     </div>
   );
 
   return withShell ? (
-    <StaffShellSkeleton fullWidth={false} hasHeader={true}>
+    <StaffShellSkeleton
+      fullWidth={true}
+      hasHeader={true}
+      hasBreadcrumbs={true}
+      hasHeaderActions={true}
+      headerActionCount={1}
+    >
       {content}
     </StaffShellSkeleton>
   ) : (

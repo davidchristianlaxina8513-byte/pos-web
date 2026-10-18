@@ -14,11 +14,11 @@ import {
 } from '@/components/common/hero-icons';
 
 export default async function TodayProductsPage() {
-  const profile = await requireStaff();
-  const [products, history] = await Promise.all([
+  const [profile, products] = await Promise.all([
+    requireStaff(),
     getTodayProductQuotas(),
-    profile.role === 'admin' ? getQuotaHistory() : Promise.resolve([]),
   ]);
+  const history = profile.role === 'admin' ? await getQuotaHistory() : [];
 
   return (
     <StaffShell email={profile.email} role={profile.role} fullWidth={true}>
@@ -53,7 +53,7 @@ export default async function TodayProductsPage() {
                   className="action-focus inline-flex h-10 items-center justify-center gap-2 rounded-md border border-border bg-surface px-3.5 text-sm font-semibold text-foreground shadow-xs transition hover:bg-mist"
                 >
                   <BookOpenIcon className="h-4 w-4 text-pine" />
-                  <span>Menu Items</span>
+                  <span>Master Menu Catalog →</span>
                 </Link>
               )}
               <Link
@@ -67,6 +67,28 @@ export default async function TodayProductsPage() {
             </div>
           </div>
         </div>
+
+        {/* Contextual guidance banner for Admins */}
+        {profile.role === 'admin' && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-pine/20 bg-pine/5 px-4 py-2.5 text-xs text-foreground">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-pine">
+                Live Daily Stock Limits:
+              </span>
+              <span className="text-muted">
+                Adjusting quantities here controls real-time availability for
+                today&apos;s register. To edit permanent prices, recipes, or
+                categories, use Menu Management.
+              </span>
+            </div>
+            <Link
+              href="/admin/menu"
+              className="font-bold text-pine hover:underline whitespace-nowrap"
+            >
+              Master Menu Catalog →
+            </Link>
+          </div>
+        )}
 
         {/* Product Quota List & Recent Quota Adjustments History with Tabs */}
         <ProductQuotaList

@@ -126,17 +126,29 @@ export async function deleteProduct(productId: number): Promise<MenuResult> {
   return { ok: true };
 }
 
-export async function createCategory(name: string): Promise<MenuResult> {
+export async function createCategory(
+  name: string,
+): Promise<
+  | { ok: true; category: { category_id: string; name: string } }
+  | { ok: false; error: string }
+> {
   await requireRole('admin');
   const validation = validateCategoryName(name);
   if (!validation.ok) return { ok: false, error: validation.error };
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('category')
-    .insert({ name: validation.value });
-  if (error) return { ok: false, error: 'Could not save category.' };
+    .insert({ name: validation.value })
+    .select('category_id, name')
+    .single();
+  if (error) {
+    if (error.code === '23505') {
+      return { ok: false, error: 'A category with this name already exists.' };
+    }
+    return { ok: false, error: 'Could not save category.' };
+  }
   revalidateMenu();
-  return { ok: true };
+  return { ok: true, category: data };
 }
 
 export async function deleteCategory(categoryId: string): Promise<MenuResult> {

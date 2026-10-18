@@ -5,6 +5,7 @@ export type CartAction =
   | { type: 'increment'; product_id: number }
   | { type: 'decrement'; product_id: number }
   | { type: 'remove'; product_id: number }
+  | { type: 'restore'; lines: CartLine[] }
   | { type: 'clear' };
 
 function toLine(item: MenuItem): CartLine {
@@ -50,6 +51,8 @@ export function cartReducer(lines: CartLine[], action: CartAction): CartLine[] {
         .filter((line) => line.qty > 0);
     case 'remove':
       return lines.filter((line) => line.product_id !== action.product_id);
+    case 'restore':
+      return action.lines;
     case 'clear':
       return [];
   }

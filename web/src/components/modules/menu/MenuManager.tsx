@@ -8,16 +8,12 @@ import { Breadcrumbs } from '@/components/common/Breadcrumbs';
 import { Modal } from '@/components/modal/Modal';
 import { EmptyState } from '@/components/error/EmptyState';
 import { cn } from '@/lib/cn';
-import {
-  createCategory,
-  deleteCategory,
-  deleteProduct,
-} from '@/features/menu/actions';
-import { UNCATEGORIZED } from '@/features/menu/validate';
+import { deleteProduct } from '@/features/menu/actions';
 import type { MenuCategory, MenuItem } from '@/features/pos/types';
 import { useAlert } from '@/components/toast';
 import {
   BookOpenIcon,
+  CalendarDaysIcon,
   CheckCircleIcon,
   ChevronDownIcon,
   ChevronUpDownIcon,
@@ -155,15 +151,6 @@ export function MenuManager({ categories, items }: MenuManagerProps) {
   const [deletingProduct, setDeletingProduct] = useState<MenuItem | null>(null);
   const [isDeletingProduct, setIsDeletingProduct] = useState(false);
 
-  // Category management modal state
-  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
-  const [newCategory, setNewCategory] = useState('');
-  const [categoryToDelete, setCategoryToDelete] = useState<MenuCategory | null>(
-    null,
-  );
-  const [isBusy, setIsBusy] = useState(false);
-  const [categoryError, setCategoryError] = useState<string | null>(null);
-
   // Category product count mapping
   const categoryCounts = useMemo(() => {
     const map = new Map<string, number>();
@@ -247,52 +234,6 @@ export function MenuManager({ categories, items }: MenuManagerProps) {
     sortDirection,
   ]);
 
-  // Category creation
-  const handleAddCategory = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!newCategory.trim()) return;
-
-    setIsBusy(true);
-    setCategoryError(null);
-    const result = await createCategory(newCategory);
-    setIsBusy(false);
-
-    if (!result.ok) {
-      setCategoryError(result.error);
-      errorAlert('Failed to Add Category', result.error);
-      return;
-    }
-
-    const catName = newCategory.trim();
-    setNewCategory('');
-    successAlert(
-      'Category Added',
-      `Category "${catName}" was created successfully.`,
-    );
-    router.refresh();
-  };
-
-  // Category deletion
-  const handleDeleteCategory = async (category: MenuCategory) => {
-    setIsBusy(true);
-    setCategoryError(null);
-    const result = await deleteCategory(category.category_id);
-    setIsBusy(false);
-    setCategoryToDelete(null);
-
-    if (!result.ok) {
-      setCategoryError(result.error);
-      errorAlert('Failed to Delete Category', result.error);
-      return;
-    }
-
-    successAlert(
-      'Category Deleted',
-      `Category "${category.name}" removed. Associated products moved to ${UNCATEGORIZED}.`,
-    );
-    router.refresh();
-  };
-
   // Product deletion
   const handleConfirmDeleteProduct = async () => {
     if (!deletingProduct) return;
@@ -335,18 +276,13 @@ export function MenuManager({ categories, items }: MenuManagerProps) {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
-            <button
-              type="button"
-              onClick={() => {
-                setCategoryError(null);
-                setCategoryModalOpen(true);
-              }}
-              className="action-focus inline-flex h-10 items-center gap-2 rounded-md border border-border bg-surface px-3.5 text-sm font-semibold text-foreground shadow-xs transition-colors hover:bg-mist"
+            <Link
+              href="/today-products"
+              className="action-focus inline-flex h-10 items-center gap-2 rounded-md border border-border bg-white px-3.5 text-sm font-semibold text-foreground shadow-2xs transition-colors hover:bg-slate-50"
             >
-              <TagIcon className="h-4 w-4 text-pine" />
-              <span>Manage Categories</span>
-            </button>
-
+              <CalendarDaysIcon className="h-4 w-4 text-pine" />
+              <span>Today&apos;s Stock Quotas →</span>
+            </Link>
             <Link
               href="/admin/menu/product/new"
               className="action-focus inline-flex h-10 items-center gap-2 rounded-md bg-pine px-4 text-sm font-semibold text-surface shadow-xs transition-colors hover:bg-pine-deep"
@@ -356,6 +292,25 @@ export function MenuManager({ categories, items }: MenuManagerProps) {
             </Link>
           </div>
         </div>
+      </div>
+
+      {/* Contextual guidance banner */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-pine/20 bg-pine/5 px-4 py-2.5 text-xs text-foreground">
+        <div className="flex items-center gap-2">
+          <span className="font-bold text-pine">
+            Catalog &amp; Master Recipes:
+          </span>
+          <span className="text-muted">
+            Configure permanent product prices, categories, and descriptions. To
+            set daily available portions, switch to Today&apos;s Products.
+          </span>
+        </div>
+        <Link
+          href="/today-products"
+          className="font-bold text-pine hover:underline whitespace-nowrap"
+        >
+          Manage Today&apos;s Stock →
+        </Link>
       </div>
 
       {/* 2. Key Metrics KPI Cards */}
@@ -810,132 +765,6 @@ export function MenuManager({ categories, items }: MenuManagerProps) {
           ))}
         </div>
       )}
-
-      {/* 5. Categories Management Modal Dialog */}
-      <Modal
-        title="Manage Categories"
-        isOpen={categoryModalOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            setCategoryModalOpen(false);
-            setCategoryToDelete(null);
-          }
-        }}
-        isDismissDisabled={isBusy}
-      >
-        <div className="flex flex-col gap-5 pt-1">
-          {/* Add Category Form */}
-          <form onSubmit={handleAddCategory} className="flex flex-col gap-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-muted">
-              Add New Category
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value)}
-                placeholder="e.g. Cold Brews, Pastries"
-                disabled={isBusy}
-                className="h-10 flex-1 rounded-md border border-border bg-white px-3 text-sm text-foreground transition-colors focus:border-pine focus:outline-pine"
-              />
-              <Button
-                type="submit"
-                size="md"
-                disabled={isBusy || !newCategory.trim()}
-                className="h-10 shrink-0 rounded-md bg-pine px-4 text-sm font-semibold text-surface hover:bg-pine-deep"
-              >
-                <PlusIcon className="h-4 w-4" />
-                <span>Add</span>
-              </Button>
-            </div>
-          </form>
-
-          {categoryError ? (
-            <div className="rounded-xl border border-danger/30 bg-danger/10 p-3 text-xs text-danger">
-              {categoryError}
-            </div>
-          ) : null}
-
-          {/* Delete confirmation banner */}
-          {categoryToDelete ? (
-            <div className="rounded-2xl border border-danger/40 bg-danger/10 p-3.5">
-              <p className="text-xs font-bold text-danger">
-                Delete &quot;{categoryToDelete.name}&quot;?
-              </p>
-              <p className="mt-1 text-xs text-foreground/80 leading-relaxed">
-                Products currently assigned to this category will automatically
-                be moved to <strong>{UNCATEGORIZED}</strong>.
-              </p>
-              <div className="mt-3 flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="danger"
-                  disabled={isBusy}
-                  onClick={() => void handleDeleteCategory(categoryToDelete)}
-                  className="rounded-lg px-3 py-1.5 text-xs font-bold"
-                >
-                  {isBusy ? 'Deleting…' : 'Yes, Delete'}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={isBusy}
-                  onClick={() => setCategoryToDelete(null)}
-                  className="rounded-lg px-3 py-1.5 text-xs font-bold"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          ) : null}
-
-          {/* Category List */}
-          <div className="flex flex-col gap-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-muted">
-              Current Categories ({categories.length})
-            </label>
-            <div className="max-h-60 divide-y divide-border/60 overflow-y-auto rounded-xl border border-border bg-mist/40">
-              {categories.map((cat) => {
-                const count = categoryCounts.get(cat.category_id) ?? 0;
-                const isUncategorized = cat.name === UNCATEGORIZED;
-
-                return (
-                  <div
-                    key={cat.category_id}
-                    className="flex items-center justify-between p-3"
-                  >
-                    <div className="flex items-center gap-2">
-                      <TagIcon className="h-4 w-4 text-pine" />
-                      <span className="text-sm font-bold text-foreground">
-                        {cat.name}
-                      </span>
-                      <span className="rounded-full bg-mist px-2 py-0.5 text-xs font-semibold text-muted border border-border">
-                        {count} {count === 1 ? 'item' : 'items'}
-                      </span>
-                    </div>
-
-                    {!isUncategorized ? (
-                      <button
-                        type="button"
-                        onClick={() => setCategoryToDelete(cat)}
-                        disabled={isBusy}
-                        title={`Delete ${cat.name}`}
-                        className="rounded-lg p-1.5 text-muted transition-colors hover:bg-danger/10 hover:text-danger"
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
-                    ) : (
-                      <span className="text-[11px] font-semibold text-muted italic">
-                        Default
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </Modal>
 
       {/* 6. View Product Details Modal Dialog */}
       <Modal

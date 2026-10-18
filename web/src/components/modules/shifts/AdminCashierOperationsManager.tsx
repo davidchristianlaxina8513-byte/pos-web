@@ -53,7 +53,7 @@ export function AdminCashierOperationsManager({
 
   // Filters for Turnovers
   const [turnoverStatusFilter, setTurnoverStatusFilter] = useState<
-    'all' | 'pending' | 'verified' | 'flagged'
+    'all' | 'pending' | 'verified' | 'flagged' | 'discrepancy'
   >('all');
   const [turnoverSearch, setTurnoverSearch] = useState('');
   const [turnoverSortField, setTurnoverSortField] =
@@ -122,8 +122,14 @@ export function AdminCashierOperationsManager({
   const filteredTurnovers = useMemo(() => {
     return turnovers
       .filter((t) => {
-        if (turnoverStatusFilter !== 'all' && t.status !== turnoverStatusFilter)
+        if (turnoverStatusFilter === 'discrepancy') {
+          if (Math.abs(t.variance) < 0.01) return false;
+        } else if (
+          turnoverStatusFilter !== 'all' &&
+          t.status !== turnoverStatusFilter
+        ) {
           return false;
+        }
         if (turnoverSearch.trim()) {
           const q = turnoverSearch.toLowerCase();
           const matchCashier = t.cashier_name.toLowerCase().includes(q);
@@ -249,7 +255,14 @@ export function AdminCashierOperationsManager({
       {/* 4 Summary KPI Metric Cards */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {/* Active Registers */}
-        <div className="relative overflow-hidden rounded-xl border border-border bg-surface p-5 sm:p-6 shadow-sm">
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('shifts');
+            setShiftStatusFilter('open');
+          }}
+          className="relative text-left overflow-hidden rounded-xl border border-border bg-surface p-5 sm:p-6 shadow-sm transition hover:border-pine/40 hover:shadow"
+        >
           <div className="absolute right-3 top-3 rounded-lg bg-mist p-2 text-foreground">
             <UsersIcon className="h-5 w-5" />
           </div>
@@ -270,17 +283,22 @@ export function AdminCashierOperationsManager({
           <p className="mt-1 text-xs text-muted">
             {activeShiftsCount === 0
               ? 'No open cashier shifts'
-              : `${activeShiftsCount} cashier${activeShiftsCount > 1 ? 's' : ''} currently on duty`}
+              : `${activeShiftsCount} cashier${activeShiftsCount > 1 ? 's' : ''} currently on duty (click to view)`}
           </p>
-        </div>
+        </button>
 
         {/* Turnovers Pending Review */}
-        <div
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('turnovers');
+            setTurnoverStatusFilter('pending');
+          }}
           className={cn(
-            'relative overflow-hidden rounded-xl border p-5 sm:p-6 shadow-sm transition-colors',
+            'relative text-left overflow-hidden rounded-xl border p-5 sm:p-6 shadow-sm transition hover:shadow',
             pendingTurnoversCount > 0
-              ? 'border-amber-500/30 bg-surface'
-              : 'border-border bg-surface',
+              ? 'border-amber-500/40 bg-surface hover:border-amber-500'
+              : 'border-border bg-surface hover:border-pine/40',
           )}
         >
           <div
@@ -314,9 +332,11 @@ export function AdminCashierOperationsManager({
             )}
           </div>
           <p className="mt-1 text-xs text-muted">
-            Awaiting manager verification
+            {pendingTurnoversCount === 0
+              ? 'All turnovers reviewed'
+              : 'Awaiting manager verification (click to review)'}
           </p>
-        </div>
+        </button>
 
         {/* Total Counted Cash */}
         <div className="relative overflow-hidden rounded-xl border border-border bg-surface p-5 sm:p-6 shadow-sm">
@@ -338,22 +358,55 @@ export function AdminCashierOperationsManager({
         </div>
 
         {/* Discrepancies Count */}
-        <div className="relative overflow-hidden rounded-xl border border-border bg-surface p-5 sm:p-6 shadow-sm">
-          <div className="absolute right-3 top-3 rounded-lg bg-mist p-2 text-foreground">
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('turnovers');
+            setTurnoverStatusFilter('discrepancy');
+          }}
+          className={cn(
+            'relative text-left overflow-hidden rounded-xl border p-5 sm:p-6 shadow-sm transition hover:shadow',
+            discrepancyCount > 0
+              ? 'border-rose-500/40 bg-surface hover:border-rose-500'
+              : 'border-border bg-surface hover:border-pine/40',
+          )}
+        >
+          <div
+            className={cn(
+              'absolute right-3 top-3 rounded-lg p-2',
+              discrepancyCount > 0
+                ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                : 'bg-mist text-foreground',
+            )}
+          >
             <ExclamationTriangleIcon className="h-5 w-5" />
           </div>
           <span className="text-xs font-semibold uppercase tracking-wider text-muted">
             Discrepant Turnovers
           </span>
-          <div className="mt-2 text-2xl font-black text-foreground">
-            {discrepancyCount}
+          <div className="mt-2 flex items-center gap-2">
+            <span
+              className={cn(
+                'text-2xl font-black',
+                discrepancyCount > 0
+                  ? 'text-rose-600 dark:text-rose-400'
+                  : 'text-foreground',
+              )}
+            >
+              {discrepancyCount}
+            </span>
+            {discrepancyCount > 0 && (
+              <span className="inline-flex rounded-full bg-rose-500/10 px-2 py-0.5 text-[11px] font-bold text-rose-700 dark:text-rose-400">
+                Variance
+              </span>
+            )}
           </div>
           <p className="mt-1 text-xs text-muted">
             {discrepancyCount === 0
-              ? 'All drawer turn overs balanced'
-              : 'Turnovers with cash variance / shortage'}
+              ? 'All drawer turnovers balanced'
+              : 'Turnovers with variance / shortage (click to filter)'}
           </p>
-        </div>
+        </button>
       </div>
 
       {/* Main Operations Container */}
@@ -455,6 +508,18 @@ export function AdminCashierOperationsManager({
                     )}
                   >
                     Flagged
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTurnoverStatusFilter('discrepancy')}
+                    className={cn(
+                      'rounded px-2.5 py-1.5 transition-colors',
+                      turnoverStatusFilter === 'discrepancy'
+                        ? 'bg-rose-600 text-surface font-semibold'
+                        : 'text-muted hover:text-foreground',
+                    )}
+                  >
+                    Discrepancies ({discrepancyCount})
                   </button>
                 </div>
 
@@ -1028,12 +1093,14 @@ export function AdminCashierOperationsManager({
         >
           <div className="space-y-4">
             {/* Warning banner */}
-            <div className="flex items-start gap-3 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-amber-900 dark:text-amber-200">
+            <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5">
               <ExclamationTriangleIcon className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
-              <div className="text-xs">
-                <span className="font-bold">Audit Alert:</span> Flagging this
-                turnover marks it for supervisor review and notifies management
-                of the drawer cash variance.
+              <div className="text-xs leading-relaxed text-foreground">
+                <span className="font-bold text-amber-800 dark:text-amber-300">
+                  Audit Alert:
+                </span>{' '}
+                Flagging this turnover marks it for supervisor review and
+                notifies management of the drawer cash variance.
               </div>
             </div>
 

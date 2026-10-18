@@ -8,7 +8,14 @@ export async function voidTransaction(
   transactionId: string,
   reason: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  await requireStaff();
+  const profile = await requireStaff();
+  if (profile.role !== 'admin') {
+    return {
+      ok: false,
+      error:
+        'Only managers or supervisors are authorized to void transactions.',
+    };
+  }
   if (!transactionId || !reason.trim())
     return { ok: false, error: 'A void reason is required.' };
   const supabase = await createClient();
@@ -19,15 +26,14 @@ export async function voidTransaction(
   if (error)
     return {
       ok: false,
-      error: error.message.includes('Not authorized')
-        ? 'You can void only your own sales.'
-        : 'Could not void this transaction.',
+      error: error.message || 'Could not void this transaction.',
     };
   for (const path of [
     '/daily-sales',
     '/admin/reports',
     '/today-products',
     '/pos',
+    `/pos/receipt/${transactionId}`,
     '/dashboard',
     '/cash-turnover',
     '/cashier-operations',

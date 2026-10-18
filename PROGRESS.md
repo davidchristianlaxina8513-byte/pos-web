@@ -8,6 +8,45 @@ The web application now uses daily product quotas as its only availability mecha
 
 ## Modern Dashboard and POS Redesign (2026-10-17)
 
+- **Transaction-Level Void, Order Fulfillment Lifecycle, Cart Autosave & Shift Recovery (2026-10-18)**:
+  - **1. Void at Transaction Level (Read-Only Daily Sales)**:
+    - Shifted void operations strictly to individual transactions (accessible from Receipt/Transaction view) rather than the Daily Sales summary.
+    - Made Daily Sales view strictly read-only by removing the void button and rendering clean status badges; updated gross and net calculations to exclude voided and cancelled orders.
+    - Updated `void_sale` RPC to restrict voiding exclusively to manager/admin roles, require an audit reason, record `voided_by`, `voided_at`, and log `product_sale_voided` event to `audit_log`.
+    - Added [`ReceiptOrderActions`](web/src/components/modules/pos/ReceiptOrderActions.tsx) with a manager-authorized Void confirmation modal on the receipt view.
+  - **2. Order Fulfillment Status (Pending Until Fulfilled)**:
+    - Updated transactions status check constraint to support fulfillment stages: `'pending'`, `'preparing'`, `'ready'`, `'completed'`, `'cancelled'`, and `'voided'`.
+    - Newly placed orders enter as `pending` upon checkout completion.
+    - Built [`update_order_status`](supabase/migrations/0015_order_fulfillment_and_cart_autosave.sql) RPC enforcing transition rules and recording status updates in `audit_log`.
+    - Created [`ActiveOrdersModal`](web/src/components/modules/pos/ActiveOrdersModal.tsx) displaying live orders (`pending`, `preparing`, `ready`) with item breakdown, elapsed time, and one-click quick progression buttons (`Start Preparing`, `Mark Ready`, `Mark Served / Fulfilled`).
+    - Configured daily sales aggregation to treat all non-voided, non-cancelled orders (`pending`, `preparing`, `ready`, `completed`) as active revenue since payment is collected at checkout.
+  - **3. Cart Autosave & Idempotency**:
+    - Created `cart_drafts` table with RLS for cashier and admin workstations.
+    - Added resilient dual-layer persistence in [`PosScreen.tsx`](web/src/components/modules/pos/PosScreen.tsx): instant local fallback in `localStorage` coupled with debounced database synchronization (`saveCartDraft`).
+    - Added real-time visual save status indicator in [`CartPanel.tsx`](web/src/components/modules/pos/CartPanel.tsx) (`Saving...`, `Saved`, `Saved locally`).
+    - Enforced checkout idempotency using client-generated transaction IDs (`clientTxnIdRef = useRef(crypto.randomUUID())`) in [`CheckoutDialog.tsx`](web/src/components/modules/pos/CheckoutDialog.tsx) and `process_sale` RPC to eliminate duplicate transactions on retries.
+  - **4. Shift Recovery & Persistence**:
+    - Updated [`getCurrentShift()`](web/src/features/shifts/queries.ts) to prioritize recovering existing `status = 'open'` shifts on page load, reload, or crash.
+    - Added database partial unique index `cashier_one_open_shift` preventing multiple open shifts per cashier.
+    - Displayed active shift recovery banner in POS with start time, opening cash, and quick link to cashier operations.
+    - Updated `submit_cash_turnover` RPC and shift cash calculations to account for all active non-voided/non-cancelled cash transactions.
+  - **5. Component Standardization & Box Sizing Alignment**:
+    - Standardized `ActiveOrdersModal.tsx` sizing from an oversized `4xl` dialog down to `size="2xl"`, eliminating the horizontally stretched empty box.
+    - Replaced ad-hoc filter pills with the authentic DCASIS filter chips pattern (`action-focus inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-semibold`) matching `UsersManager.tsx` and `ProductQuotaList.tsx`.
+    - Swapped raw HTML buttons and link buttons across `ActiveOrdersModal.tsx`, `PosScreen.tsx`, and `ReceiptOrderActions.tsx` to the standard [`Button`](web/src/components/form/Button.tsx) component (`variant="primary" | "secondary" | "danger" | "ghost"`).
+    - Standardized order and status containers to use the shared [`Card`](web/src/components/common/Card.tsx) component.
+  - **6. Receipt Page UI Streamlining & Redundant Fulfillment Card Removal**:
+    - Removed the redundant floating "Order Fulfillment Status" card on completed orders, eliminating visual clutter and awkward 2-line badge wraps.
+    - Integrated clean, compact order status pill badges directly in the receipt card (`Completed`, `Ready for Pickup`, `Preparing`, `Pending`, `Voided`).
+    - Gated active fulfillment progression cards strictly to pending/active orders (`!isTerminal`).
+    - Positioned primary POS navigation (`+ New Transaction`, `Print`) directly beneath the receipt card with a discreet, clean manager action link (`Void Transaction (Manager Authorization)`) for admins.
+  - **7. Admin Operations & Flow Streamlining**:
+    - **Reports Ledger True Order Status**: Updated [`TransactionReviewTable.tsx`](web/src/components/modules/reports/TransactionReviewTable.tsx) to display real fulfillment lifecycle statuses (`Pending`, `Preparing`, `Ready`, `Completed`, `Voided`, `Cancelled`) with color-coded badges and icons instead of binary status.
+    - **Catalog vs Daily Quota Cross-Linking**: Added reciprocal guidance banners and buttons between [`MenuManager.tsx`](web/src/components/modules/menu/MenuManager.tsx) (`/admin/menu`) and [`today-products/page.tsx`](web/src/app/today-products/page.tsx) (`/today-products`) clarifying master catalog pricing/recipes vs daily live portion availability.
+    - **Live Register Operations Widget & Operations Pulse**: Added a dedicated "Live Register Operations" card to [`admin/page.tsx`](web/src/app/admin/page.tsx) tracking cashiers currently on duty, opening drawer cash, and start times. Upgraded needs-attention alerts into discrete, 1-click action chips for sold out products, low stock, pending turnovers, cash discrepancies, and pending payments.
+    - **Interactive Cashier Operations & Discrepancies Filter**: Updated [`AdminCashierOperationsManager.tsx`](web/src/components/modules/shifts/AdminCashierOperationsManager.tsx) with a `Discrepancies ({count})` filter tab and converted summary KPI metric cards into 1-click quick-filter triggers.
+    - **Modal & Receipt Void Reason Text Contrast & Tailwind v4 Dark Variant**: Fixed illegible light text inside warning and void reason banners by defining `@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));` in `globals.css` (preventing OS dark mode media queries from leaking into light theme mode) and upgrading banner body text to high-contrast `text-foreground` across [`pos/receipt/[id]/page.tsx`](web/src/app/pos/receipt/[id]/page.tsx), [`TransactionReviewTable.tsx`](web/src/components/modules/reports/TransactionReviewTable.tsx), [`AdminCashierOperationsManager.tsx`](web/src/components/modules/shifts/AdminCashierOperationsManager.tsx), and [`TurnoverList.tsx`](web/src/components/modules/shifts/TurnoverList.tsx).
+
 - **Simplified Dashboard with Styled Welcome Card**:
   - Streamlined both Admin and Cashier Dashboards to eliminate information overload while delivering a clean, elevated layout.
   - Upgraded the welcome section from bare text into a styled surface card with rounded corners (`rounded-2xl`), subtle borders, a `border-l-4 border-l-pine` accent bar, soft shadow, icon badge, live role/session indicator, and direct "Open Register" CTA.
@@ -42,9 +81,11 @@ The web application now uses daily product quotas as its only availability mecha
     - **`MenuCatalogSkeleton`**: 4 catalog cards + search & availability filter bar + product table with thumbnails (`/admin/menu`).
     - **`UsersSkeleton`**: 4 staff KPI cards + 2-column split (Add Staff form card on left, Staff Roster table on right) (`/admin/users`).
     - **`CashierOperationsSkeleton`**: 4 operations KPI cards + tab bar + shifts and turnover ledger (`/admin/cashier-operations`, `/cashier-operations`, `/my-shift`, `/admin/shifts`, `/admin/cash-turnovers`, `/cash-turnover`).
+    - **`FormSkeleton`**: Overhauled to match the authentic full-width 4-section DCASIS form architecture (General Information 1/3 instruction + 2/3 card, Product Photo upload box, Register Availability radio cards, Daily Stock Quota preset pills & input, and Cancel/Save buttons) (`/admin/menu/product/new`, `/admin/menu/product/[id]`).
     - **`SettingsSkeleton`**: Account profile info card + password card + display preferences card (`/admin/settings`, `/profile`).
     - **`ReceiptSkeleton`**: Centered thermal receipt card with header, dashed lines, and print button (`/pos/receipt/[id]`).
-  - Created and wired dedicated `loading.tsx` routes across all admin and cashier sub-paths.
+  - Standardized `StaffShellSkeleton` to support dynamic `headerActionCount` (defaulting to 1), perfectly matching routes with single header CTA buttons (`Back to Menu`, `+ Add Product`, `Print Report`).
+  - Wired direct `DashboardSkeleton` imports in `web/src/app/admin/loading.tsx` and `web/src/app/dashboard/loading.tsx`.
 - **POS Checkout Modal Streamlining & Expansion (`/pos`)**:
   - Upgraded shared [`Modal.tsx`](web/src/components/modal/Modal.tsx) with a responsive `size` variant prop (`'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl'`, defaulting to `'md'` = `sm:max-w-md`), ensuring 100% backward compatibility with all dialogs across the system while allowing wide modals when required.
   - Expanded the checkout dialog ([`CheckoutDialog.tsx`](web/src/components/modules/pos/CheckoutDialog.tsx)) to `size="4xl"` (`sm:max-w-4xl`), resolving the cramped layout when processing orders with many items.
@@ -71,6 +112,19 @@ The web application now uses daily product quotas as its only availability mecha
         - Removed full-screen grey background, oversized margins, navigation links, and screen buttons during printing.
         - Injected print-only store header ("CAFE ELVIRA · Official Sales Receipt") and footer ("Thank you for your visit! · Please come again").
         - Forced monochrome black text and dashed dividers for sharp, legible thermal printing.
+    - **Authentic DCASIS Athlete Form Architecture (`/admin/menu/product/new` & `/admin/menu/product/[id]`)**:
+      - Rebuilt [`ProductForm.tsx`](web/src/components/modules/menu/ProductForm.tsx) to exactly mirror the user's authentic DCASIS athlete form architecture (`4QDH.vue` / Tailwind UI stacked form):
+        - Full-width container (`fullWidth={true}` on `StaffShell` in `/admin/menu/product/new` and `/admin/menu/product/[id]`) expanding across the screen without artificial `max-w-7xl` or `max-w-md` constraints.
+        - Horizontal divider lines (`divide-y divide-gray-900/10`) applied directly to the `<form>` element separating every major section.
+        - Stripped rogue `dark:` utility classes (`dark:bg-[#1c251e]`, `dark:text-gray-100`, etc.) that were triggered by system-level dark mode preferences, ensuring cards render clean white with high-contrast text matching the DCASIS template.
+        - Each section formatted in a 3-column responsive grid (`grid grid-cols-1 gap-x-8 gap-y-8 py-10 md:grid-cols-3`):
+          - **Left Column (1/3 width, `px-4 sm:px-0`)**: Section title (`text-base font-semibold leading-7 text-gray-900`) and detailed instructions / description (`text-sm leading-6 text-gray-600`).
+          - **Right Column (2/3 width, `bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2 px-4 py-6 sm:p-8`)**: Elevated white card container holding the interactive form fields in a 2-column subgrid.
+        - **Section 1: General Information**: Product name (`sm:col-span-2`), menu category dropdown with right-aligned "Add new category" trigger link and creation modal directly modeled after the authentic DCASIS athlete modal flow (`C3A1.vue`), dynamic instant selection without page reload, and selling price with `₱` input adornment.
+        - **Section 2: Product Photo**: Square preview container, "Select photo" / "Change photo" file trigger, "Remove" button, upload progress overlay, and format guidelines.
+        - **Section 3: Register Availability**: DCASIS segmented toggle buttons (`Active on POS` with emerald ring/dot vs `Hidden from POS` with slate dot) and explanation.
+        - **Section 4: Daily Production Quota**: Quick-preset quota pills (`Unlimited`, `10`, `25`, `50`, `100 units`), custom daily quota numeric input, and POS inventory decrementation rule callout.
+        - **Footer Actions**: Right-aligned Cancel and Submit (`Submit` / `Save Changes`) buttons, with left-aligned `Delete Product` confirmation dialog when editing.
 - **Unified DCASIS Header & Breadcrumb Banner (System-Wide)**:
   - Replaced the boxed card banners across `/admin/menu`, `/today-products`, and module views with the authentic DCASIS page header design directly modeled after `sports-client`.
   - Built a shared `Breadcrumbs` component (`web/src/components/common/Breadcrumbs.tsx`) matching `sports-client/components/breadcrumbs/index.vue` with `HomeIcon` (`/dashboard` or `/admin`), `ChevronRightIcon`, and bold current route state.
@@ -84,7 +138,7 @@ The web application now uses daily product quotas as its only availability mecha
   - Updated [`SidebarSkeleton`](web/src/components/loader/LoadingSkeleton.tsx) and [`StaffShellSkeleton`](web/src/components/loader/LoadingSkeleton.tsx) to align with the top-right user profile header layout for seamless loading feedback.
 - **Menu & Catalog Management Redesign (`/admin/menu`)**:
   - Expanded layout to full width (`fullWidth={true}` in `StaffShell`) to eliminate the narrow mobile column on desktop and provide a unified dashboard feel.
-  - Implemented authentic DCASIS breadcrumbs and header banner with quick action buttons ("+ Add Product" and "Manage Categories").
+  - Implemented authentic DCASIS breadcrumbs and header banner with quick action button ("+ Add Product"). Category management was streamlined and moved directly inside the product form's category creator modal.
   - Added 4 real-time KPI overview cards: Total Catalog count, Active on POS, Hidden Products, and Category groupings.
   - Built an interactive search and filter bar with real-time text query, category pills with count badges, availability filter chips (All / Available / Hidden), and a View Switcher (Table View vs Card Grid View).
   - Designed an intuitive, clean **Table View** showing actual product image thumbnails, category tags, price tags, POS availability status badges, daily quota limits, and a full action trio: **View** (`EyeIcon`), **Edit** (`PencilSquareIcon`), and **Delete** (`TrashIcon`).
@@ -93,7 +147,29 @@ The web application now uses daily product quotas as its only availability mecha
   - Implemented a dedicated **View Product Details Modal** displaying full-resolution photo preview, pricing, category tag, POS availability status, and inventory metrics (Today's quota, units sold today, and units remaining).
   - Implemented a safe **Delete Product Confirmation Modal** verifying product removal, warning about sales record preservation, and dispatching DCASIS toast alerts on success/failure.
   - Replaced murky green backdrop overlay (`bg-pine-deep/50`) across modals and drawers with a clean, neutral frosted blur (`bg-black/40 backdrop-blur-sm`).
-  - Created a dedicated **Manage Categories Modal** (`Modal`) replacing the cramped bottom dropdown, supporting category creation, listing item counts per category, and safe deletion with confirmation (moving orphaned products to `Uncategorized`).
+- **Authentic DCASIS Settings Architecture (`/admin/settings`)**:
+  - Restructured `/admin/settings` to mirror the authentic full-width DCASIS form architecture:
+    - Enabled `fullWidth={true}` and standard DCASIS breadcrumbs (`Home` > `Settings`) on `StaffShell`.
+    - Implemented horizontal divider lines (`divide-y divide-gray-900/10`) separating every configuration domain.
+    - Standardized 3-column responsive layout (`grid grid-cols-1 gap-x-8 gap-y-8 py-10 md:grid-cols-3`):
+      - **Left Column (1/3 width, `px-4 sm:px-0`)**: Category title (`text-base font-semibold leading-7 text-gray-900`) and instructional description (`text-sm leading-6 text-gray-600`).
+      - **Right Column (2/3 width, `bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2 px-4 py-6 sm:p-8`)**: Elevated white card container.
+    - **Section 1: Personal Information**: Displays signed-in administrative email with helper explanation, full-access Administrator role indicator with green status dot, and a dedicated staff directory shortcut card navigating to `/admin/users`.
+    - **Section 2: Security & Password**: Standardized `PasswordSection` with `h-11 py-2.5 px-3` inputs, required labels, pine focus rings, client-side mismatch validation, and instant feedback alerts.
+    - **Section 3: Preferences & Interface Theme**: Standardized `PreferencesPanel` with sleek DCASIS switch toggles for POS alerts (order notifications and low-stock quota alerts) and pine appearance radio tiles (`light`, `dark`, `system`). Cleaned up placeholder language dropdown.
+  - Updated `SettingsSkeleton` to accurately mirror the 3-section layout geometry with `fullWidth={true}`.
+- **Rendering & Click Performance Optimizations (System-Wide)**:
+  - **Eliminated Sequential Query Waterfalls**: Replaced sequential `await requireRole()` / `await requireStaff()` blocking calls with concurrent `Promise.all()` data fetching across all server-rendered routes:
+    - Admin Dashboard (`/admin`), Menu Management (`/admin/menu`), Reports (`/admin/reports`), User Management (`/admin/users`), System Audit Log (`/admin/audit`), Cashier Operations (`/admin/cashier-operations`), Today's Products (`/today-products`), POS (`/pos`), Cashier Dashboard (`/dashboard`), Daily Sales (`/daily-sales`), Edit Product (`/admin/menu/product/[id]`), and Add Product (`/admin/menu/product/new`).
+    - Eliminates extra sequential network round trips to the remote Supabase cloud, cutting initial server response latency in half.
+  - **Reactive Active Tab & Route Hierarchy Matching**:
+    - Built [`isRouteActive`](web/src/components/layout/staff-shell.tsx) to resolve active navigation states across root routes, nested sub-routes, and related sections:
+      - Sub-routes (e.g. `/admin/menu/product/new`, `/admin/menu/product/[id]`) correctly preserve active highlight on **Menu Management**.
+      - POS receipt pages (`/pos/receipt/[id]`) preserve active highlight on **Point of Sale**.
+      - Shift and turnover pages (`/admin/shifts`, `/admin/cash-turnovers`, `/my-shift`, `/cash-turnover`) preserve active highlight on **Cashier Operations**.
+    - Implemented optimistic, zero-latency reactive active tab switching (`currentPath = navigatingHref ?? pathname`): the active green tab pill (`bg-pine text-surface shadow-xs`) instantly switches to the clicked item on click with zero delay, accompanied by an animated loading dot and the top progress bar.
+    - Added `prefetch={true}` on all sidebar navigation links.
+    - Implemented render-time state adjustment on pathname change in [`staff-shell.tsx`](web/src/components/layout/staff-shell.tsx) following React 19 standards.
 - **Reports & Sales Analytics Redesign (`/admin/reports`)**:
   - Expanded layout to full width (`fullWidth={true}` in `StaffShell`) with DCASIS breadcrumbs (`Home` > `Reports & Analytics`) and header title banner.
   - Added a dedicated "Print Summary" header action with `PrinterIcon` triggering the browser print engine for clean sales reporting.
@@ -145,6 +221,7 @@ The web application now uses daily product quotas as its only availability mecha
   - Standardized all form inputs and textareas to `h-10 rounded-md border border-border bg-white px-3 py-2 text-sm` with crisp pine focus outline and `text-xs font-semibold text-foreground mb-1` labels, completely eliminating oversized legacy "v2 mobile pill" inputs (`h-[52px] rounded-2xl bg-mist`).
   - Standardized standard action buttons to `rounded-md font-semibold text-sm` (`h-8` sm, `h-10` md, `h-11` lg), eliminating bubbly `rounded-full` form action buttons.
   - Standardized Select triggers to `h-10 rounded-md border border-border bg-white px-3 text-sm focus:border-pine focus:outline-pine` with `rounded-md border border-border bg-surface p-1 shadow-md` popover menus.
+  - Aligned Menu Category select in `ProductForm.tsx` to match the DCASIS system input/select padding (`py-2.5 pl-3 pr-10`) and height (`h-[44px]`) with `appearance-none`, pine focus ring, and clean SVG `ChevronDownIcon` replacing squished Linux browser GTK controls.
   - Standardized cards and content boxes to `rounded-xl border border-border bg-surface p-5 sm:p-6 shadow-sm` across all modules.
   - Standardized primary shell page padding in `StaffShell` (`web/src/components/layout/staff-shell.tsx`) and `StaffShellSkeleton` (`web/src/components/loader/LoadingSkeleton.tsx`) to `py-8 sm:py-10 px-4 sm:px-6 lg:px-8` matching DCASIS `layouts/main.vue`.
   - Updated all feature forms, dialogs, and controls across the application:
@@ -158,7 +235,7 @@ The web application now uses daily product quotas as its only availability mecha
     - **Authentication**: `LoginPage` (`/login`) (email, password inputs, submit button).
     - **Cashier Operations**: `AdminCashierOperationsManager.tsx` (KPI metric cards, container, search inputs, status filters, and flag discrepancy modal), `ShiftPanel.tsx`, and `TurnoverList.tsx`.
     - **Reports & Analytics**: `PrintReportButton.tsx` (standardized to `h-10 rounded-md border border-border bg-surface px-3.5 text-sm font-semibold`), `ReportsFilterBar.tsx` (Date presets pills standardized to `rounded-md p-1` container with `rounded px-3 py-1.5 text-sm font-semibold` items, More Filters button standardized to `h-10 rounded-md px-3.5 text-sm font-semibold`), advanced filter inputs, selects, and `TransactionReviewTable.tsx` (search inputs, status filters, void confirmation modal).
-    - **Menu Management**: `MenuManager.tsx` (Manage Categories and Add Product buttons standardized to `h-10 rounded-md font-semibold text-sm`, category filter pills standardized to `rounded-md px-3.5 py-2 text-sm font-semibold`, card/table view action buttons standardized to `h-8 rounded-md font-semibold text-xs`).
+    - **Menu Management**: `MenuManager.tsx` (Add Product action button standardized to `h-10 rounded-md font-semibold text-sm`; removed redundant Manage Categories button and modal as category creation is handled directly inside the Add Product page, category filter pills standardized to `rounded-md px-3.5 py-2 text-sm font-semibold`, card/table view action buttons standardized to `h-8 rounded-md font-semibold text-xs`).
     - **Header Actions Across Pages**: `today-products/page.tsx`, `admin/menu/product/new/page.tsx`, `admin/menu/product/[id]/page.tsx`, `admin/page.tsx`, and `dashboard/page.tsx` (Open Register, Menu Items, Back to Menu buttons standardized to `h-10 rounded-md font-semibold text-sm`).
     - **Stock Quotas & Quick Filters (`/today-products`)**:
       - Streamlined quick filter chips (`All Products`, `In Stock`, `Low Stock`, `Sold Out`, `Unlimited`) to clean neutral and brand-aligned styling without excessive colors or dots:

@@ -18,6 +18,7 @@ import {
   ReceiptRefundIcon,
   NoSymbolIcon,
   CheckCircleIcon,
+  ClockIcon,
   ExclamationTriangleIcon,
 } from '@/components/common/hero-icons';
 import { EmptyState } from '@/components/error/EmptyState';
@@ -512,6 +513,23 @@ export function TransactionReviewTable({
                             <NoSymbolIcon className="h-3 w-3" />
                             Voided
                           </span>
+                        ) : receipt.status === 'cancelled' ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                            Cancelled
+                          </span>
+                        ) : receipt.status === 'pending' ? (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-amber-200/80 bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold text-amber-700 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                            <ClockIcon className="h-3 w-3" />
+                            Pending
+                          </span>
+                        ) : receipt.status === 'preparing' ? (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-blue-200/80 bg-blue-50 px-2.5 py-0.5 text-[11px] font-bold text-blue-700 dark:border-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+                            Preparing
+                          </span>
+                        ) : receipt.status === 'ready' ? (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-purple-200/80 bg-purple-50 px-2.5 py-0.5 text-[11px] font-bold text-purple-700 dark:border-purple-800 dark:bg-purple-950/60 dark:text-purple-300">
+                            Ready
+                          </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
                             <CheckCircleIcon className="h-3 w-3" />
@@ -685,12 +703,14 @@ export function TransactionReviewTable({
         >
           <div className="space-y-4">
             {/* Warning banner */}
-            <div className="flex items-start gap-3 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-amber-900 dark:text-amber-200">
+            <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5">
               <ExclamationTriangleIcon className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
-              <div className="text-xs">
-                <span className="font-bold">Irreversible Action:</span> Voiding
-                this transaction will reverse revenue calculations, mark the
-                sale as voided, and adjust sales reports.
+              <div className="text-xs leading-relaxed text-foreground">
+                <span className="font-bold text-amber-800 dark:text-amber-300">
+                  Irreversible Action:
+                </span>{' '}
+                Voiding this transaction will reverse revenue calculations, mark
+                the sale as voided, and adjust sales reports.
               </div>
             </div>
 

@@ -65,6 +65,27 @@ export interface ReceiptLine {
   subtotal: number;
 }
 
+export type OrderStatus =
+  | 'pending'
+  | 'preparing'
+  | 'ready'
+  | 'completed'
+  | 'cancelled'
+  | 'voided';
+
+export interface ActiveOrder {
+  transaction_id: string;
+  transaction_number: string;
+  order_number: number | null;
+  date: string;
+  total_amount: number;
+  payment_mode: PaymentMode;
+  payment_status: PaymentStatus;
+  status: OrderStatus;
+  cashier_name: string | null;
+  items: ReceiptLine[];
+}
+
 export interface Receipt {
   transaction_id: string;
   transaction_number: string;
@@ -79,5 +100,7 @@ export interface Receipt {
   total_amount: number;
   amount_received: number | null;
   change_given: number | null;
+  status: OrderStatus;
+  void_reason?: string | null;
   items: ReceiptLine[];
 }

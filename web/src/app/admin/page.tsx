@@ -3,61 +3,84 @@ import { requireRole } from '@/features/auth/queries';
 import { getAdminTodaySummary } from '@/features/dashboard/queries';
 import { getDashboard } from '@/features/reports/queries';
 import { getTodayProductQuotas } from '@/features/quotas/queries';
+import { getAllShifts } from '@/features/shifts/queries';
 import { SalesChart } from '@/components/modules/reports/SalesChart';
 import {
   ArrowRightIcon,
   BanknotesIcon,
   CalendarDaysIcon,
   CheckCircleIcon,
+  ClockIcon,
   DocumentTextIcon,
   ExclamationTriangleIcon,
   ShoppingBagIcon,
   ShoppingCartIcon,
   Squares2X2Icon,
+  UsersIcon,
 } from '@/components/common/hero-icons';
 import { StaffShell } from '@/components/layout/staff-shell';
+import { cn } from '@/lib/cn';
 
 export default async function AdminPage() {
-  const profile = await requireRole('admin');
-  const [dashboard, quotas, today] = await Promise.all([
+  const [profile, dashboard, quotas, today, shifts] = await Promise.all([
+    requireRole('admin'),
     getDashboard(),
     getTodayProductQuotas(),
     getAdminTodaySummary(),
+    getAllShifts(),
   ]);
 
   const soldOut = quotas.filter((item) => item.status === 'sold_out');
   const almostSoldOut = quotas.filter(
     (item) => item.status === 'almost_sold_out',
   );
+  const openShifts = shifts.filter((s) => s.status === 'open');
 
-  const attention: { id: string; label: string; href: string }[] = [];
+  const attention: {
+    id: string;
+    label: string;
+    href: string;
+    tone: 'warning' | 'danger';
+  }[] = [];
+
   if (soldOut.length) {
     attention.push({
       id: 'sold-out',
-      label: `${soldOut.length} product${soldOut.length === 1 ? '' : 's'} sold out today`,
+      label: `${soldOut.length} Product${soldOut.length === 1 ? '' : 's'} Sold Out`,
       href: '/today-products',
+      tone: 'danger',
     });
   }
   if (almostSoldOut.length) {
     attention.push({
       id: 'almost-sold-out',
-      label: `${almostSoldOut.length} product${almostSoldOut.length === 1 ? '' : 's'} low on stock`,
+      label: `${almostSoldOut.length} Low Stock`,
       href: '/today-products',
+      tone: 'warning',
+    });
+  }
+  if (today.discrepancyTurnovers) {
+    attention.push({
+      id: 'discrepancies',
+      label: `${today.discrepancyTurnovers} Cash Discrepanc${today.discrepancyTurnovers === 1 ? 'y' : 'ies'}`,
+      href: '/admin/cashier-operations',
+      tone: 'danger',
+    });
+  }
+  if (today.pendingTurnovers) {
+    attention.push({
+      id: 'turnovers',
+      label: `${today.pendingTurnovers} Turnover${today.pendingTurnovers === 1 ? '' : 's'} Pending`,
+      href: '/admin/cashier-operations',
+      tone: 'warning',
     });
   }
   if (today.pendingPayments) {
     attention.push({
       id: 'pending-payments',
-      label: `${today.pendingPayments} payment${today.pendingPayments === 1 ? '' : 's'} pending verification`,
+      label: `${today.pendingPayments} Payment${today.pendingPayments === 1 ? '' : 's'} Pending`,
       href: '/admin/cashier-operations',
-    });
-  }
-  if (today.pendingTurnovers || today.discrepancyTurnovers) {
-    const count = today.pendingTurnovers + today.discrepancyTurnovers;
-    attention.push({
-      id: 'turnovers',
-      label: `${count} cash turnover${count === 1 ? '' : 's'} need review`,
-      href: '/admin/cashier-operations',
+      tone: 'warning',
     });
   }
 
@@ -118,28 +141,139 @@ export default async function AdminPage() {
           </div>
         </section>
 
-        {/* Needs Attention Alert (only shown when action required) */}
+        {/* Needs Attention Action Chips (Discrete 1-click links) */}
         {attention.length > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warning/30 bg-warning/10 p-4">
-            <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5 rounded-xl border border-warning/30 bg-warning/5 p-3.5">
+            <div className="flex items-center gap-2 mr-1">
               <ExclamationTriangleIcon className="h-5 w-5 shrink-0 text-warning" />
-              <div className="text-sm">
-                <span className="font-bold text-foreground">
-                  Action required:{' '}
-                </span>
-                <span className="text-muted">
-                  {attention.map((item) => item.label).join(' · ')}
-                </span>
-              </div>
+              <span className="text-xs font-bold uppercase tracking-wider text-warning">
+                Needs Attention:
+              </span>
             </div>
-            <Link
-              href={attention[0]?.href ?? '/today-products'}
-              className="text-xs font-bold text-pine hover:underline"
-            >
-              Review now →
-            </Link>
+            <div className="flex flex-wrap items-center gap-2">
+              {attention.map((item) => (
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold shadow-2xs transition hover:shadow-xs',
+                    item.tone === 'danger'
+                      ? 'border-danger/30 bg-surface text-danger hover:border-danger hover:bg-danger/5'
+                      : 'border-warning/30 bg-surface text-foreground hover:border-warning hover:bg-warning/5',
+                  )}
+                >
+                  <span>{item.label}</span>
+                  <span className="font-bold text-pine">→</span>
+                </Link>
+              ))}
+            </div>
           </div>
         )}
+
+        {/* Live Register Operations Widget */}
+        <section
+          aria-label="Live register operations"
+          className="rounded-2xl border border-border/80 bg-surface p-5 shadow-soft sm:p-6"
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-border/70 pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-pine/10 text-pine">
+                <UsersIcon className="h-4 w-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-bold text-foreground">
+                    Live Register Operations
+                  </h2>
+                  <span
+                    className={cn(
+                      'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold',
+                      openShifts.length > 0
+                        ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                        : 'bg-mist text-muted',
+                    )}
+                  >
+                    {openShifts.length > 0 && (
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    )}
+                    {openShifts.length === 0
+                      ? 'No active shifts'
+                      : `${openShifts.length} On Duty`}
+                  </span>
+                </div>
+                <p className="text-xs text-muted">
+                  Active cashiers, drawer opening balances, and shift monitor
+                </p>
+              </div>
+            </div>
+
+            <Link
+              href="/admin/cashier-operations"
+              className="text-xs font-bold text-pine hover:underline shrink-0"
+            >
+              Cashier &amp; Drawer Operations →
+            </Link>
+          </div>
+
+          <div className="mt-4">
+            {openShifts.length === 0 ? (
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl bg-mist/50 p-4 text-xs text-muted border border-border/60">
+                <div className="flex items-center gap-2.5">
+                  <ClockIcon className="h-4 w-4 text-muted shrink-0" />
+                  <span>
+                    No cashier shifts are currently open. Shifts automatically
+                    appear here as soon as cashiers start them at the register.
+                  </span>
+                </div>
+                <Link
+                  href="/admin/cashier-operations"
+                  className="font-bold text-pine hover:underline whitespace-nowrap"
+                >
+                  View Shift History →
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {openShifts.map((shift) => (
+                  <div
+                    key={shift.shift_id}
+                    className="flex items-center justify-between rounded-xl border border-border/80 bg-surface p-3.5 shadow-2xs hover:border-pine/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-pine/10 text-xs font-extrabold text-pine">
+                        {shift.cashier_name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-bold text-foreground text-sm">
+                          {shift.cashier_name}
+                        </p>
+                        <p className="text-[11px] text-muted flex items-center gap-1">
+                          <ClockIcon className="h-3 w-3" />
+                          Started{' '}
+                          {new Date(shift.started_at).toLocaleTimeString(
+                            'en-US',
+                            {
+                              hour: 'numeric',
+                              minute: '2-digit',
+                            },
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] font-semibold uppercase text-muted block">
+                        Opening Cash
+                      </span>
+                      <span className="text-sm font-extrabold text-foreground">
+                        ₱{shift.starting_cash.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
 
         {/* 4 Essential KPI Cards */}
         <section aria-label="Essential metrics">

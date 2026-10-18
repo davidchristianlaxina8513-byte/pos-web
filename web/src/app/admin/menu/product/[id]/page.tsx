@@ -3,7 +3,6 @@ import { notFound } from 'next/navigation';
 import { requireRole } from '@/features/auth/queries';
 import { getCategories, getEditableProduct } from '@/features/menu/queries';
 import { ProductForm } from '@/components/modules/menu/ProductForm';
-import { Card } from '@/components/common/Card';
 import { StaffShell } from '@/components/layout/staff-shell';
 
 /** v2 admin product edit (price history skipped — price is unversioned). */
@@ -12,16 +11,17 @@ export default async function EditProductPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const profile = await requireRole('admin');
   const { id } = await params;
   const productId = Number(id);
-  const [categories, product] = await Promise.all([
+  const [profile, categories, product] = await Promise.all([
+    requireRole('admin'),
     getCategories(),
     Number.isInteger(productId) ? getEditableProduct(productId) : null,
   ]);
   if (!product) notFound();
   return (
     <StaffShell
+      fullWidth={true}
       email={profile.email}
       role={profile.role}
       title={`Edit Product — ${product.name}`}

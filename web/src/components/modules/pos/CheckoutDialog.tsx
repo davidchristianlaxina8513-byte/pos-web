@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { SectionLabel } from '@/components/common/SectionLabel';
 import { Button } from '@/components/form/Button';
@@ -69,6 +69,7 @@ export function CheckoutDialog({
 }: CheckoutDialogProps) {
   const router = useRouter();
   const { errorAlert } = useAlert();
+  const clientTxnIdRef = useRef<string>(crypto.randomUUID());
   const total = cartTotal(lines);
   const [method, setMethod] = useState<PaymentMode>('cash');
   const [amountText, setAmountText] = useState('');
@@ -103,6 +104,7 @@ export function CheckoutDialog({
       amountReceived,
       paymentReference,
       evidenceData,
+      clientTxnIdRef.current,
     );
     if (!result.ok) {
       setError(result.error);

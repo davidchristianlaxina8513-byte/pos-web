@@ -4,8 +4,8 @@ import { AdminCashierOperationsManager } from '@/components/modules/shifts';
 import { StaffShell } from '@/components/layout/staff-shell';
 
 export default async function AdminCashierOperationsPage() {
-  const profile = await requireRole('admin');
-  const [shifts, turnovers] = await Promise.all([
+  const [profile, shifts, turnovers] = await Promise.all([
+    requireRole('admin'),
     getAllShifts(),
     getAllTurnovers(),
   ]);

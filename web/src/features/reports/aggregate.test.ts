@@ -13,15 +13,36 @@ import {
 } from './aggregate';
 
 const ROWS: SaleRow[] = [
-  { date: '2026-09-11T02:00:00Z', total_amount: 100, payment_mode: 'cash' },
-  { date: '2026-09-11T03:00:00Z', total_amount: 50, payment_mode: 'gcash' },
+  {
+    date: '2026-09-11T02:00:00Z',
+    total_amount: 100,
+    payment_mode: 'cash',
+    status: 'completed',
+  },
+  {
+    date: '2026-09-11T03:00:00Z',
+    total_amount: 50,
+    payment_mode: 'gcash',
+    status: 'pending',
+  },
   {
     date: '2026-09-11T04:00:00Z',
     total_amount: 999,
     payment_mode: 'cash',
     status: 'voided',
   },
-  { date: '2026-09-10T02:00:00Z', total_amount: 75, payment_mode: 'maya' },
+  {
+    date: '2026-09-11T05:00:00Z',
+    total_amount: 120,
+    payment_mode: 'cash',
+    status: 'cancelled',
+  },
+  {
+    date: '2026-09-10T02:00:00Z',
+    total_amount: 75,
+    payment_mode: 'maya',
+    status: 'ready',
+  },
 ];
 
 test('manilaDayKey buckets by Manila calendar day', () => {
@@ -31,8 +52,14 @@ test('manilaDayKey buckets by Manila calendar day', () => {
   expect(manilaDayKey('2026-09-10T17:00:00Z')).toBe('2026-09-11');
 });
 
-test('activeSales drops voided rows', () => {
-  expect(activeSales(ROWS)).toHaveLength(3);
+test('activeSales drops voided and cancelled rows while keeping active fulfillment orders', () => {
+  const active = activeSales(ROWS);
+  expect(active).toHaveLength(3);
+  expect(active.map((r) => r.status)).toEqual([
+    'completed',
+    'pending',
+    'ready',
+  ]);
 });
 
 test('resolveRange aligns presets to Manila midnights', () => {
@@ -51,10 +78,6 @@ test('resolveRange honors custom dates', () => {
   const custom = resolveRange('7d', '2026-09-01', '2026-09-05');
   expect(custom.from?.toISOString()).toBe('2026-08-31T16:00:00.000Z');
   expect(custom.to?.toISOString()).toBe('2026-09-05T16:00:00.000Z');
-});
-
-test('activeSales drops voided rows', () => {
-  expect(activeSales(ROWS)).toHaveLength(3);
 });
 
 test('buildDaySales buckets revenue and orders per Manila day', () => {

@@ -193,9 +193,12 @@ export function TurnoverList({
           title="Flag Turnover Discrepancy"
         >
           <div className="space-y-4">
-            <div className="flex items-start gap-3 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-amber-900 dark:text-amber-200">
+            <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5">
               <ExclamationTriangleIcon className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
-              <div className="text-xs">
+              <div className="text-xs leading-relaxed text-foreground">
+                <span className="font-bold text-amber-800 dark:text-amber-300">
+                  Audit Alert:
+                </span>{' '}
                 Flagging this turnover marks it for audit review and notifies
                 management of the cash variance.
               </div>

@@ -10,7 +10,13 @@ import {
   validateCheckout,
   validateOnlinePayment,
 } from './checkout';
-import type { CartLine, PaymentMode, Receipt } from './types';
+import type {
+  ActiveOrder,
+  CartLine,
+  OrderStatus,
+  PaymentMode,
+  Receipt,
+} from './types';
 
 export type CheckoutResult =
   | { ok: true; transactionId: string }
@@ -43,6 +49,7 @@ export async function checkoutSale(
   amountReceived: number | null,
   paymentReference: string,
   evidenceData: FormData | null,
+  clientTransactionId?: string,
 ): Promise<CheckoutResult> {
   const profile = await requireStaff();
   const mode = parsePaymentMode(paymentMode);
@@ -51,7 +58,7 @@ export async function checkoutSale(
   if (!validation.ok) return { ok: false, error: validation.error };
   const { items, amountReceived: received, changeGiven } = validation.value;
   const supabase = await createClient();
-  const transactionId = crypto.randomUUID();
+  const transactionId = clientTransactionId?.trim() || crypto.randomUUID();
   let evidencePath: string | null = null;
   let evidenceMime: string | null = null;
   let evidenceSize: number | null = null;
@@ -173,7 +180,7 @@ export async function getReceipt(
   const { data: txn, error: txnError } = await supabase
     .from('transactions')
     .select(
-      'id, transaction_number, order_number, date, payment_mode, payment_status, payment_reference, payment_review_note, total_amount, amount_received, change_given, user_id, user:user!transactions_user_id_fkey(username)',
+      'id, transaction_number, order_number, date, payment_mode, payment_status, payment_reference, payment_review_note, total_amount, amount_received, change_given, user_id, status, void_reason, user:user!transactions_user_id_fkey(username)',
     )
     .eq('id', transactionId)
     .maybeSingle();
@@ -255,6 +262,8 @@ export async function getReceipt(
     amount_received:
       txn.amount_received === null ? null : Number(txn.amount_received),
     change_given: txn.change_given === null ? null : Number(txn.change_given),
+    status: (txn.status as OrderStatus) || 'pending',
+    void_reason: typeof txn.void_reason === 'string' ? txn.void_reason : null,
     items,
   };
 }
@@ -302,4 +311,169 @@ export async function reviewOnlinePayment(
   revalidatePath('/admin/reports');
   revalidatePath('/admin');
   return { ok: true };
+}
+
+export async function updateOrderStatusAction(
+  transactionId: string,
+  newStatus: OrderStatus,
+  notes?: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  await requireStaff();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc('update_order_status', {
+    p_transaction_id: transactionId,
+    p_new_status: newStatus,
+    p_notes: notes?.trim() || null,
+  });
+  if (error) {
+    return {
+      ok: false,
+      error: error.message || 'Could not update order status.',
+    };
+  }
+  revalidatePath('/pos');
+  revalidatePath(`/pos/receipt/${transactionId}`);
+  revalidatePath('/today-products');
+  revalidatePath('/dashboard');
+  revalidatePath('/admin');
+  revalidatePath('/admin/reports');
+  return { ok: true };
+}
+
+export async function getActiveOrders(): Promise<ActiveOrder[]> {
+  await requireStaff();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('transactions')
+    .select(
+      `
+      id,
+      transaction_number,
+      order_number,
+      date,
+      total_amount,
+      payment_mode,
+      payment_status,
+      status,
+      user:user!transactions_user_id_fkey(username),
+      transaction_items(
+        quantity,
+        subtotal,
+        product(name)
+      )
+    `,
+    )
+    .in('status', ['pending', 'preparing', 'ready'])
+    .order('date', { ascending: true });
+
+  if (error || !data) return [];
+
+  return data.flatMap((txn) => {
+    const mode = parsePaymentMode(txn.payment_mode);
+    const paymentStatus = parsePaymentStatus(txn.payment_status);
+    if (!mode || !paymentStatus || typeof txn.transaction_number !== 'string') {
+      return [];
+    }
+    const user = txn.user as ReceiptUserRow | ReceiptUserRow[] | null;
+    const row = Array.isArray(user) ? user[0] : user;
+    const cashier_name =
+      typeof row?.username === 'string' ? row.username : null;
+
+    const items = ((txn.transaction_items ?? []) as ReceiptItemDbRow[]).flatMap(
+      (itemRow) => {
+        const qty = Number(itemRow.quantity);
+        const subtotal = Number(itemRow.subtotal);
+        const name =
+          itemRow.product && !Array.isArray(itemRow.product)
+            ? itemRow.product.name
+            : null;
+        if (!Number.isFinite(qty) || !Number.isFinite(subtotal)) return [];
+        return [
+          {
+            name: typeof name === 'string' ? name : 'Item',
+            quantity: qty,
+            subtotal,
+          },
+        ];
+      },
+    );
+
+    return [
+      {
+        transaction_id: txn.id,
+        transaction_number: txn.transaction_number,
+        order_number:
+          typeof txn.order_number === 'number' ? txn.order_number : null,
+        date: txn.date,
+        total_amount: Number(txn.total_amount),
+        payment_mode: mode,
+        payment_status: paymentStatus,
+        status: (txn.status as OrderStatus) || 'pending',
+        cashier_name,
+        items,
+      },
+    ];
+  });
+}
+
+export async function saveCartDraft(
+  draftId: string,
+  lines: CartLine[],
+): Promise<{ ok: boolean }> {
+  try {
+    const profile = await requireStaff();
+    const supabase = await createClient();
+    const { error } = await supabase.from('cart_drafts').upsert(
+      {
+        id: draftId,
+        user_id: profile.userId,
+        lines,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'id' },
+    );
+    if (error) return { ok: false };
+    return { ok: true };
+  } catch {
+    return { ok: false };
+  }
+}
+
+export async function getCartDraft(
+  draftId?: string,
+): Promise<CartLine[] | null> {
+  try {
+    const profile = await requireStaff();
+    const supabase = await createClient();
+    let query = supabase
+      .from('cart_drafts')
+      .select('lines')
+      .eq('user_id', profile.userId);
+    if (draftId) {
+      query = query.eq('id', draftId);
+    }
+    const { data, error } = await query
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error || !data || !Array.isArray(data.lines)) return null;
+    return data.lines as CartLine[];
+  } catch {
+    return null;
+  }
+}
+
+export async function clearCartDraft(draftId: string): Promise<void> {
+  try {
+    const profile = await requireStaff();
+    const supabase = await createClient();
+    await supabase
+      .from('cart_drafts')
+      .delete()
+      .eq('id', draftId)
+      .eq('user_id', profile.userId);
+  } catch {
+    // Non-blocking cleanup
+  }
 }
