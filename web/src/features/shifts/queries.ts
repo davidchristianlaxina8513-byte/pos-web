@@ -120,7 +120,7 @@ function mapTurnover(
 }
 
 export async function getMyTurnovers(): Promise<CashTurnover[]> {
-  const profile = await requireRole('cashier');
+  const profile = await requireStaff();
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('cash_turnovers')
@@ -186,7 +186,7 @@ function mapShift(
 }
 
 export async function getMyShifts(): Promise<AdminShift[]> {
-  const profile = await requireRole('cashier');
+  const profile = await requireStaff();
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('cashier_shifts')

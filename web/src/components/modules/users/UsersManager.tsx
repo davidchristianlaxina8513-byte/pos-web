@@ -267,6 +267,21 @@ export function UsersManager({ users, currentUserId }: UsersManagerProps) {
               onChange={(next) => setRole(next as UserRole)}
             />
 
+            {/* Role Capabilities Preview Card */}
+            <div className="rounded-lg border border-border/80 bg-mist/40 p-3 text-xs space-y-1.5">
+              <span className="font-bold text-foreground flex items-center gap-1.5">
+                <CheckCircleIcon className="h-3.5 w-3.5 text-pine shrink-0" />
+                {role === 'cashier'
+                  ? 'Cashier Role Capabilities'
+                  : 'Administrator Role Capabilities'}
+              </span>
+              <p className="text-muted leading-relaxed text-[11px]">
+                {role === 'cashier'
+                  ? 'Authorized for counter sales (Cash, QR Ph), starting/closing shifts, drawer reconciliation & turnovers, live kitchen order progression, daily sales inspection, and receipt printing.'
+                  : 'Full system privileges including manager void authorization, cash turnover review & verification, menu and recipe pricing, daily quota allocations, staff account management, and financial audit logs.'}
+              </p>
+            </div>
+
             {error ? (
               <div
                 role="alert"

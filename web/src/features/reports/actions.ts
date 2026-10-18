@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { requireStaff } from '@/features/auth/queries';
+import { setFulfillmentStatus } from '@/features/pos/fulfillment-store';
 
 export async function voidTransaction(
   transactionId: string,
@@ -28,6 +29,7 @@ export async function voidTransaction(
       ok: false,
       error: error.message || 'Could not void this transaction.',
     };
+  setFulfillmentStatus(transactionId, 'voided', reason.trim());
   for (const path of [
     '/daily-sales',
     '/admin/reports',

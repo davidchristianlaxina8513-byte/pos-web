@@ -5,6 +5,7 @@ import { requireStaff } from '@/features/auth/queries';
 import { PaymentEvidenceActions } from '@/components/modules/pos/PaymentEvidenceActions';
 import { Card } from '@/components/common/Card';
 import { CheckIcon } from '@/components/common/icons';
+import { NoSymbolIcon } from '@/components/common/hero-icons';
 import { cn } from '@/lib/cn';
 import { PrintButton } from './print-button';
 import { ReceiptOrderActions } from '@/components/modules/pos/ReceiptOrderActions';
@@ -52,22 +53,43 @@ export default async function ReceiptPage({
         </div>
 
         <div className="mt-4 flex flex-col items-center text-center print:hidden">
-          <span
-            aria-hidden="true"
-            className="flex h-20 w-20 items-center justify-center rounded-full bg-mint text-pine-deep"
-          >
-            <CheckIcon className="h-9 w-9" />
-          </span>
-          <h1 className="mt-4 text-2xl font-extrabold tracking-tight text-pine-deep">
-            {isPaymongo
-              ? 'Payment Successful'
-              : receipt.payment_status === 'pending_verification'
-                ? 'Payment Evidence Submitted'
-                : receipt.payment_status === 'rejected'
-                  ? 'Payment Requires Attention'
-                  : 'Payment Successful'}
-          </h1>
-          <p className="mt-1 text-sm text-muted">Thank you for your visit!</p>
+          {receipt.status === 'voided' ? (
+            <>
+              <span
+                aria-hidden="true"
+                className="flex h-20 w-20 items-center justify-center rounded-full border border-border/80 bg-mist text-muted"
+              >
+                <NoSymbolIcon className="h-9 w-9 text-muted" />
+              </span>
+              <h1 className="mt-4 text-2xl font-extrabold tracking-tight text-foreground">
+                Transaction Voided
+              </h1>
+              <p className="mt-1 text-sm text-muted">
+                This transaction has been voided and excluded from sales.
+              </p>
+            </>
+          ) : (
+            <>
+              <span
+                aria-hidden="true"
+                className="flex h-20 w-20 items-center justify-center rounded-full bg-mint text-pine-deep"
+              >
+                <CheckIcon className="h-9 w-9" />
+              </span>
+              <h1 className="mt-4 text-2xl font-extrabold tracking-tight text-pine-deep">
+                {isPaymongo
+                  ? 'Payment Successful'
+                  : receipt.payment_status === 'pending_verification'
+                    ? 'Payment Evidence Submitted'
+                    : receipt.payment_status === 'rejected'
+                      ? 'Payment Requires Attention'
+                      : 'Payment Successful'}
+              </h1>
+              <p className="mt-1 text-sm text-muted">
+                Thank you for your visit!
+              </p>
+            </>
+          )}
         </div>
 
         <Card className="pos-receipt-print mt-6 rounded-card border-border shadow-soft print:mt-0 print:rounded-none print:border-none print:shadow-none print:p-0 print:bg-white">
@@ -76,7 +98,11 @@ export default async function ReceiptPage({
             <h2 className="text-sm font-black tracking-wider uppercase">
               CAFE ELVIRA
             </h2>
-            <p className="text-[10px] font-medium">Official Sales Receipt</p>
+            <p className="text-[10px] font-medium">
+              {receipt.status === 'voided'
+                ? '*** VOIDED RECEIPT ***'
+                : 'Official Sales Receipt'}
+            </p>
           </div>
 
           <div className="flex items-start justify-between gap-3">
@@ -134,7 +160,14 @@ export default async function ReceiptPage({
             </div>
             <div className="mt-1 flex items-center justify-between">
               <span className="text-base font-bold">Total</span>
-              <span className="text-lg font-extrabold text-leaf">
+              <span
+                className={cn(
+                  'text-lg font-extrabold',
+                  receipt.status === 'voided'
+                    ? 'text-muted line-through'
+                    : 'text-leaf',
+                )}
+              >
                 ₱{receipt.total_amount.toFixed(2)}
               </span>
             </div>
@@ -152,10 +185,17 @@ export default async function ReceiptPage({
               <span className="text-xs font-semibold tracking-wider text-muted uppercase">
                 Payment status
               </span>
-              <span className="font-semibold text-leaf">
-                {isPaymongo
-                  ? 'Paid'
-                  : PAYMENT_STATUS_LABELS[receipt.payment_status]}
+              <span
+                className={cn(
+                  'font-semibold',
+                  receipt.status === 'voided' ? 'text-muted' : 'text-leaf',
+                )}
+              >
+                {receipt.status === 'voided'
+                  ? 'Voided'
+                  : isPaymongo
+                    ? 'Paid'
+                    : PAYMENT_STATUS_LABELS[receipt.payment_status]}
               </span>
             </div>
             <div className="mt-1 flex items-center justify-between">
@@ -172,7 +212,7 @@ export default async function ReceiptPage({
                       : receipt.status === 'preparing'
                         ? 'border-blue-300 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/60 dark:text-blue-300'
                         : receipt.status === 'voided'
-                          ? 'border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
+                          ? 'border-neutral-300 bg-neutral-100 text-neutral-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300'
                           : receipt.status === 'cancelled'
                             ? 'border-neutral-300 bg-neutral-100 text-neutral-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300'
                             : 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-300',
@@ -183,10 +223,8 @@ export default async function ReceiptPage({
             </div>
 
             {receipt.status === 'voided' && receipt.void_reason ? (
-              <div className="mt-3 rounded-lg border border-rose-300/80 bg-rose-50 p-2.5 text-xs text-foreground dark:border-rose-900/60 dark:bg-rose-950/40">
-                <span className="font-bold text-rose-700 dark:text-rose-400">
-                  Void Reason:{' '}
-                </span>
+              <div className="mt-2.5 rounded-md border border-border bg-mist/50 p-2.5 text-xs text-foreground">
+                <span className="font-semibold text-muted">Void Reason: </span>
                 <span className="text-foreground font-medium">
                   {receipt.void_reason}
                 </span>
@@ -216,10 +254,12 @@ export default async function ReceiptPage({
                     {receipt.payment_reference ?? '—'}
                   </span>
                 </div>
-                <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-leaf">
-                  <span className="inline-block h-2 w-2 rounded-full bg-leaf" />
-                  Verified via PayMongo QR Ph
-                </div>
+                {receipt.status !== 'voided' ? (
+                  <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-leaf">
+                    <span className="inline-block h-2 w-2 rounded-full bg-leaf" />
+                    Verified via PayMongo QR Ph
+                  </div>
+                ) : null}
               </div>
             ) : (
               <>

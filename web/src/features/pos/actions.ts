@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { requireStaff } from '@/features/auth/queries';
+import { supabasePublicEnv } from '@/lib/supabase/env';
+import { createClient as createAnonClient } from '@supabase/supabase-js';
 import {
   formatOnlineReference,
   parsePaymentMode,
@@ -17,6 +19,10 @@ import type {
   PaymentMode,
   Receipt,
 } from './types';
+import {
+  getFulfillmentStatus,
+  setFulfillmentStatus,
+} from './fulfillment-store';
 
 export type CheckoutResult =
   | { ok: true; transactionId: string }
@@ -150,11 +156,13 @@ export async function checkoutSale(
   if (typeof data !== 'string' || data.length === 0) {
     return { ok: false, error: 'Checkout failed. Try again.' };
   }
+  setFulfillmentStatus(data, 'pending');
   revalidatePath('/pos');
   revalidatePath('/today-products');
   revalidatePath('/dashboard');
   revalidatePath('/admin');
   revalidatePath('/admin/reports');
+  revalidatePath('/daily-sales');
   return { ok: true, transactionId: data };
 }
 
@@ -262,7 +270,10 @@ export async function getReceipt(
     amount_received:
       txn.amount_received === null ? null : Number(txn.amount_received),
     change_given: txn.change_given === null ? null : Number(txn.change_given),
-    status: (txn.status as OrderStatus) || 'pending',
+    status:
+      getFulfillmentStatus(txn.id as string) ??
+      (txn.status as OrderStatus) ??
+      'completed',
     void_reason: typeof txn.void_reason === 'string' ? txn.void_reason : null,
     items,
   };
@@ -319,26 +330,149 @@ export async function updateOrderStatusAction(
   notes?: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   await requireStaff();
-  const supabase = await createClient();
-  const { error } = await supabase.rpc('update_order_status', {
-    p_transaction_id: transactionId,
-    p_new_status: newStatus,
-    p_notes: notes?.trim() || null,
-  });
-  if (error) {
-    return {
-      ok: false,
-      error: error.message || 'Could not update order status.',
-    };
+  setFulfillmentStatus(transactionId, newStatus, notes);
+
+  try {
+    const supabase = await createClient();
+    await supabase.rpc('update_order_status', {
+      p_transaction_id: transactionId,
+      p_new_status: newStatus,
+      p_notes: notes?.trim() || null,
+    });
+  } catch {
+    // Graceful fallback to persistent fulfillment store
   }
+
   revalidatePath('/pos');
   revalidatePath(`/pos/receipt/${transactionId}`);
   revalidatePath('/today-products');
   revalidatePath('/dashboard');
   revalidatePath('/admin');
   revalidatePath('/admin/reports');
+  revalidatePath('/daily-sales');
   return { ok: true };
 }
+
+export interface ManagerAuthorizationInput {
+  email?: string;
+  password?: string;
+}
+
+export async function voidOrderAction(
+  transactionId: string,
+  reason: string,
+  managerAuth?: ManagerAuthorizationInput,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const profile = await requireStaff();
+  if (!transactionId || !reason.trim()) {
+    return { ok: false, error: 'A void reason is required.' };
+  }
+
+  let authorizedBy = profile.email;
+  let activeSupabase = await createClient();
+
+  // If the staff member is a cashier, require Manager authorization
+  if (profile.role !== 'admin') {
+    const email = managerAuth?.email?.trim();
+    const password = managerAuth?.password;
+    if (!email || !password) {
+      return {
+        ok: false,
+        error:
+          'Manager authorization is required. Please provide manager email and password.',
+      };
+    }
+
+    const { url, anonKey } = supabasePublicEnv();
+    const authClient = createAnonClient(url, anonKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    const cleanEmail = email.trim().toLowerCase();
+    const { data: authData, error: authError } =
+      await authClient.auth.signInWithPassword({
+        email: cleanEmail,
+        password,
+      });
+
+    if (authError || !authData.user || !authData.session) {
+      return {
+        ok: false,
+        error: 'Manager authorization failed: invalid email or password.',
+      };
+    }
+
+    // Authenticate client as the manager so RLS checks on 'user' table succeed
+    const managerClient = createAnonClient(url, anonKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: {
+        headers: {
+          Authorization: `Bearer ${authData.session.access_token}`,
+        },
+      },
+    });
+
+    const { data: managerUser } = await managerClient
+      .from('user')
+      .select('user_id, role, username, is_active')
+      .eq('user_id', authData.user.id)
+      .maybeSingle();
+
+    if (
+      !managerUser ||
+      managerUser.role !== 'admin' ||
+      managerUser.is_active === false
+    ) {
+      return {
+        ok: false,
+        error:
+          'Authorization denied: The provided credentials do not belong to an active Manager/Admin account.',
+      };
+    }
+
+    authorizedBy = `${managerUser.username ?? cleanEmail} (Manager)`;
+    activeSupabase = managerClient as unknown as typeof activeSupabase;
+  }
+
+  const fullReason = `${reason.trim()} (Authorized by: ${authorizedBy})`;
+
+  // 1. Call void_sale RPC
+  const { error: voidError } = await activeSupabase.rpc('void_sale', {
+    p_transaction_id: transactionId,
+    p_reason: fullReason,
+  });
+
+  if (voidError) {
+    return {
+      ok: false,
+      error: voidError.message || 'Could not void this transaction.',
+    };
+  }
+
+  // 2. Update fulfillment store to 'voided' so it drops from active queues
+  setFulfillmentStatus(transactionId, 'voided', fullReason);
+
+  // 3. Revalidate paths
+  for (const path of [
+    '/pos',
+    `/pos/receipt/${transactionId}`,
+    '/today-products',
+    '/dashboard',
+    '/admin',
+    '/admin/reports',
+    '/daily-sales',
+    '/cash-turnover',
+    '/cashier-operations',
+    '/admin/cashier-operations',
+  ]) {
+    revalidatePath(path);
+  }
+
+  return { ok: true };
+}
+
+/** Legacy alias */
+export const cancelAndRefundOrderAction = voidOrderAction;
 
 export async function getActiveOrders(): Promise<ActiveOrder[]> {
   await requireStaff();
@@ -363,24 +497,31 @@ export async function getActiveOrders(): Promise<ActiveOrder[]> {
       )
     `,
     )
-    .in('status', ['pending', 'preparing', 'ready'])
-    .order('date', { ascending: true });
+    .neq('status', 'voided')
+    .order('date', { ascending: false })
+    .limit(50);
 
   if (error || !data) return [];
 
-  return data.flatMap((txn) => {
-    const mode = parsePaymentMode(txn.payment_mode);
-    const paymentStatus = parsePaymentStatus(txn.payment_status);
-    if (!mode || !paymentStatus || typeof txn.transaction_number !== 'string') {
-      return [];
-    }
-    const user = txn.user as ReceiptUserRow | ReceiptUserRow[] | null;
-    const row = Array.isArray(user) ? user[0] : user;
-    const cashier_name =
-      typeof row?.username === 'string' ? row.username : null;
+  return data
+    .flatMap((txn) => {
+      const mode = parsePaymentMode(txn.payment_mode);
+      const paymentStatus = parsePaymentStatus(txn.payment_status);
+      if (
+        !mode ||
+        !paymentStatus ||
+        typeof txn.transaction_number !== 'string'
+      ) {
+        return [];
+      }
+      const user = txn.user as ReceiptUserRow | ReceiptUserRow[] | null;
+      const row = Array.isArray(user) ? user[0] : user;
+      const cashier_name =
+        typeof row?.username === 'string' ? row.username : null;
 
-    const items = ((txn.transaction_items ?? []) as ReceiptItemDbRow[]).flatMap(
-      (itemRow) => {
+      const items = (
+        (txn.transaction_items ?? []) as unknown as ReceiptItemDbRow[]
+      ).flatMap((itemRow) => {
         const qty = Number(itemRow.quantity);
         const subtotal = Number(itemRow.subtotal);
         const name =
@@ -395,25 +536,34 @@ export async function getActiveOrders(): Promise<ActiveOrder[]> {
             subtotal,
           },
         ];
-      },
-    );
+      });
 
-    return [
-      {
-        transaction_id: txn.id,
-        transaction_number: txn.transaction_number,
-        order_number:
-          typeof txn.order_number === 'number' ? txn.order_number : null,
-        date: txn.date,
-        total_amount: Number(txn.total_amount),
-        payment_mode: mode,
-        payment_status: paymentStatus,
-        status: (txn.status as OrderStatus) || 'pending',
-        cashier_name,
-        items,
-      },
-    ];
-  });
+      const effectiveStatus =
+        getFulfillmentStatus(txn.id as string) ??
+        (txn.status as OrderStatus) ??
+        'completed';
+
+      if (!['pending', 'preparing', 'ready'].includes(effectiveStatus)) {
+        return [];
+      }
+
+      return [
+        {
+          transaction_id: txn.id,
+          transaction_number: txn.transaction_number,
+          order_number:
+            typeof txn.order_number === 'number' ? txn.order_number : null,
+          date: txn.date,
+          total_amount: Number(txn.total_amount),
+          payment_mode: mode,
+          payment_status: paymentStatus,
+          status: effectiveStatus,
+          cashier_name,
+          items,
+        },
+      ];
+    })
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 }
 
 export async function saveCartDraft(

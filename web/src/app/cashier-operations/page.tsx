@@ -1,104 +1,63 @@
 import Link from 'next/link';
-import { requireRole } from '@/features/auth/queries';
+import { requireStaff } from '@/features/auth/queries';
 import {
   getCurrentShift,
   getMyShifts,
   getMyTurnovers,
 } from '@/features/shifts/queries';
-import { ShiftPanel } from '@/components/modules/shifts/ShiftPanel';
-import { ShiftHistoryList } from '@/components/modules/shifts/ShiftHistoryList';
-import { TurnoverList } from '@/components/modules/shifts/TurnoverList';
-import { Card } from '@/components/common/Card';
+import { CashierOperationsManager } from '@/components/modules/shifts/CashierOperationsManager';
 import { StaffShell } from '@/components/layout/staff-shell';
+import {
+  ArrowRightIcon,
+  ShoppingCartIcon,
+} from '@/components/common/hero-icons';
+
+export const dynamic = 'force-dynamic';
 
 export default async function CashierOperationsPage() {
   const [profile, shift, shifts, turnovers] = await Promise.all([
-    requireRole('cashier'),
+    requireStaff(),
     getCurrentShift(),
     getMyShifts(),
     getMyTurnovers(),
   ]);
+
   return (
     <StaffShell
       email={profile.email}
       role={profile.role}
       title="Cashier Operations"
-      subtitle="Manage your shift and submit cash turnover"
+      subtitle="Open register shifts, track drawer cash sales, and submit daily turnovers."
+      breadcrumbs={[{ name: 'Cashier Operations', current: true }]}
+      actions={
+        <div className="flex flex-wrap items-center gap-2">
+          {profile.role === 'admin' && (
+            <Link
+              href="/admin/cashier-operations"
+              className="action-focus inline-flex h-10 items-center justify-center gap-2 rounded-md border border-pine/30 bg-surface px-4 text-sm font-semibold text-pine shadow-xs transition hover:bg-pine/5"
+            >
+              <span>Admin Operations</span>
+              <ArrowRightIcon className="h-3.5 w-3.5" />
+            </Link>
+          )}
+          <Link
+            href="/pos"
+            className="action-focus inline-flex h-10 items-center justify-center gap-2 rounded-md bg-pine px-4 text-sm font-semibold text-surface shadow-xs transition hover:bg-pine-deep"
+          >
+            <ShoppingCartIcon className="h-4 w-4" />
+            <span>Open Register</span>
+            <ArrowRightIcon className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      }
+      fullWidth={true}
     >
-      <nav
-        aria-label="Cashier operations sections"
-        className="mb-4 flex gap-2 overflow-x-auto pb-1"
-      >
-        <Link
-          href="#shift"
-          className="action-focus shrink-0 rounded-full bg-pine px-4 py-2 text-sm font-semibold text-surface"
-        >
-          Cashier Shift
-        </Link>
-        <Link
-          href="#turnover"
-          className="action-focus shrink-0 rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold"
-        >
-          Cash Turnover
-        </Link>
-      </nav>
-
-      <section id="shift" className="scroll-mt-4 space-y-4">
-        <Card
-          title={shift?.status === 'open' ? 'Current shift' : 'Start shift'}
-          className="rounded-card border-border shadow-soft"
-        >
-          <dl className="mb-3 grid gap-2 text-sm sm:grid-cols-2">
-            <div>
-              <dt className="text-muted">Current cashier</dt>
-              <dd className="break-all font-bold">{profile.email}</dd>
-            </div>
-            <div>
-              <dt className="text-muted">Shift status</dt>
-              <dd className="font-bold uppercase">
-                {shift?.status === 'open' ? 'Open' : 'Closed'}
-              </dd>
-            </div>
-            {shift?.ended_at ? (
-              <div>
-                <dt className="text-muted">Last end time</dt>
-                <dd>
-                  {new Date(shift.ended_at).toLocaleString('en-PH', {
-                    timeZone: 'Asia/Manila',
-                  })}
-                </dd>
-              </div>
-            ) : null}
-          </dl>
-          <ShiftPanel shift={shift} />
-          {shift?.status === 'open' ? (
-            <p className="mt-3 text-sm text-muted">
-              Use the Cash Turnover section to count cash and end this shift.
-            </p>
-          ) : null}
-        </Card>
-        <Card
-          title="Shift history"
-          className="rounded-card border-border shadow-soft"
-        >
-          <ShiftHistoryList shifts={shifts} />
-        </Card>
-      </section>
-
-      <section id="turnover" className="mt-6 scroll-mt-4 space-y-4">
-        <Card
-          title="Cash turnover"
-          className="rounded-card border-border shadow-soft"
-        >
-          <ShiftPanel shift={shift} turnoverMode />
-        </Card>
-        <Card
-          title="Turnover history"
-          className="rounded-card border-border shadow-soft"
-        >
-          <TurnoverList turnovers={turnovers} />
-        </Card>
-      </section>
+      <CashierOperationsManager
+        cashierEmail={profile.email}
+        shift={shift}
+        shifts={shifts}
+        turnovers={turnovers}
+      />
     </StaffShell>
   );
 }

@@ -6,7 +6,16 @@ import { CloseIcon } from '@/components/common/icons';
 
 import { cn } from '@/lib/cn';
 
-export type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl';
+export type ModalSize =
+  | 'sm'
+  | 'md'
+  | 'lg'
+  | 'xl'
+  | '2xl'
+  | '3xl'
+  | '4xl'
+  | '5xl'
+  | '6xl';
 
 export interface ModalProps {
   title: string;
@@ -30,6 +39,8 @@ const SIZE_CLASSES: Record<ModalSize, string> = {
   '2xl': 'sm:max-w-2xl',
   '3xl': 'sm:max-w-3xl',
   '4xl': 'sm:max-w-4xl',
+  '5xl': 'sm:max-w-5xl',
+  '6xl': 'sm:max-w-6xl',
 };
 
 /**

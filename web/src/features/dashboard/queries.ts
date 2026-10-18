@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
-import { requireRole } from '@/features/auth/queries';
+import { requireRole, requireStaff } from '@/features/auth/queries';
+import { getFulfillmentStatus } from '@/features/pos/fulfillment-store';
 
 export interface TodaySale {
   id: string;
@@ -27,7 +28,7 @@ function manilaRange(now = new Date()): { from: string; to: string } {
 }
 
 export async function getCashierTodaySales(): Promise<TodaySale[]> {
-  await requireRole('cashier');
+  await requireStaff();
   const supabase = await createClient();
   const range = manilaRange();
   const { data, error } = await supabase
@@ -53,7 +54,8 @@ export async function getCashierTodaySales(): Promise<TodaySale[]> {
             total_amount: Number(row.total_amount),
             payment_mode: String(row.payment_mode),
             payment_status: String(row.payment_status),
-            status: String(row.status),
+            status:
+              (getFulfillmentStatus(row.id) as string) ?? String(row.status),
           },
         ]
       : [],

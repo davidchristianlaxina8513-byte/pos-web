@@ -3,12 +3,16 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/form/Button';
+import { Field } from '@/components/form/Field';
+import { PasswordField } from '@/components/form/PasswordField';
 import { Card } from '@/components/common/Card';
 import { Modal } from '@/components/modal/Modal';
 import { useAlert } from '@/components/toast';
 import { cn } from '@/lib/cn';
-import { voidTransaction } from '@/features/reports/actions';
-import { updateOrderStatusAction } from '@/features/pos/actions';
+import {
+  updateOrderStatusAction,
+  voidOrderAction,
+} from '@/features/pos/actions';
 import type { OrderStatus } from '@/features/pos/types';
 
 interface ReceiptOrderActionsProps {
@@ -72,9 +76,9 @@ export function ReceiptOrderActions({
   const [isPending, startTransition] = useTransition();
 
   const [voidModalOpen, setVoidModalOpen] = useState(false);
-  const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [voidReasonInput, setVoidReasonInput] = useState('');
-  const [cancelReasonInput, setCancelReasonInput] = useState('');
+  const [managerEmail, setManagerEmail] = useState('');
+  const [managerPassword, setManagerPassword] = useState('');
 
   const config = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
 
@@ -105,36 +109,31 @@ export function ReceiptOrderActions({
       );
       return;
     }
+    if (!isAdmin && (!managerEmail.trim() || !managerPassword)) {
+      errorAlert(
+        'Manager Authorization Required',
+        'Please enter manager email and password to authorize this void.',
+      );
+      return;
+    }
+
     startTransition(async () => {
-      const res = await voidTransaction(transactionId, voidReasonInput.trim());
+      const res = await voidOrderAction(
+        transactionId,
+        voidReasonInput.trim(),
+        !isAdmin
+          ? { email: managerEmail.trim(), password: managerPassword }
+          : undefined,
+      );
       if (!res.ok) {
         errorAlert('Void Failed', res.error);
         return;
       }
       setVoidModalOpen(false);
       setVoidReasonInput('');
-      successAlert(
-        'Transaction Voided',
-        'The transaction has been voided and sales adjusted.',
-      );
-      router.refresh();
-    });
-  };
-
-  const handleConfirmCancel = () => {
-    startTransition(async () => {
-      const res = await updateOrderStatusAction(
-        transactionId,
-        'cancelled',
-        cancelReasonInput.trim() || undefined,
-      );
-      if (!res.ok) {
-        errorAlert('Cancellation Failed', res.error);
-        return;
-      }
-      setCancelModalOpen(false);
-      setCancelReasonInput('');
-      successAlert('Order Cancelled', 'The order has been cancelled.');
+      setManagerEmail('');
+      setManagerPassword('');
+      successAlert('Transaction Voided', 'The transaction has been voided.');
       router.refresh();
     });
   };
@@ -144,7 +143,7 @@ export function ReceiptOrderActions({
 
   return (
     <div className="mt-4 flex flex-col gap-3 print:hidden">
-      {/* Active Order Fulfillment Card (Only shown if pending / preparing / ready) */}
+      {/* Active Order Kitchen Progression Card */}
       {!isTerminal ? (
         <Card className="rounded-xl border border-border bg-surface shadow-xs [&>div]:p-4">
           <div className="flex flex-col gap-3">
@@ -178,10 +177,11 @@ export function ReceiptOrderActions({
                   </Button>
                   <Button
                     variant="secondary"
-                    onClick={() => setCancelModalOpen(true)}
+                    onClick={() => setVoidModalOpen(true)}
                     disabled={isPending}
+                    className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-semibold"
                   >
-                    Cancel Order
+                    Void Order
                   </Button>
                 </>
               )}
@@ -212,11 +212,11 @@ export function ReceiptOrderActions({
         </Card>
       ) : null}
 
-      {/* POS Navigation and Print Actions */}
+      {/* Primary Navigation & Print Button */}
       {children}
 
-      {/* Discreet Manager Void Action (Admin only, when transaction is not voided) */}
-      {isAdmin && status !== 'voided' ? (
+      {/* Discreet Void Action */}
+      {status !== 'voided' ? (
         <div className="pt-1 text-center">
           <button
             type="button"
@@ -229,7 +229,7 @@ export function ReceiptOrderActions({
         </div>
       ) : null}
 
-      {/* Void Confirmation Modal */}
+      {/* Clean Void Modal */}
       <Modal
         title="Void Transaction"
         isOpen={voidModalOpen}
@@ -237,6 +237,8 @@ export function ReceiptOrderActions({
           if (!open) {
             setVoidModalOpen(false);
             setVoidReasonInput('');
+            setManagerEmail('');
+            setManagerPassword('');
           }
         }}
         size="md"
@@ -246,105 +248,81 @@ export function ReceiptOrderActions({
           <p className="text-sm text-foreground/80">
             Are you sure you want to void this transaction? This action will
             mark the transaction as voided, exclude its amounts from Daily
-            Sales, and write an audit record.
+            Sales, and restore daily stock.
           </p>
 
+          {/* Manager Authorization (Cashier only) */}
+          {!isAdmin && (
+            <div className="space-y-3">
+              <p className="text-xs text-muted">
+                Manager credentials are required to authorize this void.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field
+                  id="receipt-mgr-email"
+                  name="receipt-mgr-email"
+                  label="Manager Email"
+                  type="email"
+                  placeholder="admin@elvira.cafe"
+                  value={managerEmail}
+                  onChange={(e) => setManagerEmail(e.target.value)}
+                  disabled={isPending}
+                />
+                <PasswordField
+                  id="receipt-mgr-pwd"
+                  name="receipt-mgr-pwd"
+                  label="Manager Password"
+                  placeholder="••••••••"
+                  value={managerPassword}
+                  onChange={(e) => setManagerPassword(e.target.value)}
+                  disabled={isPending}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Void Reason Input */}
           <div>
             <label
               htmlFor="void-reason"
-              className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5"
+              className="block text-xs font-semibold text-foreground mb-1"
             >
-              Reason for Voiding <span className="text-danger">*</span>
+              Reason for voiding <span className="text-danger">*</span>
             </label>
             <textarea
               id="void-reason"
               rows={3}
               value={voidReasonInput}
               onChange={(e) => setVoidReasonInput(e.target.value)}
-              placeholder="e.g. Customer cancelled before preparation, duplicate order, wrong items entered..."
-              className="w-full rounded-lg border border-border bg-background p-2.5 text-sm text-foreground placeholder:text-muted/60 focus:border-pine focus:outline-none"
+              placeholder="e.g., Customer cancelled, incorrect order entry..."
+              className="w-full rounded-md border border-border bg-white p-3 text-sm text-foreground placeholder:text-muted/60 focus:border-danger focus:outline-2 focus:outline-danger"
               disabled={isPending}
             />
           </div>
 
+          {/* Actions */}
           <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/60">
             <button
               type="button"
+              disabled={isPending}
               onClick={() => {
                 setVoidModalOpen(false);
                 setVoidReasonInput('');
+                setManagerEmail('');
+                setManagerPassword('');
               }}
-              disabled={isPending}
-              className="rounded-lg px-3 py-2 text-xs font-semibold text-muted hover:bg-mist disabled:opacity-50"
+              className="h-10 rounded-md border border-border bg-white px-4 text-sm font-semibold text-foreground hover:bg-mist disabled:opacity-50 cursor-pointer"
             >
               Cancel
             </button>
-            <Button
-              onClick={handleConfirmVoid}
-              disabled={isPending || !voidReasonInput.trim()}
-              className="rounded-lg bg-danger px-4 py-2 text-xs font-bold text-white hover:bg-danger/90 disabled:opacity-50"
-            >
-              {isPending ? 'Voiding...' : 'Confirm Void'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Cancel Order Modal */}
-      <Modal
-        title="Cancel Order"
-        isOpen={cancelModalOpen}
-        onOpenChange={(open: boolean) => {
-          if (!open) {
-            setCancelModalOpen(false);
-            setCancelReasonInput('');
-          }
-        }}
-        size="md"
-        isDismissDisabled={isPending}
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-foreground/80">
-            Cancel this pending order? This will mark it as cancelled.
-          </p>
-
-          <div>
-            <label
-              htmlFor="cancel-reason"
-              className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5"
-            >
-              Cancellation Notes (optional)
-            </label>
-            <input
-              id="cancel-reason"
-              type="text"
-              value={cancelReasonInput}
-              onChange={(e) => setCancelReasonInput(e.target.value)}
-              placeholder="Optional notes..."
-              className="w-full rounded-lg border border-border bg-background p-2.5 text-sm text-foreground placeholder:text-muted/60 focus:border-pine focus:outline-none"
-              disabled={isPending}
-            />
-          </div>
-
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/60">
             <button
               type="button"
-              onClick={() => {
-                setCancelModalOpen(false);
-                setCancelReasonInput('');
-              }}
-              disabled={isPending}
-              className="rounded-lg px-3 py-2 text-xs font-semibold text-muted hover:bg-mist disabled:opacity-50"
+              disabled={isPending || !voidReasonInput.trim()}
+              onClick={handleConfirmVoid}
+              className="action-focus inline-flex h-10 items-center rounded-md bg-danger px-4 text-sm font-semibold text-surface shadow-xs hover:bg-danger/90 disabled:opacity-50 cursor-pointer"
             >
-              Close
+              {isPending ? 'Voiding...' : 'Confirm Void'}
             </button>
-            <Button
-              onClick={handleConfirmCancel}
-              disabled={isPending}
-              className="rounded-lg bg-rose-600 px-4 py-2 text-xs font-bold text-white hover:bg-rose-700 disabled:opacity-50"
-            >
-              {isPending ? 'Cancelling...' : 'Confirm Cancellation'}
-            </Button>
           </div>
         </div>
       </Modal>

@@ -305,6 +305,7 @@ export function PosScreen({
           isOpen={activeOrdersOpen}
           onClose={() => setActiveOrdersOpen(false)}
           onCountChange={(count) => setActiveCount(count)}
+          isAdmin={userRole === 'admin'}
         />
       </div>
     </div>

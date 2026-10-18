@@ -38,7 +38,7 @@ export default async function TodayProductsPage() {
           <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-3xl font-bold tracking-tight text-pine">
-                Today&apos;s Products &amp; Stock Monitoring
+                Today&apos;s Products & Stock Monitoring
               </h1>
               <p className="mt-1 text-sm text-slate-500 leading-relaxed">
                 Track units served, adjust daily limits, and manage real-time

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { requireRole } from '@/features/auth/queries';
+import { requireStaff } from '@/features/auth/queries';
 import { getCashierTodaySales } from '@/features/dashboard/queries';
 import { getTodayProductQuotas } from '@/features/quotas/queries';
 import { QUOTA_STATUS_LABEL } from '@/features/quotas/status';
@@ -15,17 +15,30 @@ import {
   Squares2X2Icon,
 } from '@/components/common/hero-icons';
 import { StaffShell } from '@/components/layout/staff-shell';
+import { cn } from '@/lib/cn';
 
 export default async function CashierDashboardPage() {
   const [profile, sales, products, shift] = await Promise.all([
-    requireRole('cashier'),
+    requireStaff(),
     getCashierTodaySales(),
     getTodayProductQuotas(),
     getCurrentShift(),
   ]);
 
+  const activeSales = sales.filter(
+    (sale) => sale.status !== 'voided' && sale.status !== 'cancelled',
+  );
+  const netSales = activeSales.reduce(
+    (sum, sale) => sum + sale.total_amount,
+    0,
+  );
   const completed = sales.filter((sale) => sale.status === 'completed');
-  const netSales = completed.reduce((sum, sale) => sum + sale.total_amount, 0);
+  const pendingOrders = sales.filter(
+    (sale) =>
+      sale.status === 'pending' ||
+      sale.status === 'preparing' ||
+      sale.status === 'ready',
+  );
   const productsSold = products.reduce(
     (sum, product) => sum + product.sold_quantity,
     0,
@@ -145,6 +158,51 @@ export default async function CashierDashboardPage() {
           </Link>
         </div>
 
+        {/* Active Kitchen / Fulfilment Pulse */}
+        {pendingOrders.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-pine/30 bg-pine/5 px-4 py-3">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-2.5 w-2.5 rounded-full bg-pine animate-pulse" />
+              <div className="text-xs text-foreground">
+                <span className="font-bold text-pine">
+                  {pendingOrders.length} Order
+                  {pendingOrders.length === 1 ? '' : 's'} Active in Kitchen:
+                </span>{' '}
+                {pendingOrders.filter((o) => o.status === 'pending').length >
+                  0 && (
+                  <span>
+                    {pendingOrders.filter((o) => o.status === 'pending').length}{' '}
+                    Pending ·{' '}
+                  </span>
+                )}
+                {pendingOrders.filter((o) => o.status === 'preparing').length >
+                  0 && (
+                  <span>
+                    {
+                      pendingOrders.filter((o) => o.status === 'preparing')
+                        .length
+                    }{' '}
+                    Preparing ·{' '}
+                  </span>
+                )}
+                {pendingOrders.filter((o) => o.status === 'ready').length >
+                  0 && (
+                  <span className="font-semibold text-purple-700 dark:text-purple-400">
+                    {pendingOrders.filter((o) => o.status === 'ready').length}{' '}
+                    Ready for Pickup
+                  </span>
+                )}
+              </div>
+            </div>
+            <Link
+              href="/pos"
+              className="text-xs font-bold text-pine hover:underline whitespace-nowrap"
+            >
+              Open Register &amp; Active Orders →
+            </Link>
+          </div>
+        )}
+
         {/* 4 Essential Metrics */}
         <section aria-label="Cashier metrics">
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -161,7 +219,12 @@ export default async function CashierDashboardPage() {
               <p className="mt-3 text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
                 ₱{netSales.toFixed(2)}
               </p>
-              <p className="mt-1 text-xs text-muted">Completed net sales</p>
+              <p className="mt-1 text-xs text-muted">
+                {activeSales.length} order{activeSales.length === 1 ? '' : 's'}
+                {pendingOrders.length > 0
+                  ? ` · ${pendingOrders.length} in progress`
+                  : ''}
+              </p>
             </div>
 
             {/* Orders */}
@@ -175,9 +238,11 @@ export default async function CashierDashboardPage() {
                 </div>
               </div>
               <p className="mt-3 text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
-                {completed.length}
+                {activeSales.length}
               </p>
-              <p className="mt-1 text-xs text-muted">Transactions completed</p>
+              <p className="mt-1 text-xs text-muted">
+                {completed.length} served · {pendingOrders.length} in progress
+              </p>
             </div>
 
             {/* Products Sold */}
@@ -258,7 +323,7 @@ export default async function CashierDashboardPage() {
                       key={sale.id}
                       className="flex items-center justify-between py-2.5 text-sm"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex items-center gap-2.5 min-w-0">
                         <time className="shrink-0 text-xs text-muted">
                           {new Date(sale.date).toLocaleTimeString('en-PH', {
                             timeZone: 'Asia/Manila',
@@ -272,6 +337,24 @@ export default async function CashierDashboardPage() {
                         >
                           {sale.transaction_number}
                         </Link>
+                        <span
+                          className={cn(
+                            'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider',
+                            sale.status === 'completed' &&
+                              'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+                            sale.status === 'ready' &&
+                              'bg-purple-500/10 text-purple-700 dark:text-purple-400',
+                            sale.status === 'preparing' &&
+                              'bg-blue-500/10 text-blue-700 dark:text-blue-400',
+                            sale.status === 'pending' &&
+                              'bg-amber-500/10 text-amber-700 dark:text-amber-400',
+                            sale.status === 'voided' &&
+                              'bg-danger/10 text-danger line-through',
+                            sale.status === 'cancelled' && 'bg-mist text-muted',
+                          )}
+                        >
+                          {sale.status}
+                        </span>
                       </div>
                       <span className="font-bold text-foreground shrink-0 pl-2">
                         ₱{sale.total_amount.toFixed(2)}
@@ -321,13 +404,15 @@ export default async function CashierDashboardPage() {
                       </p>
                     </div>
                     <span
-                      className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold uppercase ${
-                        item.status === 'sold_out'
-                          ? 'bg-danger text-white'
-                          : item.status === 'almost_sold_out'
-                            ? 'bg-warning/20 text-warning'
-                            : 'bg-mist text-foreground'
-                      }`}
+                      className={cn(
+                        'shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold uppercase',
+                        item.status === 'sold_out' && 'bg-danger text-white',
+                        item.status === 'almost_sold_out' &&
+                          'bg-amber-500/15 text-amber-800 dark:text-amber-300 font-bold',
+                        item.status === 'good' && 'bg-pine/10 text-pine',
+                        item.status === 'unlimited' &&
+                          'bg-mist text-foreground',
+                      )}
                     >
                       {QUOTA_STATUS_LABEL[item.status]}
                     </span>

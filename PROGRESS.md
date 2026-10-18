@@ -8,6 +8,44 @@ The web application now uses daily product quotas as its only availability mecha
 
 ## Modern Dashboard and POS Redesign (2026-10-17)
 
+- **Root Landing Route (`/`) Role-Aware Automatic Redirect (2026-10-18)**:
+  - Fixed `web/src/app/page.tsx` displaying the raw, unstyled scaffold text ("IPSS Web / Signed in as cashier@elvira.cafe / Continue to dashboard / Sign out") when navigating to `http://localhost:3000`.
+  - Replaced the manual scaffold markup with an immediate automatic server redirect `redirect(landingForRole(profile.role))`:
+    - Cashiers visiting `http://localhost:3000` are seamlessly redirected to `/dashboard`.
+    - Administrators visiting `http://localhost:3000` are seamlessly redirected to `/admin`.
+    - Unauthenticated visitors visiting `http://localhost:3000` are redirected to `/login`.
+
+- **Cashier Modules End-to-End Audit & Verification (2026-10-18)**:
+  - Validated all 7 cashier-facing modules against the live dev Supabase database with authenticated cashier session (`cashier@elvira.cafe`):
+    1. **Dashboard (`/dashboard`)**: Welcome banner, active shift indicator, 4 summary KPI cards, sales trend, live portion quotas, and open register CTA. Upgraded gate to `requireStaff()` so administrators can also preview and test the cashier dashboard without forced redirects.
+    2. **Point of Sale (`/pos`)**: Menu grid with category filtering, real-time quota deduction, dual-layer resilient cart autosave, Cash & QR Ph (GCash/Maya) checkout, and Active Orders kitchen progression modal (`pending` → `preparing` → `ready` → `completed`).
+    3. **Menu Catalog (`/menu`)**: View-only catalog mirroring admin design with Table/Card view switcher, search, category pills, and product detail inspection modal.
+    4. **Today's Products (`/today-products`)**: Real-time portion quota monitoring, stock adjustments, and quota audit history table.
+    5. **Daily Sales (`/daily-sales`)**: Read-only Manila business day sales ledger, gross/voided/net calculation cards, receipt links, and order lifecycle badges.
+    6. **Cashier Operations (`/cashier-operations`)**: Shift start/drawer float declaration, drawer cash reconciliation & turnover submission, shift history ledger with details modal, and turnover review ledger.
+    7. **Profile & Settings (`/profile`)**: Authentic 3-column DCASIS settings layout with cashier credentials, password update, role capabilities matrix, sound/theme preferences, and session sign out.
+  - Verified `typecheck`, `format:check`, `lint`, and unit test suite (52/52 tests passing). Next.js production build succeeded with exit code 0.
+
+- **Cashier Profile & Settings Redesign (`/profile`) - Admin Parity (2026-10-18)**:
+  - **Authentic DCASIS 3-Column Architecture**: Redesigned `http://localhost:3000/profile` to match the exact DCASIS form structure (`1/3 instructions` + `2/3 form card`) used in `/admin/settings` ([`web/src/app/admin/settings/page.tsx`](web/src/app/admin/settings/page.tsx)).
+  - **Section 1: Personal Information**:
+    - Cashier avatar & identity header with email, active role badge (`Cashier (Counter Operator)`), and pulsing live status pill.
+    - Disabled email input with authentication credential context.
+    - Quick navigation tiles: direct links to `/cashier-operations` (Cashier Shift & Drawer Operations) and `/pos` (Point of Sale Register) with `ChevronRightIcon`.
+  - **Section 2: Security & Password**:
+    - Embedded `<PasswordSection />` allowing cashiers to safely update their own account password (minimum 6 characters) with immediate session persistence.
+    - Security callout banner explaining session protection.
+  - **Section 3: Role Scope & Operational Capabilities**:
+    - 2-column capability matrix summarizing "What Cashiers Can Do" vs "Manager Protected Boundaries" under Cafe Elvira RBAC, plus quick link to `/cashier-operations` for operating rules.
+  - **Section 4: Preferences & Interface Theme**:
+    - Embedded `<PreferencesPanel />` providing sound effect toggles, low stock audio alerts, and light/dark theme controls.
+  - **Section 5: Session Management & Sign Out**:
+    - Active session details (Manila timezone, email) with clean, styled `signOut` action button.
+  - **Universal Staff Access & Header Actions**:
+    - Uses `requireStaff()` to allow seamless previewing by both cashiers and managers without unauthorized redirects; includes "Admin Settings →" shortcut for admins and "Open Register" CTA.
+  - **Skeleton Loading Parity**:
+    - Updated `SettingsSkeleton` in [`LoadingSkeleton.tsx`](web/src/components/loader/LoadingSkeleton.tsx) and [`loading.tsx`](web/src/app/profile/loading.tsx) with `hasHeaderActions={true}` to eliminate layout shift during page load.
+
 - **Transaction-Level Void, Order Fulfillment Lifecycle, Cart Autosave & Shift Recovery (2026-10-18)**:
   - **1. Void at Transaction Level (Read-Only Daily Sales)**:
     - Shifted void operations strictly to individual transactions (accessible from Receipt/Transaction view) rather than the Daily Sales summary.
@@ -35,17 +73,78 @@ The web application now uses daily product quotas as its only availability mecha
     - Replaced ad-hoc filter pills with the authentic DCASIS filter chips pattern (`action-focus inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-semibold`) matching `UsersManager.tsx` and `ProductQuotaList.tsx`.
     - Swapped raw HTML buttons and link buttons across `ActiveOrdersModal.tsx`, `PosScreen.tsx`, and `ReceiptOrderActions.tsx` to the standard [`Button`](web/src/components/form/Button.tsx) component (`variant="primary" | "secondary" | "danger" | "ghost"`).
     - Standardized order and status containers to use the shared [`Card`](web/src/components/common/Card.tsx) component.
-  - **6. Receipt Page UI Streamlining & Redundant Fulfillment Card Removal**:
-    - Removed the redundant floating "Order Fulfillment Status" card on completed orders, eliminating visual clutter and awkward 2-line badge wraps.
-    - Integrated clean, compact order status pill badges directly in the receipt card (`Completed`, `Ready for Pickup`, `Preparing`, `Pending`, `Voided`).
+  - **7. Standard Secure Void Modal Refinement**:
+    - Reverted bloated modal structure and removed `SecureVoidModal.tsx`, adhering strictly to the repository's existing compact modal design.
+    - Preserved high security: Cashiers are required to provide Manager Email and Password to authorize any void; Managers/Admins can authorize directly with their active session.
+    - Provided 4 quick standard reason presets (`Customer changed mind`, `Ordered by mistake`, `Kitchen delay / out of stock`, `Customer left counter`) alongside custom reason notes.
+    - Verified all typecheck, lint, prettier format, vitest unit tests, and Next.js production build pass cleanly.
     - Gated active fulfillment progression cards strictly to pending/active orders (`!isTerminal`).
     - Positioned primary POS navigation (`+ New Transaction`, `Print`) directly beneath the receipt card with a discreet, clean manager action link (`Void Transaction (Manager Authorization)`) for admins.
+  - **8. Voided Receipt UI Polish & Color Harmonization**:
+    - Replaced the mismatched "Payment Successful" heading and green checkmark on voided receipts with a neutral `NoSymbolIcon` badge, "Transaction Voided" title, and explanatory subtitle.
+    - Neutralized the bright pink/red `Void Reason` banner into a clean, text-based container (`border-border bg-mist/50 text-foreground`) without harsh red backgrounds.
+    - Updated `Total` on voided receipts to muted line-through (`text-muted line-through`), set `Payment status` to neutral `Voided` (removing the green "Paid" label), and converted the `Order status` badge to neutral `border-neutral-300 bg-neutral-100 text-neutral-700`.
+    - Suppressed the green "Verified via PayMongo QR Ph" tag on voided receipts to keep the state unambiguous.
+    - Updated print template to clearly show `*** VOIDED RECEIPT ***`.
   - **7. Admin Operations & Flow Streamlining**:
     - **Reports Ledger True Order Status**: Updated [`TransactionReviewTable.tsx`](web/src/components/modules/reports/TransactionReviewTable.tsx) to display real fulfillment lifecycle statuses (`Pending`, `Preparing`, `Ready`, `Completed`, `Voided`, `Cancelled`) with color-coded badges and icons instead of binary status.
     - **Catalog vs Daily Quota Cross-Linking**: Added reciprocal guidance banners and buttons between [`MenuManager.tsx`](web/src/components/modules/menu/MenuManager.tsx) (`/admin/menu`) and [`today-products/page.tsx`](web/src/app/today-products/page.tsx) (`/today-products`) clarifying master catalog pricing/recipes vs daily live portion availability.
     - **Live Register Operations Widget & Operations Pulse**: Added a dedicated "Live Register Operations" card to [`admin/page.tsx`](web/src/app/admin/page.tsx) tracking cashiers currently on duty, opening drawer cash, and start times. Upgraded needs-attention alerts into discrete, 1-click action chips for sold out products, low stock, pending turnovers, cash discrepancies, and pending payments.
     - **Interactive Cashier Operations & Discrepancies Filter**: Updated [`AdminCashierOperationsManager.tsx`](web/src/components/modules/shifts/AdminCashierOperationsManager.tsx) with a `Discrepancies ({count})` filter tab and converted summary KPI metric cards into 1-click quick-filter triggers.
     - **Modal & Receipt Void Reason Text Contrast & Tailwind v4 Dark Variant**: Fixed illegible light text inside warning and void reason banners by defining `@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));` in `globals.css` (preventing OS dark mode media queries from leaking into light theme mode) and upgrading banner body text to high-contrast `text-foreground` across [`pos/receipt/[id]/page.tsx`](web/src/app/pos/receipt/[id]/page.tsx), [`TransactionReviewTable.tsx`](web/src/components/modules/reports/TransactionReviewTable.tsx), [`AdminCashierOperationsManager.tsx`](web/src/components/modules/shifts/AdminCashierOperationsManager.tsx), and [`TurnoverList.tsx`](web/src/components/modules/shifts/TurnoverList.tsx).
+  - **8. Cashier-Side Flow & Usability Improvements**:
+    - **Cashier Dashboard Active Sales & Order Fulfillment Sync**: Updated `web/src/app/dashboard/page.tsx` so Today's Sales and Orders KPI metrics track all active sales (`pending`, `preparing`, `ready`, and `completed`) rather than only `completed`, accurately counting prepaid orders right after checkout.
+    - **Kitchen Active Orders Pulse Alert**: Added real-time kitchen status banner on the Cashier Dashboard notifying staff of pending/preparing/ready orders awaiting fulfillment, with 1-click shortcut to POS/Kitchen active orders dialog.
+    - **Recent Orders Fulfillment Status Badges**: Added color-coded live fulfillment status badges (`Pending`, `Preparing`, `Ready`, `Completed`, `Voided`, `Cancelled`) directly in the Recent Orders table on the Cashier Dashboard.
+    - **View-Only Menu Catalog Redesign (`/menu`) - Admin Mirroring**:
+      - Completely redesigned `http://localhost:3000/menu` to mirror the authentic DCASIS design and layout of the Admin Menu (`/admin/menu` / [`MenuManager.tsx`](web/src/components/modules/menu/MenuManager.tsx)).
+      - Matching header banner with catalog count pill and counter action shortcuts (`Go to POS`, `Today's Stock Quotas →`, and `Master Menu Catalog →` for admins).
+      - Authentic 4 KPI metric cards: Total Catalog, Active on POS, Hidden Products, and Categories with identical iconography, layout, and styling.
+      - Standard toolbar with search input, availability filter (`All`, `Available`, `Hidden`), view switcher (`Table` vs `Grid`), and category filter pills.
+      - Full-featured Table View with sortable columns (Name, Category, Price, Status, Today's Quota) and Grid Card View with photo preview, availability tags, and quick-action buttons (`View Details`, `Order in POS`).
+      - Product preview details modal showing large image preview, status badge, category, price, and live quota breakdown.
+    - **Cashier Void Manager Auth RLS Fix & Neutral Void Receipt**:
+      - Fixed cashier voiding authorization failure where valid manager credentials (`admin@elvira.cafe` / `admin123`) were rejected due to Supabase RLS preventing cashiers from reading other users' rows in the `user` table. Resolved by verifying manager auth token first and reading role with manager client before calling `void_sale`.
+      - Neutralized voided receipt styling in [`pos/receipt/[id]/page.tsx`](web/src/app/pos/receipt/[id]/page.tsx): replaced bright red banners and green checkmarks with neutral `NoSymbolIcon`, "Transaction Voided" title, strikethrough total, and clean neutral status pills.
+    - **High-Contrast Low Stock Warnings**: Upgraded low quota badges on the dashboard to high-contrast `text-amber-800 dark:text-amber-300 font-bold`.
+    - **Cashier Operations Redesign & Skeleton Loading Alignment (`/cashier-operations`)**:
+      - Redesigned `http://localhost:3000/cashier-operations` to match the authentic DCASIS design of the admin side ([`AdminCashierOperationsManager.tsx`](web/src/components/modules/shifts/AdminCashierOperationsManager.tsx)).
+      - **Header & Shell Parity**: Migrated breadcrumbs, page title, subtitle, and action buttons (`Open Register`, plus `Admin Operations` link for admins) up to [`StaffShell`](web/src/components/layout/staff-shell.tsx) in [`cashier-operations/page.tsx`](web/src/app/cashier-operations/page.tsx), removing duplicate internal headers and eliminating layout jumps.
+      - **4 Interactive Summary KPI Cards**: Shift Status (Active with live pulsing green badge or Closed), Starting Cash Float, Cash Sales Collected, and Expected in Drawer with direct click-to-switch tab interactions.
+      - **4 Tabbed Workspaces with DCASIS Data Tables**:
+        1. **Cashier Shift**: Full DCASIS form for starting shift or viewing active drawer session + quick navigation to shift history.
+        2. **Cash Turnover & Drawer Count**: Drawer reconciliation form with live variance calculation, discrepancy explanation, and quick navigation to turnover history.
+        3. **Shift History Ledger**: Full sortable data table with search, status filters (`All`, `Open`, `Closed`), duration, starting cash, notes, and a dedicated **Shift Details Modal**.
+        4. **Turnover History Ledger**: Full sortable data table with search, review status filters (`All`, `Pending`, `Verified`, `Flagged`, `Discrepancies`), variance badge (`Balanced`, `Short`, `Over`), counted cash, and a dedicated **Turnover Details Modal** displaying full reconciliation and manager audit notes.
+      - **Skeleton Loading Fix**: Overhauled [`CashierOperationsSkeleton`](web/src/components/loader/LoadingSkeleton.tsx) to match the exact shell header (`hasHeaderActions={true}` with action button placeholder), 4 KPI cards grid (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`), tab bar, and form/table layout, ensuring a 1:1 smooth loading transition without visual flickers or jumping elements.
+      - **Staff Access Gate**: Updated [`page.tsx`](web/src/app/cashier-operations/page.tsx) and query helpers [`getMyShifts`](web/src/features/shifts/queries.ts) and [`getMyTurnovers`](web/src/features/shifts/queries.ts) to use `requireStaff()`, allowing admins and cashiers to seamlessly review register operations without unauthorized redirects.
+      - **Role-Based Capability Matrix ("What Cashiers Can Do")**:
+        - Integrated a dedicated workspace tab (`Role Scope & Permissions`) and top-right indicator pill with quick-inspection modal button into [`CashierOperationsManager.tsx`](web/src/components/modules/shifts/CashierOperationsManager.tsx).
+        - Clearly defines **Authorized Counter Capabilities** (Shift Drawer Opening/Closing with presets, POS Checkout & QR Ph/Cash payments, Order Fulfillment Queue Progression, Daily Sales & Receipts, Drawer Reconciliation & Turnover, and Quota/Menu checking) alongside **Protected Manager Boundaries** (Manager Void Authorization with step-up password, Cash Turnover Auditing & Variance Approval, Catalog Price/Recipe Adjustments, Daily Stock Quota allocations, User Account Management, and System Audit Logs).
+        - Added live role capability preview cards to the staff creation form in [`UsersManager.tsx`](web/src/components/modules/users/UsersManager.tsx) ensuring managers see exact permission scopes when onboarding cashiers vs administrators.
+    - **Authentic DCASIS Form Architecture for Cashier Shifts & Drawer Turnover**: Overhauled [`ShiftPanel.tsx`](web/src/components/modules/shifts/ShiftPanel.tsx) to follow the authentic 3-column DCASIS form structure (`1/3 instructions` + `2/3 form card`):
+      - **Start Shift Form**: Register Session identity block (authenticated cashier email and Manila date/time) + Opening Cash Float section with quick preset denomination chips (`₱500`, `₱1,000`, `₱1,500`, `₱2,000`, `₱3,000`, `₱5,000`), starting float input with `₱` prefix, optional notes, cash drawer accounting rule callout, and "Start Shift & Open Drawer" button.
+      - **Active Shift Summary**: 3-column session overview (cashier, started timestamp, live pulsing status badge) + real-time drawer breakdown cards (Starting Float, Cash Sales Collected, Expected in Drawer) with direct CTA to switch to cash turnover.
+      - **Cash Turnover & Drawer Count Form**: Shift Closing Summary 3-column breakdown + Drawer Cash Count reconciliation block with 1-tap "Match Expected Total" chip, counted cash input with `₱` prefix, live variance calculation banner (Balanced / Shortage / Overage), mandatory discrepancy explanation field when variance is non-zero, turnover policy warning, and "Submit Cash Turnover & Close Shift" button.
+    - **Shift Variance & Discrepancy Guidance**: Upgraded drawer difference calculation with high-contrast emerald (balanced), red/rose (shortage), and amber (overage) indicators, plus explicit guidance for cashier discrepancy notes.
+    - **Kitchen Order Fulfillment Simulation & Real-Time Queue Store**: Added persistent order fulfillment store ([`fulfillment-store.ts`](web/src/features/pos/fulfillment-store.ts)) ensuring new POS checkouts enter as pending and can be progressed through the kitchen lifecycle (`Pending` → `Preparing` → `Ready for Pickup` → `Completed`) via [`ActiveOrdersModal`](web/src/components/modules/pos/ActiveOrdersModal.tsx) and [`ReceiptOrderActions`](web/src/components/modules/pos/ReceiptOrderActions.tsx), fully supporting professor requirements and live demo simulations.
+    - **Daily Sales Ledger Instant Cache Invalidation & Staff Access**:
+      - Fixed stale cached transactions on `/daily-sales` after completing POS checkouts by adding `export const dynamic = 'force-dynamic'` to [`daily-sales/page.tsx`](web/src/app/daily-sales/page.tsx).
+      - Added `revalidatePath('/daily-sales')` to `checkoutSale`, `updateOrderStatusAction`, `cancelAndRefundOrderAction` in [`actions.ts`](web/src/features/pos/actions.ts), and [`paymongo/status/route.ts`](web/src/app/api/pos/paymongo/status/route.ts).
+      - Broadened role access from strict `cashier` to `requireStaff()` on [`daily-sales/page.tsx`](web/src/app/daily-sales/page.tsx) and [`getCashierTodaySales()`](web/src/features/dashboard/queries.ts), allowing both Cashiers and Admins/Managers to view live daily sales without permission rejection.
+      - Integrated `getFulfillmentStatus(row.id)` into `getCashierTodaySales()` so order lifecycle status badges accurately reflect live kitchen progression states.
+    - **High-Density Order Ledger Table & Multi-Order Queue Redesign**: Redesigned [`ActiveOrdersModal.tsx`](web/src/components/modules/pos/ActiveOrdersModal.tsx) to `size="6xl"` featuring a high-density, sticky-header Order Ledger Table view as default to display dozens of active tickets simultaneously without wasted space. Added real-time order search, responsive Table vs Cards view switcher, item breakdown pills (`1× Bacon with Egg`, etc.), payment and elapsed time indicators, and 1-tap quick action buttons (`Start Preparing`, `Mark Ready`, `Mark Served / Fulfilled`) for rapid kitchen queue management.
+    - **GCash & Maya QR Ph Active Queue Sync**: Resolved issue where online payments (GCash / Maya QR Ph) bypassed the Active Orders queue. Integrated `setFulfillmentStatus(effectiveTxId, 'pending')` and path revalidations directly inside [`/api/pos/paymongo/status/route.ts`](web/src/app/api/pos/paymongo/status/route.ts) upon successful payment confirmation. Added color-coded payment mode badges (`Cash`, `GCash`, `Maya`) to both Table and Cards view in `ActiveOrdersModal.tsx`.
+    - **Unified Secure Voiding Architecture (Consolidated Void-Only with Step-Up Security)**:
+      - Replaced all split "Cancel & Refund" mechanisms with a single, unified, high-security **Void Transaction** workflow across POS Active Orders ([`ActiveOrdersModal.tsx`](web/src/components/modules/pos/ActiveOrdersModal.tsx)), Receipt view ([`ReceiptOrderActions.tsx`](web/src/components/modules/pos/ReceiptOrderActions.tsx)), and Admin Reports ([`TransactionReviewTable.tsx`](web/src/components/modules/reports/TransactionReviewTable.tsx)).
+      - Created dedicated reusable [`SecureVoidModal.tsx`](web/src/components/modules/pos/SecureVoidModal.tsx) enforcing 5 distinct security controls:
+        1. **Manager Step-Up Authentication**: Server-side verification of Manager/Admin email and password via Supabase Auth (`signInWithPassword`) and role check (`role === 'admin'`).
+        2. **Standardized Reason Classification**: Mandatory category selection (`Cashier Entry Error`, `Customer Change of Mind`, `Kitchen Shortage / Quality Issue`, `Duplicate Transaction`, `System Testing / Float Adjustment`, `Other`).
+        3. **Minimum Explanation Length**: Requires at least 8 characters explaining the specific operational cause.
+        4. **Physical Drawer & Digital Reversal Guidance**: Explicit warning detailing exact cash drawer deduction or digital payment reversal obligations.
+        5. **Audited Financial Reversal Acknowledgment**: Mandatory checkbox confirming permanent reversal, stock quota restoration, and immutable audit logging.
+      - Implemented [`voidOrderAction`](web/src/features/pos/actions.ts) executing `void_sale` RPC with elevated manager credentials, updating persistent fulfillment state to `'voided'`, and invalidating all relevant application paths.
+
 
 - **Simplified Dashboard with Styled Welcome Card**:
   - Streamlined both Admin and Cashier Dashboards to eliminate information overload while delivering a clean, elevated layout.

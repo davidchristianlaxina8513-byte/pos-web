@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { requireStaff } from '@/features/auth/queries';
 import { getPaymongoPaymentStatus } from '@/features/pos/paymongo/service';
+import { setFulfillmentStatus } from '@/features/pos/fulfillment-store';
 import { createClient } from '@/lib/supabase/server';
 
 export async function GET(request: Request) {
@@ -79,6 +81,16 @@ export async function GET(request: Request) {
         typeof data === 'string' && data ? data : transactionId;
       result.record.transactionId = effectiveTxId;
       result.record.paymentReference = paymentReference;
+
+      // Register newly paid online order as 'pending' for kitchen fulfillment
+      setFulfillmentStatus(effectiveTxId, 'pending');
+
+      revalidatePath('/pos');
+      revalidatePath('/today-products');
+      revalidatePath('/dashboard');
+      revalidatePath('/admin');
+      revalidatePath('/admin/reports');
+      revalidatePath('/daily-sales');
 
       if (profile.role === 'admin') {
         try {

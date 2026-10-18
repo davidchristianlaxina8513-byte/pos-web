@@ -552,60 +552,90 @@ export function CashierOperationsSkeleton({
   const content = (
     <div aria-hidden="true" className="space-y-6">
       {/* 4 Operations KPI Cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[0, 1, 2, 3].map((idx) => (
           <div
             key={idx}
-            className="rounded-xl border border-border bg-surface p-5 shadow-xs"
+            className="relative overflow-hidden rounded-xl border border-border bg-surface p-5 sm:p-6 shadow-sm"
           >
-            <div className="flex items-center justify-between">
-              <div className="h-3.5 w-24 rounded bg-mist/70" />
-              <div className="h-8 w-8 rounded-lg bg-mist/60" />
+            <div className="absolute right-3 top-3 h-8 w-8 rounded-lg bg-mist/80" />
+            <div className="h-3.5 w-24 rounded bg-mist/70" />
+            <div className="mt-3 flex items-center gap-2">
+              <div className="h-8 w-24 rounded bg-mist/85" />
+              <div className="h-5 w-16 rounded-full bg-mist/50" />
             </div>
-            <div className="mt-3 h-8 w-20 rounded bg-mist/85" />
-            <div className="mt-2 h-3 w-28 rounded bg-mist/45" />
+            <div className="mt-2 h-3 w-36 rounded bg-mist/45" />
           </div>
         ))}
       </div>
 
-      {/* Tab Switcher */}
-      <div className="flex items-center gap-1 rounded-xl border border-border/80 bg-mist/40 p-1">
-        <div className="h-9 w-32 rounded-lg bg-surface shadow-xs" />
-        <div className="h-9 w-32 rounded-lg bg-mist/50" />
-      </div>
-
-      {/* Shifts / Operations Table */}
-      <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-xs">
-        <div className="h-11 border-b border-border/70 bg-mist/50 px-4 flex items-center justify-between">
-          <div className="h-4 w-32 rounded bg-mist/70" />
-          <div className="h-4 w-28 rounded bg-mist/70" />
-          <div className="h-4 w-24 rounded bg-mist/70" />
-          <div className="h-4 w-24 rounded bg-mist/70" />
-          <div className="h-4 w-20 rounded bg-mist/70" />
+      {/* Main Operations Container */}
+      <div className="rounded-xl border border-border bg-surface shadow-sm overflow-hidden">
+        {/* Navigation Tabs Header */}
+        <div className="flex flex-col gap-3 border-b border-border/70 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-border bg-slate-50/70 p-1">
+            <div className="h-8 w-36 rounded-lg bg-surface shadow-xs" />
+            <div className="h-8 w-44 rounded-lg bg-mist/50" />
+            <div className="h-8 w-32 rounded-lg bg-mist/50" />
+            <div className="h-8 w-36 rounded-lg bg-mist/50" />
+            <div className="h-8 w-44 rounded-lg bg-mist/50" />
+          </div>
+          <div className="h-4 w-44 rounded bg-mist/50" />
         </div>
-        <div className="divide-y divide-border/60">
-          {[0, 1, 2, 3, 4, 5].map((idx) => (
-            <div
-              key={idx}
-              className="flex items-center justify-between px-4 py-3.5"
-            >
-              <div className="space-y-1">
-                <div className="h-4 w-32 rounded bg-mist/80" />
-                <div className="h-3 w-20 rounded bg-mist/50" />
-              </div>
-              <div className="h-4 w-24 rounded bg-mist/70" />
-              <div className="h-4 w-20 rounded bg-mist/80" />
-              <div className="h-6 w-20 rounded-full bg-mist/60" />
-              <div className="h-8 w-16 rounded-md bg-mist/60" />
+
+        {/* Tab Body: Form Skeleton + History Table Skeleton */}
+        <div className="p-5 sm:p-6 space-y-8">
+          <div className="grid grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-3">
+            <div className="space-y-2">
+              <div className="h-5 w-40 rounded bg-mist/80" />
+              <div className="h-4 w-56 rounded bg-mist/50" />
             </div>
-          ))}
+            <div className="rounded-xl border border-border bg-surface p-6 md:col-span-2 space-y-4 shadow-2xs">
+              <div className="h-4 w-32 rounded bg-mist/70" />
+              <div className="h-10 w-full rounded-md bg-mist/60" />
+              <div className="h-20 w-full rounded-md bg-mist/40" />
+              <div className="flex justify-end">
+                <div className="h-10 w-36 rounded-md bg-mist/80" />
+              </div>
+            </div>
+          </div>
+
+          {/* History Table Container */}
+          <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-2xs">
+            <div className="h-12 border-b border-border/70 bg-mist/50 px-4 flex items-center justify-between">
+              <div className="h-4 w-32 rounded bg-mist/70" />
+              <div className="h-8 w-44 rounded bg-mist/60" />
+            </div>
+            <div className="divide-y divide-border/60">
+              {[0, 1, 2, 3].map((idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between px-4 py-3.5"
+                >
+                  <div className="space-y-1">
+                    <div className="h-4 w-28 rounded bg-mist/80" />
+                    <div className="h-3 w-16 rounded bg-mist/50" />
+                  </div>
+                  <div className="h-4 w-20 rounded bg-mist/70" />
+                  <div className="h-4 w-16 rounded bg-mist/80" />
+                  <div className="h-6 w-16 rounded-full bg-mist/60" />
+                  <div className="h-7 w-20 rounded-md bg-mist/60" />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 
   return withShell ? (
-    <StaffShellSkeleton fullWidth={true} hasHeader={true}>
+    <StaffShellSkeleton
+      fullWidth={true}
+      hasHeader={true}
+      hasHeaderActions={true}
+      headerActionCount={1}
+    >
       {content}
     </StaffShellSkeleton>
   ) : (
@@ -616,7 +646,8 @@ export function CashierOperationsSkeleton({
 /** 8. Settings & Profile Skeleton */
 export function SettingsSkeleton({
   withShell = true,
-}: { withShell?: boolean } = {}) {
+  hasHeaderActions = false,
+}: { withShell?: boolean; hasHeaderActions?: boolean } = {}) {
   const content = (
     <div aria-hidden="true" className="divide-y divide-gray-900/10">
       {/* Section 1: Personal Information */}
@@ -713,7 +744,8 @@ export function SettingsSkeleton({
       fullWidth={true}
       hasHeader={true}
       hasBreadcrumbs={true}
-      hasHeaderActions={false}
+      hasHeaderActions={hasHeaderActions}
+      headerActionCount={1}
     >
       {content}
     </StaffShellSkeleton>

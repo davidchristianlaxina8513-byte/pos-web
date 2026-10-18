@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useMemo } from 'react';
-import type { ReceiptRecord, SoldLine } from '@/features/reports/aggregate';
 import { voidTransaction } from '@/features/reports/actions';
+import type { ReceiptRecord, SoldLine } from '@/features/reports/aggregate';
 import { useAlert } from '@/components/toast';
 import { Modal } from '@/components/modal/Modal';
 import {
