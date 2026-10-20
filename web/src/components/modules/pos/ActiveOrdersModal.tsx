@@ -18,6 +18,8 @@ import {
   DocumentTextIcon,
   ReceiptRefundIcon,
   ShoppingBagIcon,
+  FireIcon,
+  BellIcon,
 } from '@/components/common/hero-icons';
 import { useAlert } from '@/components/toast';
 import { cn } from '@/lib/cn';
@@ -296,8 +298,8 @@ export function ActiveOrdersModal({
                 {preparingCount}
               </p>
             </div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-bold">
-              🍳
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
+              <FireIcon className="h-5 w-5" />
             </div>
           </div>
 
@@ -310,8 +312,8 @@ export function ActiveOrdersModal({
                 {readyCount}
               </p>
             </div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 font-bold">
-              🔔
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300">
+              <BellIcon className="h-5 w-5" />
             </div>
           </div>
 
@@ -443,7 +445,7 @@ export function ActiveOrdersModal({
                 searchQuery
                   ? 'No matching active orders'
                   : filter === 'all'
-                    ? 'All Caught Up! 🎉'
+                    ? 'All Caught Up'
                     : `No orders in ${filter} state`
               }
               sub={
