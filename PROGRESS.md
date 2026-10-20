@@ -8,6 +8,12 @@ The web application now uses daily product quotas as its only availability mecha
 
 ## Modern Dashboard and POS Redesign (2026-10-17)
 
+- **Unified QR Ph Payment: Consolidated GCash & Maya into Universal "E-Wallet" (2026-10-20)**:
+  - Simplified counter checkout: consolidated separate "GCash" and "Maya" buttons into a clean, 2-option selector (`[ ₱ Cash ]` and `[ QR E-Wallet ]`) in [`CheckoutDialog.tsx`](web/src/components/modules/pos/CheckoutDialog.tsx).
+  - Updated QR Ph instruction badge across [`PaymongoQRModal.tsx`](web/src/components/modules/pos/PaymongoQRModal.tsx) to explicitly inform customers: *"Scan via GCash, Maya, MariBank, or any Bank App"*.
+  - Updated payment method display across receipt view ([`receipt/[id]/page.tsx`](web/src/app/pos/receipt/[id]/page.tsx)), daily sales ([`daily-sales/page.tsx`](web/src/app/daily-sales/page.tsx)), and admin review table ([`TransactionReviewTable.tsx`](web/src/components/modules/reports/TransactionReviewTable.tsx)) to display `E-Wallet (QR Ph)`.
+  - Verification: `typecheck`, `test` (52/52 passing), `format:check`, and `lint` passed cleanly.
+
 - **Capstone Defense Accounting Alignment: Void to Customer Refund Transformation (2026-10-20)**:
   - Addressed panelist/accounting requirement regarding paid sales: replaced all casual "Void" terminology with formal "Cancel & Refund" / "Customer Refund & Reversal" across [`ActiveOrdersModal.tsx`](web/src/components/modules/pos/ActiveOrdersModal.tsx), [`ReceiptOrderActions.tsx`](web/src/components/modules/pos/ReceiptOrderActions.tsx), [`TransactionReviewTable.tsx`](web/src/components/modules/reports/TransactionReviewTable.tsx), and [`VoidButton.tsx`](web/src/components/modules/reports/VoidButton.tsx).
   - Updated Daily Sales ledger ([`daily-sales/page.tsx`](web/src/app/daily-sales/page.tsx)) and Reports KPIs ([`ReportsKPIs.tsx`](web/src/components/modules/reports/ReportsKPIs.tsx)) to enforce standard retail accounting: `Gross Sales - Customer Refunds = Net Sales`.
