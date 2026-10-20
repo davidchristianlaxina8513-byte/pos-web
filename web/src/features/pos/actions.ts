@@ -156,7 +156,17 @@ export async function checkoutSale(
   if (typeof data !== 'string' || data.length === 0) {
     return { ok: false, error: 'Checkout failed. Try again.' };
   }
-  setFulfillmentStatus(data, 'pending');
+  // Auto-start order in preparing status upon successful payment
+  setFulfillmentStatus(data, 'preparing');
+  try {
+    await supabase.rpc('update_order_status', {
+      p_transaction_id: data,
+      p_new_status: 'preparing',
+      p_notes: 'Auto-started upon payment completion',
+    });
+  } catch {
+    // Non-blocking fallback
+  }
   revalidatePath('/pos');
   revalidatePath('/today-products');
   revalidatePath('/dashboard');

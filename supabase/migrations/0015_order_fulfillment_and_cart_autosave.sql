@@ -159,13 +159,13 @@ begin
     where day = v_day returning last into v_order_no;
   v_transaction_number := 'TXN-' || to_char(v_day, 'YYYYMMDD') || '-' || lpad(v_order_no::text, 5, '0');
 
-  -- Initial status is 'pending' until kitchen/staff fulfills
+  -- Initial status is 'preparing' (auto-started upon payment completion)
   insert into transactions(
     id, user_id, total_amount, payment_mode, date, status,
     amount_received, change_given, order_number, transaction_number,
     payment_reference, payment_status
   ) values (
-    p_transaction_id, v_user_id, 0, p_payment_mode, p_date, 'pending',
+    p_transaction_id, v_user_id, 0, p_payment_mode, p_date, 'preparing',
     p_amount_received, p_change_given, v_order_no, v_transaction_number,
     case when p_payment_mode = 'cash' then null else v_reference end,
     case when p_payment_mode = 'cash' then 'paid' else 'pending_verification' end
@@ -218,7 +218,7 @@ begin
       'business_date', v_day,
       'transaction_number', v_transaction_number,
       'total', v_total,
-      'order_status', 'pending',
+      'order_status', 'preparing',
       'payment_status', case when p_payment_mode = 'cash' then 'paid' else 'pending_verification' end
     )
   );

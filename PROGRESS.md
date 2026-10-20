@@ -8,6 +8,12 @@ The web application now uses daily product quotas as its only availability mecha
 
 ## Modern Dashboard and POS Redesign (2026-10-17)
 
+- **Order Fulfillment Auto-Start & Receipt Screen Streamlining (2026-10-20)**:
+  - **Auto-Start Paid Orders**: Updated checkout fulfillment lifecycle in [`actions.ts`](web/src/features/pos/actions.ts), PayMongo status endpoint ([`status/route.ts`](web/src/app/api/pos/paymongo/status/route.ts)), and SQL migration (`0015_order_fulfillment_and_cart_autosave.sql`). Paid orders immediately enter status `preparing` instead of `pending`, automatically queuing into the kitchen without requiring an extra manual "Start Preparing" tap.
+  - **Clean Receipt Interface**: Removed `Cancel & Refund` triggers and the manager authorization modal from the post-checkout receipt screen ([`ReceiptOrderActions.tsx`](web/src/components/modules/pos/ReceiptOrderActions.tsx)). The receipt view is now dedicated cleanly to receipt printing, new transaction navigation, and kitchen readiness progression (`Mark as Ready for Pickup` → `Mark as Served`).
+  - **Consolidated Refund Controls**: Maintained strict manager authorization for cancellations & refunds exclusively in the operational queues: the **Active Orders Modal** (`ActiveOrdersModal.tsx`) accessible from the POS header and the **Admin Transaction Review / Daily Sales** reports.
+  - **Verification**: Ran `typecheck`, `test` (52/52 passing), `format:check`, `lint`, and production build (25/25 routes compiled successfully in 2.1s).
+
 - **Unified QR Ph Payment: Consolidated GCash & Maya into Universal "E-Wallet" (2026-10-20)**:
   - Simplified counter checkout: consolidated separate "GCash" and "Maya" buttons into a clean, 2-option selector (`[ ₱ Cash ]` and `[ QR E-Wallet ]`) in [`CheckoutDialog.tsx`](web/src/components/modules/pos/CheckoutDialog.tsx).
   - Updated QR Ph instruction badge across [`PaymongoQRModal.tsx`](web/src/components/modules/pos/PaymongoQRModal.tsx) to explicitly inform customers: *"Scan via GCash, Maya, MariBank, or any Bank App"*.

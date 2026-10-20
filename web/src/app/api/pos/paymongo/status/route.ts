@@ -82,8 +82,17 @@ export async function GET(request: Request) {
       result.record.transactionId = effectiveTxId;
       result.record.paymentReference = paymentReference;
 
-      // Register newly paid online order as 'pending' for kitchen fulfillment
-      setFulfillmentStatus(effectiveTxId, 'pending');
+      // Register newly paid online order as 'preparing' for kitchen fulfillment
+      setFulfillmentStatus(effectiveTxId, 'preparing');
+      try {
+        await supabase.rpc('update_order_status', {
+          p_transaction_id: effectiveTxId,
+          p_new_status: 'preparing',
+          p_notes: 'Auto-started upon online payment verification',
+        });
+      } catch {
+        // Non-blocking fallback
+      }
 
       revalidatePath('/pos');
       revalidatePath('/today-products');
