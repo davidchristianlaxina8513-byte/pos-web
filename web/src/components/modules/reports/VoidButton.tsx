@@ -18,7 +18,7 @@ export function VoidButton({ transactionId }: { transactionId: string }) {
         className="text-sm font-bold text-danger"
         onClick={() => {
           const reason = window.prompt(
-            'Reason for voiding this completed sale:',
+            'Reason for refunding this completed sale:',
           );
           if (!reason) return;
           setBusy(true);
@@ -27,18 +27,18 @@ export function VoidButton({ transactionId }: { transactionId: string }) {
             setBusy(false);
             if (!result.ok) {
               setError(result.error);
-              errorAlert('Void Failed', result.error);
+              errorAlert('Refund Failed', result.error);
             } else {
               warningAlert(
-                'Transaction Voided',
-                `Transaction was marked as voided.`,
+                'Transaction Refunded',
+                `Transaction was recorded as refunded.`,
               );
               router.refresh();
             }
           });
         }}
       >
-        {busy ? 'Voiding…' : 'Void'}
+        {busy ? 'Refunding…' : 'Refund'}
       </button>
       {error ? (
         <span role="alert" className="text-xs text-danger">

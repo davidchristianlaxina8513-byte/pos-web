@@ -150,8 +150,8 @@ export function TransactionReviewTable({
     if (!targetReceipt) return;
     if (!voidReason.trim()) {
       errorAlert(
-        'Void Reason Required',
-        'Please provide a reason for voiding this transaction.',
+        'Refund Reason Required',
+        'Please provide a reason for refunding this transaction.',
       );
       return;
     }
@@ -164,12 +164,12 @@ export function TransactionReviewTable({
     setVoidSubmitting(false);
 
     if (!result.ok) {
-      errorAlert('Void Failed', result.error);
+      errorAlert('Refund Failed', result.error);
     } else {
       setVoidModalOpen(false);
       warningAlert(
-        'Transaction Voided',
-        `Transaction ${targetReceipt.transaction_number} was voided successfully.`,
+        'Transaction Refunded',
+        `Transaction ${targetReceipt.transaction_number} was recorded as refunded.`,
       );
       router.refresh();
     }
@@ -554,7 +554,7 @@ export function TransactionReviewTable({
                               type="button"
                               onClick={() => openVoidModal(receipt)}
                               className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-surface text-muted transition-colors hover:border-danger/30 hover:bg-danger/5 hover:text-danger"
-                              title="Void Transaction"
+                              title="Process Refund &amp; Return"
                             >
                               <ReceiptRefundIcon className="h-4 w-4" />
                             </button>
@@ -693,13 +693,13 @@ export function TransactionReviewTable({
         )}
       </div>
 
-      {/* Void Confirmation Modal */}
+      {/* Refund Confirmation Modal */}
       {targetReceipt && (
         <Modal
           isOpen={voidModalOpen}
           onOpenChange={(open) => !voidSubmitting && setVoidModalOpen(open)}
           isDismissDisabled={voidSubmitting}
-          title="Void Completed Sale"
+          title="Process Transaction Refund"
         >
           <div className="space-y-4">
             {/* Warning banner */}
@@ -707,10 +707,11 @@ export function TransactionReviewTable({
               <ExclamationTriangleIcon className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
               <div className="text-xs leading-relaxed text-foreground">
                 <span className="font-bold text-amber-800 dark:text-amber-300">
-                  Irreversible Action:
+                  Manager Authorization:
                 </span>{' '}
-                Voiding this transaction will reverse revenue calculations, mark
-                the sale as voided, and adjust sales reports.
+                Refunding this transaction records an authorized customer
+                return, deducts from net sales, and restores portion quota with
+                an immutable audit log.
               </div>
             </div>
 
@@ -729,28 +730,29 @@ export function TransactionReviewTable({
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted">Payment:</span>
-                <span className="font-bold text-foreground">
+                <span className="text-muted">Refund Amount:</span>
+                <span className="font-bold text-rose-600">
                   {PAYMENT_LABELS[targetReceipt.payment_mode]} (₱
                   {targetReceipt.total_amount.toFixed(2)})
                 </span>
               </div>
             </div>
 
-            {/* Void Reason Input */}
+            {/* Refund Reason Input */}
             <div>
               <label
                 htmlFor="void-reason"
                 className="block text-xs font-semibold text-foreground mb-1"
               >
-                Reason for voiding <span className="text-danger">*</span>
+                Reason for customer refund{' '}
+                <span className="text-danger">*</span>
               </label>
               <textarea
                 id="void-reason"
                 rows={3}
                 value={voidReason}
                 onChange={(e) => setVoidReason(e.target.value)}
-                placeholder="e.g., Customer cancelled, incorrect order entry, duplicate charge..."
+                placeholder="e.g., Customer cancelled, defective/spilled drink, incorrect order entry..."
                 className="w-full rounded-md border border-border bg-white p-3 text-sm text-foreground placeholder:text-muted/60 focus:border-danger focus:outline-2 focus:outline-danger"
               />
             </div>
@@ -769,9 +771,9 @@ export function TransactionReviewTable({
                 type="button"
                 disabled={voidSubmitting || !voidReason.trim()}
                 onClick={handleConfirmVoid}
-                className="action-focus inline-flex h-10 items-center rounded-md bg-danger px-4 text-sm font-semibold text-surface shadow-xs hover:bg-danger/90 disabled:opacity-50"
+                className="action-focus inline-flex h-10 items-center rounded-md bg-rose-600 px-4 text-sm font-semibold text-white shadow-xs hover:bg-rose-700 disabled:opacity-50 cursor-pointer"
               >
-                {voidSubmitting ? 'Voiding Sale...' : 'Confirm Void'}
+                {voidSubmitting ? 'Processing Refund...' : 'Confirm Refund'}
               </button>
             </div>
           </div>

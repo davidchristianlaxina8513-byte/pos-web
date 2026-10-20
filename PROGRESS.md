@@ -8,6 +8,23 @@ The web application now uses daily product quotas as its only availability mecha
 
 ## Modern Dashboard and POS Redesign (2026-10-17)
 
+- **Capstone Defense Accounting Alignment: Void to Customer Refund Transformation (2026-10-20)**:
+  - Addressed panelist/accounting requirement regarding paid sales: replaced all casual "Void" terminology with formal "Cancel & Refund" / "Customer Refund & Reversal" across [`ActiveOrdersModal.tsx`](web/src/components/modules/pos/ActiveOrdersModal.tsx), [`ReceiptOrderActions.tsx`](web/src/components/modules/pos/ReceiptOrderActions.tsx), [`TransactionReviewTable.tsx`](web/src/components/modules/reports/TransactionReviewTable.tsx), and [`VoidButton.tsx`](web/src/components/modules/reports/VoidButton.tsx).
+  - Updated Daily Sales ledger ([`daily-sales/page.tsx`](web/src/app/daily-sales/page.tsx)) and Reports KPIs ([`ReportsKPIs.tsx`](web/src/components/modules/reports/ReportsKPIs.tsx)) to enforce standard retail accounting: `Gross Sales - Customer Refunds = Net Sales`.
+  - Reinforced internal controls: refunds strictly require Manager step-up authorization (`admin@elvira.cafe`), mandatory operational reason, immutable audit logging, and inventory quota restoration.
+  - Verification: `typecheck`, `lint`, `format:check`, unit tests (52/52 passing), and Next.js production build (25/25 routes) passed with exit code 0.
+
+- **Production Deployment to Vercel with Supabase Database (2026-10-20)**:
+  - Linked project to team `ipss1` and configured production environment variables (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `PAYMONGO_SECRET_KEY`, `PAYMONGO_PUBLIC_KEY`).
+  - Executed production build and deployment via Vercel CLI (`vercel deploy --prod`).
+  - Disabled SSO deployment protection (`vercel project protection disable web --sso`) ensuring open public access to the live web application.
+  - Successfully verified live deployment endpoint (`https://web-nine-kohl-89.vercel.app`) returning HTTP 200 on `/login` and role redirects on `/`.
+
+- **Comprehensive Capstone Defense Script & System Documentation (2026-10-20)**:
+  - Compiled complete presentation script into [`IPSS_Presentation_Script.docx`](file:///home/john/Projects/pos-web/IPSS_Presentation_Script.docx) based on the team's official documentation overview and WST 1 System Testing Approach.
+  - Formatted across 6 structured sections: Project Overview (team, client background, problem, purpose, critical success factors), System Scope & CRUD Entities, 3-Tier Architecture & Tech Stack, Implementation Roadmap, WST 1 System Testing (18 modules across 4 testing dimensions), and Panelist Defense Q&A reference.
+
+
 - **Root Landing Route (`/`) Role-Aware Automatic Redirect (2026-10-18)**:
   - Fixed `web/src/app/page.tsx` displaying the raw, unstyled scaffold text ("IPSS Web / Signed in as cashier@elvira.cafe / Continue to dashboard / Sign out") when navigating to `http://localhost:3000`.
   - Replaced the manual scaffold markup with an immediate automatic server redirect `redirect(landingForRole(profile.role))`:

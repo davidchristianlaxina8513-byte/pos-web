@@ -164,11 +164,11 @@ export function ActiveOrdersModal({
     if (!isAdmin && (!managerEmail.trim() || !managerPassword)) {
       errorAlert(
         'Manager Authorization Required',
-        'Please enter manager email and password to authorize this void.',
+        'Please enter manager email and password to authorize this refund.',
       );
       return;
     }
-    const finalReason = voidReason.trim() || 'Ordered by mistake';
+    const finalReason = voidReason.trim() || 'Customer requested refund';
 
     startTransition(async () => {
       const res = await voidOrderAction(
@@ -179,12 +179,12 @@ export function ActiveOrdersModal({
           : undefined,
       );
       if (!res.ok) {
-        errorAlert('Void Failed', res.error);
+        errorAlert('Refund Failed', res.error);
         return;
       }
       successAlert(
-        'Order Voided',
-        `Order #${orderToVoid.order_number ?? ''} was voided.`,
+        'Order Cancelled & Refunded',
+        `Order #${orderToVoid.order_number ?? ''} was cancelled and customer refund recorded.`,
       );
       setOrderToVoid(null);
       setVoidReason('');
@@ -478,9 +478,9 @@ export function ActiveOrdersModal({
                             onClick={() => setOrderToVoid(order)}
                             disabled={isPendingTransition}
                             className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-semibold px-2 cursor-pointer"
-                            title="Void this order"
+                            title="Cancel and refund this order"
                           >
-                            Void
+                            Cancel &amp; Refund
                           </Button>
 
                           {badge.actionLabel && badge.nextStatus ? (
@@ -587,9 +587,9 @@ export function ActiveOrdersModal({
                           onClick={() => setOrderToVoid(order)}
                           disabled={isPendingTransition}
                           className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-semibold px-2 cursor-pointer"
-                          title="Void this order"
+                          title="Cancel and refund this order"
                         >
-                          Void
+                          Cancel &amp; Refund
                         </Button>
                         <Link href={`/pos/receipt/${order.transaction_id}`}>
                           <Button variant="secondary" size="sm">
@@ -616,9 +616,9 @@ export function ActiveOrdersModal({
           </div>
         )}
 
-        {/* Void Confirmation Modal */}
+        {/* Cancel & Refund Confirmation Modal */}
         <Modal
-          title="Void Order"
+          title="Cancel & Refund Order"
           isOpen={orderToVoid !== null}
           size="md"
           onOpenChange={(open: boolean) => {
@@ -650,8 +650,8 @@ export function ActiveOrdersModal({
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted">Void Amount:</span>
-                  <span className="font-bold text-foreground">
+                  <span className="text-muted">Refund Amount:</span>
+                  <span className="font-bold text-rose-600">
                     ₱{orderToVoid.total_amount.toFixed(2)}
                   </span>
                 </div>
@@ -661,7 +661,8 @@ export function ActiveOrdersModal({
               {!isAdmin && (
                 <div className="space-y-3">
                   <p className="text-xs text-muted">
-                    Manager credentials are required to authorize this void.
+                    Manager credentials are required to authorize this customer
+                    refund.
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <Field
@@ -687,20 +688,21 @@ export function ActiveOrdersModal({
                 </div>
               )}
 
-              {/* Void Reason Input */}
+              {/* Refund Reason Input */}
               <div>
                 <label
                   htmlFor="void-reason-input"
                   className="block text-xs font-semibold text-foreground mb-1"
                 >
-                  Reason for voiding <span className="text-danger">*</span>
+                  Reason for refund & cancellation{' '}
+                  <span className="text-danger">*</span>
                 </label>
                 <textarea
                   id="void-reason-input"
                   rows={3}
                   value={voidReason}
                   onChange={(e) => setVoidReason(e.target.value)}
-                  placeholder="e.g., Customer changed mind, ordered by mistake..."
+                  placeholder="e.g., Customer cancelled before preparation, wrong order punched..."
                   className="w-full rounded-md border border-border bg-white p-3 text-sm text-foreground placeholder:text-muted/60 focus:border-danger focus:outline-2 focus:outline-danger"
                 />
               </div>
@@ -724,9 +726,11 @@ export function ActiveOrdersModal({
                   type="button"
                   disabled={isPendingTransition || !voidReason.trim()}
                   onClick={handleConfirmVoid}
-                  className="action-focus inline-flex h-10 items-center rounded-md bg-danger px-4 text-sm font-semibold text-surface shadow-xs hover:bg-danger/90 disabled:opacity-50 cursor-pointer"
+                  className="action-focus inline-flex h-10 items-center rounded-md bg-rose-600 px-4 text-sm font-semibold text-white shadow-xs hover:bg-rose-700 disabled:opacity-50 cursor-pointer"
                 >
-                  {isPendingTransition ? 'Voiding Sale...' : 'Confirm Void'}
+                  {isPendingTransition
+                    ? 'Processing Refund...'
+                    : 'Authorize Refund & Cancel'}
                 </button>
               </div>
             </div>

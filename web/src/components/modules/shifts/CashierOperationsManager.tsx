@@ -1250,12 +1250,13 @@ export function CashierOperationsManager({
                       </span>
                       <div>
                         <strong className="block text-foreground text-xs font-bold">
-                          Transaction Voiding &amp; Reversals
+                          Customer Refunds &amp; Cancellations
                         </strong>
                         <p className="mt-0.5 text-muted leading-relaxed">
-                          Cashiers CANNOT void completed sales independently.
-                          Voiding permanently reverses revenue and stock quota;
-                          it strictly requires manager step-up credentials (
+                          Cashiers CANNOT refund or cancel completed sales
+                          independently. Refunding reverses revenue and restores
+                          stock quota; it strictly requires manager step-up
+                          credentials (
                           <code className="text-[11px] font-semibold">
                             admin@elvira.cafe
                           </code>

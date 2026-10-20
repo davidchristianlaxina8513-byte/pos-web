@@ -12,6 +12,8 @@ dist/
 web/.next/
 web/test-results/
 web/playwright-report/
+.vercel/
+web/.vercel/
 
 # debug
 npm-debug.*

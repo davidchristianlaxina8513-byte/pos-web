@@ -126,14 +126,17 @@ export function ReceiptOrderActions({
           : undefined,
       );
       if (!res.ok) {
-        errorAlert('Void Failed', res.error);
+        errorAlert('Refund Failed', res.error);
         return;
       }
       setVoidModalOpen(false);
       setVoidReasonInput('');
       setManagerEmail('');
       setManagerPassword('');
-      successAlert('Transaction Voided', 'The transaction has been voided.');
+      successAlert(
+        'Transaction Cancelled & Refunded',
+        'The transaction has been refunded and recorded.',
+      );
       router.refresh();
     });
   };
@@ -215,7 +218,7 @@ export function ReceiptOrderActions({
       {/* Primary Navigation & Print Button */}
       {children}
 
-      {/* Discreet Void Action */}
+      {/* Discreet Refund Action */}
       {status !== 'voided' ? (
         <div className="pt-1 text-center">
           <button
@@ -224,14 +227,14 @@ export function ReceiptOrderActions({
             disabled={isPending}
             className="text-xs font-semibold text-rose-600 hover:text-rose-700 hover:underline cursor-pointer disabled:opacity-50"
           >
-            Void Transaction (Manager Authorization)
+            Cancel &amp; Refund Transaction (Manager Authorization)
           </button>
         </div>
       ) : null}
 
-      {/* Clean Void Modal */}
+      {/* Clean Refund Modal */}
       <Modal
-        title="Void Transaction"
+        title="Cancel & Refund Transaction"
         isOpen={voidModalOpen}
         onOpenChange={(open: boolean) => {
           if (!open) {
@@ -246,16 +249,16 @@ export function ReceiptOrderActions({
       >
         <div className="space-y-4">
           <p className="text-sm text-foreground/80">
-            Are you sure you want to void this transaction? This action will
-            mark the transaction as voided, exclude its amounts from Daily
-            Sales, and restore daily stock.
+            Are you sure you want to cancel and refund this transaction? This
+            action will record a customer refund, adjust Daily Sales, restore
+            daily product quotas, and log an audit record.
           </p>
 
           {/* Manager Authorization (Cashier only) */}
           {!isAdmin && (
             <div className="space-y-3">
               <p className="text-xs text-muted">
-                Manager credentials are required to authorize this void.
+                Manager credentials are required to authorize this refund.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field
@@ -281,20 +284,20 @@ export function ReceiptOrderActions({
             </div>
           )}
 
-          {/* Void Reason Input */}
+          {/* Refund Reason Input */}
           <div>
             <label
               htmlFor="void-reason"
               className="block text-xs font-semibold text-foreground mb-1"
             >
-              Reason for voiding <span className="text-danger">*</span>
+              Reason for refund & return <span className="text-danger">*</span>
             </label>
             <textarea
               id="void-reason"
               rows={3}
               value={voidReasonInput}
               onChange={(e) => setVoidReasonInput(e.target.value)}
-              placeholder="e.g., Customer cancelled, incorrect order entry..."
+              placeholder="e.g., Customer cancelled, wrong item prepared, spill/defect..."
               className="w-full rounded-md border border-border bg-white p-3 text-sm text-foreground placeholder:text-muted/60 focus:border-danger focus:outline-2 focus:outline-danger"
               disabled={isPending}
             />
@@ -319,9 +322,9 @@ export function ReceiptOrderActions({
               type="button"
               disabled={isPending || !voidReasonInput.trim()}
               onClick={handleConfirmVoid}
-              className="action-focus inline-flex h-10 items-center rounded-md bg-danger px-4 text-sm font-semibold text-surface shadow-xs hover:bg-danger/90 disabled:opacity-50 cursor-pointer"
+              className="action-focus inline-flex h-10 items-center rounded-md bg-rose-600 px-4 text-sm font-semibold text-white shadow-xs hover:bg-rose-700 disabled:opacity-50 cursor-pointer"
             >
-              {isPending ? 'Voiding...' : 'Confirm Void'}
+              {isPending ? 'Processing Refund...' : 'Authorize Refund'}
             </button>
           </div>
         </div>

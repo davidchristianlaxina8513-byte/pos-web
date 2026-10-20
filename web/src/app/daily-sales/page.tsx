@@ -21,11 +21,13 @@ export default async function DailySalesPage() {
   const activeSales = sales.filter(
     (sale) => sale.status !== 'voided' && sale.status !== 'cancelled',
   );
-  const gross = activeSales.reduce((sum, sale) => sum + sale.total_amount, 0);
-  const voided = sales
+  const totalGross = sales
+    .filter((sale) => sale.status !== 'cancelled')
+    .reduce((sum, sale) => sum + sale.total_amount, 0);
+  const refunded = sales
     .filter((sale) => sale.status === 'voided')
     .reduce((sum, sale) => sum + sale.total_amount, 0);
-  const net = gross;
+  const net = totalGross - refunded;
 
   return (
     <StaffShell email={profile.email} role={profile.role} fullWidth={true}>
@@ -63,26 +65,28 @@ export default async function DailySalesPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Card title="Gross Sales (Active)">
+          <Card title="Gross Sales (Total Orders)">
             <strong className="text-2xl font-black text-foreground">
-              ₱{gross.toFixed(2)}
+              ₱{totalGross.toFixed(2)}
             </strong>
             <p className="text-xs text-muted mt-1">
-              {activeSales.length} active transactions
+              {activeSales.length} active orders served
             </p>
           </Card>
-          <Card title="Voided Sales">
+          <Card title="Customer Refunds">
             <strong className="text-2xl font-black text-danger">
-              ₱{voided.toFixed(2)}
+              -₱{refunded.toFixed(2)}
             </strong>
-            <p className="text-xs text-muted mt-1">Excluded from revenue</p>
+            <p className="text-xs text-muted mt-1">
+              Authorized returns & cancellations
+            </p>
           </Card>
           <Card title="Net Sales">
             <strong className="text-2xl font-black text-pine">
               ₱{net.toFixed(2)}
             </strong>
             <p className="text-xs text-muted mt-1">
-              Today&apos;s realized gross
+              Realized net revenue (Gross - Refunds)
             </p>
           </Card>
         </div>
@@ -130,12 +134,12 @@ export default async function DailySalesPage() {
                           sale.status === 'pending' &&
                             'bg-yellow-50 text-yellow-800 border border-yellow-200',
                           isVoided &&
-                            'bg-red-50 text-red-700 border border-red-200',
+                            'bg-rose-50 text-rose-700 border border-rose-200',
                           isCancelled &&
                             'bg-gray-100 text-gray-700 border border-gray-300',
                         )}
                       >
-                        {sale.status}
+                        {isVoided ? 'Refunded' : sale.status}
                       </span>
                       <strong
                         className={cn(

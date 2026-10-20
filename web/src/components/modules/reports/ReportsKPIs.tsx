@@ -81,21 +81,22 @@ export function ReportsKPIs({
         </p>
       </div>
 
-      {/* Voided Revenue */}
+      {/* Refunded Revenue */}
       <div className="relative overflow-hidden rounded-2xl border border-border bg-surface p-4 shadow-soft">
         <div className="absolute right-3 top-3 rounded-xl bg-danger/10 p-2 text-danger">
           <NoSymbolIcon className="h-5 w-5" />
         </div>
         <span className="text-xs font-semibold uppercase tracking-wider text-muted">
-          Voided Transactions
+          Customer Refunds &amp; Returns
         </span>
         <div className="mt-2 text-2xl font-black text-danger">
-          ₱{voidedRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+          -₱
+          {voidedRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
         </div>
         <p className="mt-1 text-xs text-muted">
           {voidedRevenue > 0
-            ? 'Cancelled sales removed from net sales'
-            : 'Zero voids in this period'}
+            ? 'Customer refunds deducted from gross revenue'
+            : 'Zero customer refunds in this period'}
         </p>
       </div>
     </div>
