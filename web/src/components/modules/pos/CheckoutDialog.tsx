@@ -32,8 +32,7 @@ export interface CheckoutDialogProps {
 
 const MODES: { value: PaymentMode; label: string; mark: string }[] = [
   { value: 'cash', label: 'Cash', mark: '₱' },
-  { value: 'gcash', label: 'GCash', mark: 'G' },
-  { value: 'maya', label: 'Maya', mark: 'M' },
+  { value: 'gcash', label: 'E-Wallet', mark: 'QR' },
 ];
 
 function LineThumb({ line }: { line: CartLine }) {
@@ -192,7 +191,7 @@ export function CheckoutDialog({
 
             <fieldset>
               <SectionLabel as="legend">Payment method</SectionLabel>
-              <div className="mt-2 grid grid-cols-3 gap-2">
+              <div className="mt-2 grid grid-cols-2 gap-2">
                 {MODES.map((mode) => {
                   const selected = method === mode.value;
                   return (
@@ -359,12 +358,12 @@ export function CheckoutDialog({
                 </div>
                 <div>
                   <p className="text-sm font-bold text-foreground">
-                    Instant {method === 'gcash' ? 'GCash' : 'Maya'} QR Ph
+                    Instant E-Wallet &amp; Bank QR Ph
                   </p>
                   <p className="mt-1 text-xs text-muted leading-relaxed">
-                    Customer scans the dynamic QR code using GCash, Maya, or any
-                    Philippine banking app. Payment verifies automatically with
-                    zero manual entry.
+                    Customer scans the dynamic QR code using GCash, Maya,
+                    MariBank, SeaBank, or any Philippine banking app. Payment
+                    verifies automatically with zero manual entry.
                   </p>
                 </div>
                 <Button

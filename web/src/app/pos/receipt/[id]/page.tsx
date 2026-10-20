@@ -12,8 +12,8 @@ import { ReceiptOrderActions } from '@/components/modules/pos/ReceiptOrderAction
 
 const PAYMENT_LABELS = {
   cash: 'Cash',
-  gcash: 'GCash',
-  maya: 'Maya',
+  gcash: 'E-Wallet',
+  maya: 'E-Wallet',
 } as const;
 
 const PAYMENT_STATUS_LABELS = {

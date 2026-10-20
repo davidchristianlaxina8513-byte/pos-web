@@ -205,7 +205,7 @@ export function PaymongoQRModal({
           {/* QR Ph Header Tag */}
           <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 border border-emerald-200">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            Scan via GCash, Maya, or any Bank App
+            Scan via GCash, Maya, MariBank, or any Bank App
           </div>
 
           {/* Amount Due Banner */}

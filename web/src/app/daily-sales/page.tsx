@@ -117,8 +117,10 @@ export default async function DailySalesPage() {
                         {sale.transaction_number}
                       </Link>
                       <span className="block capitalize text-muted text-xs mt-0.5">
-                        {sale.payment_mode} ·{' '}
-                        {sale.payment_status.replaceAll('_', ' ')}
+                        {sale.payment_mode === 'cash'
+                          ? 'Cash'
+                          : 'E-Wallet (QR Ph)'}{' '}
+                        · {sale.payment_status.replaceAll('_', ' ')}
                       </span>
                     </span>
                     <div className="flex items-center gap-3 text-right">
