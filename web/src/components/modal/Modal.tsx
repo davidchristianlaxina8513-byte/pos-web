@@ -15,7 +15,9 @@ export type ModalSize =
   | '3xl'
   | '4xl'
   | '5xl'
-  | '6xl';
+  | '6xl'
+  | '7xl'
+  | 'full';
 
 export interface ModalProps {
   title: string;
@@ -41,6 +43,8 @@ const SIZE_CLASSES: Record<ModalSize, string> = {
   '4xl': 'sm:max-w-4xl',
   '5xl': 'sm:max-w-5xl',
   '6xl': 'sm:max-w-6xl',
+  '7xl': 'sm:max-w-7xl',
+  full: 'sm:max-w-[95vw] xl:max-w-[1450px]',
 };
 
 /**

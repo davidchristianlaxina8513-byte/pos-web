@@ -8,6 +8,12 @@ The web application now uses daily product quotas as its only availability mecha
 
 ## Modern Dashboard and POS Redesign (2026-10-17)
 
+- **Active Orders Queue Redesign: High-Visibility KDS & Kitchen Card Board (2026-10-20)**:
+  - **Full-Width Modal Scale**: Expanded modal layout in [`Modal.tsx`](web/src/components/modal/Modal.tsx) (`size="full"` up to 1450px max width) allowing the order queue to utilize widescreen workstation space comfortably without squishing cards.
+  - **Queue Summary KPI Strip**: Added real-time operational KPI metrics across the top banner: Total Active Orders, In Preparation count, Ready for Pickup count, and Total Items to Make.
+  - **Authentic Kitchen Display Cards**: Completely redesigned active order cards with bold Order Numbers (`Order #12`), status top-accent borders, elapsed timer with warning/urgency highlights, solid quantity tags (`[ 1× ]`), large item names, full-width high-visibility fulfillment buttons (`Mark Ready for Pickup` in Blue, `Mark as Served` in Emerald), and organized secondary utilities (`View Receipt` and step-up `Cancel & Refund`).
+  - **Verification**: `typecheck`, `test` (52/52 passing), `format:check`, `lint`, and production build (25/25 routes compiled in 887ms) all verified clean.
+
 - **Order Fulfillment Auto-Start & Receipt Screen Streamlining (2026-10-20)**:
   - **Auto-Start Paid Orders**: Updated checkout fulfillment lifecycle in [`actions.ts`](web/src/features/pos/actions.ts), PayMongo status endpoint ([`status/route.ts`](web/src/app/api/pos/paymongo/status/route.ts)), and SQL migration (`0015_order_fulfillment_and_cart_autosave.sql`). Paid orders immediately enter status `preparing` instead of `pending`, automatically queuing into the kitchen without requiring an extra manual "Start Preparing" tap.
   - **Clean Receipt Interface**: Hid the fulfillment progression box from the post-checkout receipt screen ([`ReceiptOrderActions.tsx`](web/src/components/modules/pos/ReceiptOrderActions.tsx)). The receipt view is now dedicated cleanly and exclusively to viewing customer purchase details, receipt printing, and `+ New Transaction` navigation. Order preparation, pickup readiness, and fulfillment tracking are centralized within the POS **Active Orders Queue** (`ActiveOrdersModal.tsx`).
