@@ -253,7 +253,7 @@ export function TransactionReviewTable({
                     : 'text-muted hover:text-foreground',
                 )}
               >
-                Voided
+                Refunded
               </button>
             </div>
           )}
@@ -511,7 +511,7 @@ export function TransactionReviewTable({
                         {isVoided ? (
                           <span className="inline-flex items-center gap-1 rounded-full bg-danger/10 px-2.5 py-0.5 text-[11px] font-bold text-danger">
                             <NoSymbolIcon className="h-3 w-3" />
-                            Voided
+                            Refunded
                           </span>
                         ) : receipt.status === 'cancelled' ? (
                           <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">

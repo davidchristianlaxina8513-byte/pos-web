@@ -341,13 +341,13 @@ export function AuditLogManager({ entries }: AuditLogManagerProps) {
             <ReceiptRefundIcon className="h-5 w-5 text-foreground" />
           </div>
           <span className="text-xs font-semibold uppercase tracking-wider text-muted">
-            Sales & Voids
+            Sales &amp; Refunds
           </span>
           <div className="mt-2 text-2xl font-bold text-foreground sm:text-3xl">
             {counts.sale}
           </div>
           <p className="mt-1 text-xs text-muted">
-            Completed orders & void actions
+            Completed orders &amp; refund actions
           </p>
         </div>
       </div>
@@ -395,7 +395,7 @@ export function AuditLogManager({ entries }: AuditLogManagerProps) {
               <option value="all">All Categories ({counts.total})</option>
               <option value="quota">Stock & Quotas ({counts.quota})</option>
               <option value="shift">Cashier & Shifts ({counts.shift})</option>
-              <option value="sale">Sales & Voids ({counts.sale})</option>
+              <option value="sale">Sales &amp; Refunds ({counts.sale})</option>
               {counts.user > 0 && (
                 <option value="user">Users & Auth ({counts.user})</option>
               )}

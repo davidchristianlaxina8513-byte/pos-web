@@ -58,10 +58,10 @@ const STATUS_CONFIG: Record<
     description: 'This order was cancelled.',
   },
   voided: {
-    label: 'Voided',
+    label: 'Refunded',
     badgeClass:
       'bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800',
-    description: 'This transaction was voided and excluded from sales.',
+    description: 'This transaction was refunded and customer payment returned.',
   },
 };
 
@@ -184,7 +184,7 @@ export function ReceiptOrderActions({
                     disabled={isPending}
                     className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-semibold"
                   >
-                    Void Order
+                    Cancel &amp; Refund
                   </Button>
                 </>
               )}
